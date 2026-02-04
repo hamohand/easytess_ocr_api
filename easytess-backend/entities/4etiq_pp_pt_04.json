@@ -1,0 +1,88 @@
+{
+  "nom": "4etiq_pp_pt_04",
+  "description": "4etiq_pp_pt_04",
+  "date_creation": "2026-02-04T19:21:21.020716",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_d1fcafac-b7dc-4dea-abb9-c2a83e3c0da0_pp_Moh_moit.png",
+  "zones": [
+    {
+      "id": 1770229191645,
+      "nom": "prenom",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "auto",
+      "coords": [
+        0.3066215596330275,
+        0.31234979423868314,
+        0.501834862385321,
+        0.37794444444444447
+      ]
+    },
+    {
+      "id": 1770229205045,
+      "nom": "ville",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "auto",
+      "coords": [
+        0.6605229357798166,
+        0.781738683127572,
+        0.775717889908257,
+        0.8498168724279834
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "regex:DZA"
+      ],
+      "position_base": [
+        0.503061224489796,
+        0.1323943661971831
+      ]
+    },
+    "droite": {
+      "labels": [
+        "regex:<{10}\\d{2}"
+      ],
+      "position_base": [
+        0.9132653061224489,
+        0.8704225352112676
+      ]
+    },
+    "gauche": {
+      "labels": [
+        "regex:P<DZA"
+      ],
+      "position_base": [
+        0.02346938775510204,
+        0.8007042253521127
+      ]
+    },
+    "bas": {
+      "labels": [
+        "regex:P<DZA"
+      ],
+      "position_base": [
+        0.4683673469387755,
+        0.8169014084507042
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710
+    },
+    "dimensions_absolues": {
+      "largeur": 872,
+      "hauteur": 486,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  }
+}

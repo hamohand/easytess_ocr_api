@@ -343,7 +343,20 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
      * Dessine le cadre de référence sur le canvas (HAUT, DROITE, GAUCHE, BAS)
      */
     drawCadreReference(canvas: HTMLCanvasElement) {
-        if (!this.ctx || !this.isCadreValide()) return;
+        if (!this.ctx) return;
+
+        // DEBUG: Log anchor states
+        console.log('🔍 drawCadreReference called');
+        console.log('  HAUT:', this.cadreHaut());
+        console.log('  DROITE:', this.cadreDroite());
+        console.log('  GAUCHE:', this.cadreGauche());
+        console.log('  BAS:', this.cadreBas());
+        console.log('  isCadreValide():', this.isCadreValide());
+
+        if (!this.isCadreValide()) {
+            console.warn('⚠️ Cadre invalide - dessin annulé');
+            return;
+        }
 
         const hautPos = this.cadreHaut().position_base;
         const droitePos = this.cadreDroite().position_base;
@@ -361,6 +374,8 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         const yMax = bPos.y;
         const xMin = gPos.x;
         const xMax = dPos.x;
+
+        console.log(`📐 Frame coordinates: xMin=${xMin.toFixed(2)}, yMin=${yMin.toFixed(2)}, xMax=${xMax.toFixed(2)}, yMax=${yMax.toFixed(2)}`);
 
         // Dessiner le rectangle du cadre calculé
         this.ctx.strokeStyle = '#ff00ff';
@@ -389,6 +404,8 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         this.drawMarker(dPos.x, dPos.y, 'Dr.', '#2196f3');
         this.drawMarker(gPos.x, gPos.y, 'G', '#4caf50');
         this.drawMarker(bPos.x, bPos.y, 'Bas', '#f44336');
+
+        console.log('✅ Frame drawn successfully');
     }
 
     private drawMarker(x: number, y: number, label: string, color: string) {
@@ -488,27 +505,35 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
             next: (result) => {
                 this.isDetecting.set(false);
 
+                console.log('🔍 Backend detection result:', result);
+                console.log('📍 Positions from backend:', result.positions);
+
                 if (result.success && result.positions) {
                     // Mettre à jour les positions détectées
                     if (result.positions['haut']?.found) {
+                        console.log('  ✅ Updating HAUT:', result.positions['haut']);
                         this.cadreHaut.update(c => ({
                             ...c,
                             position_base: [result.positions['haut'].x, result.positions['haut'].y]
                         }));
                     }
                     if (result.positions['droite']?.found) {
+                        console.log('  ✅ Updating DROITE:', result.positions['droite']);
                         this.cadreDroite.update(c => ({
                             ...c,
                             position_base: [result.positions['droite'].x, result.positions['droite'].y]
                         }));
                     }
                     if (result.positions['gauche']?.found) {
+                        console.log('  ✅ Updating GAUCHE:', result.positions['gauche']);
                         this.cadreGauche.update((c: EtiquetteDrawing) => ({
                             ...c,
                             position_base: [result.positions['gauche'].x, result.positions['gauche'].y]
                         }));
+                        console.log('  🔍 GAUCHE after update:', this.cadreGauche());
                     }
                     if (result.positions['bas']?.found) {
+                        console.log('  ✅ Updating BAS:', result.positions['bas']);
                         this.cadreBas.update((c: EtiquetteDrawing) => ({
                             ...c,
                             position_base: [result.positions['bas'].x, result.positions['bas'].y]
