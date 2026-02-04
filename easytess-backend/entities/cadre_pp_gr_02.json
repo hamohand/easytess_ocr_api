@@ -1,0 +1,79 @@
+{
+  "nom": "cadre_pp_gr_02",
+  "description": "rogner",
+  "date_creation": "2026-01-31T16:25:26.288077",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_3ee31914-3539-40d7-bdb6-064cf9343e4c_passeport-dz_24-34.jpg",
+  "zones": [
+    {
+      "id": 1769873088097,
+      "nom": "nom",
+      "type": "text",
+      "lang": "ara+fra",
+      "preprocess": "auto",
+      "coords": [
+        0.29658304048892287,
+        0.17318742138364798,
+        0.4570915202444614,
+        0.24338616352201253
+      ]
+    },
+    {
+      "id": 1769873098411,
+      "nom": "ville",
+      "type": "text",
+      "lang": "ara+fra",
+      "preprocess": "auto",
+      "coords": [
+        0.6574997708174178,
+        0.9073761006289309,
+        0.737071963330787,
+        0.9772528301886791
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "DZA"
+      ],
+      "position_base": [
+        0.5067204301075269,
+        0.5576171875
+      ]
+    },
+    "droite": {
+      "labels": [
+        "délivrance"
+      ],
+      "position_base": [
+        0.9206989247311828,
+        0.723388671875
+      ]
+    },
+    "gauche_bas": {
+      "labels": [
+        "regex:\\d{18}"
+      ],
+      "position_base": [
+        0.04099462365591398,
+        0.8681640625
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 1488,
+      "height": 2048
+    },
+    "dimensions_absolues": {
+      "largeur": 1309,
+      "hauteur": 636,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 1488,
+      "height": 2048
+    }
+  }
+}

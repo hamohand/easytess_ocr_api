@@ -1,0 +1,79 @@
+{
+  "nom": "cadre_pp_gr_01",
+  "description": "grande image",
+  "date_creation": "2026-01-31T11:47:11.546303",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_bbed3e2f-f229-46a7-a364-49d4ec38034f_passeport-dz_24-34.jpg",
+  "zones": [
+    {
+      "coords": [
+        0.2791149200695493,
+        -5.665035596278069,
+        0.4774153347870856,
+        -5.000185282331743
+      ],
+      "id": 1769856025182,
+      "lang": "ara+fra",
+      "nom": "nom",
+      "preprocess": "auto",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.7491603475481539,
+        1.8170112203716366,
+        0.8500732252599669,
+        2.5083232383556293
+      ],
+      "id": 1769856062271,
+      "lang": "ara+fra",
+      "nom": "ville",
+      "preprocess": "auto",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "regex:\\d{9}"
+      ],
+      "position_base": [
+        0.751008064516129,
+        0.556640625
+      ]
+    },
+    "droite": {
+      "labels": [
+        "délivrance"
+      ],
+      "position_base": [
+        0.9206989247311828,
+        0.723388671875
+      ]
+    },
+    "gauche_bas": {
+      "labels": [
+        "regex:\\d{18}"
+      ],
+      "position_base": [
+        0.04099462365591398,
+        0.8681640625
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 1488,
+      "height": 2048
+    },
+    "dimensions_absolues": {
+      "largeur": 1309,
+      "hauteur": 638,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 1488,
+      "height": 2048
+    }
+  }
+}

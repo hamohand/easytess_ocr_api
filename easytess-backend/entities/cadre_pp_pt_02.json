@@ -1,0 +1,79 @@
+{
+  "nom": "cadre_pp_pt_02",
+  "description": "rogner",
+  "date_creation": "2026-01-31T16:33:37.715337",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_a98c95c3-2cdb-4302-ad90-4dda9ed186cd_pp_Moh_moit.png",
+  "zones": [
+    {
+      "coords": [
+        0.2939053099934525,
+        0.3853391062475674,
+        0.48129022776983943,
+        0.5249789954442432
+      ],
+      "id": 1769873420510,
+      "lang": "ara+fra",
+      "nom": "prenom",
+      "preprocess": "auto",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.2927711712846512,
+        0.9883295368695767,
+        0.48053413529730526,
+        1.117871500194592
+      ],
+      "id": 1769873462374,
+      "lang": "ara+fra",
+      "nom": "lieuN",
+      "preprocess": "auto",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "DZA"
+      ],
+      "position_base": [
+        0.503061224489796,
+        0.1323943661971831
+      ]
+    },
+    "droite": {
+      "labels": [
+        "délivrance"
+      ],
+      "position_base": [
+        0.9244897959183673,
+        0.45140845070422536
+      ]
+    },
+    "gauche_bas": {
+      "labels": [
+        "regex:\\d{18}"
+      ],
+      "position_base": [
+        0.0336734693877551,
+        0.7211267605633803
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710
+    },
+    "dimensions_absolues": {
+      "largeur": 873,
+      "hauteur": 418,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  }
+}

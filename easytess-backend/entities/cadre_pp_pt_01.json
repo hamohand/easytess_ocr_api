@@ -1,0 +1,79 @@
+{
+  "nom": "cadre_pp_pt_01",
+  "description": "petit",
+  "date_creation": "2026-01-31T16:01:22.589901",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_dd0fb8d6-eda5-4339-9e84-b7633ee6b489_pp_Moh_moit.png",
+  "zones": [
+    {
+      "id": 1769871572113,
+      "nom": "nom",
+      "type": "text",
+      "lang": "ara+fra",
+      "preprocess": "auto",
+      "coords": [
+        0.29964261168384876,
+        0.17445215311004783,
+        0.44557617411225653,
+        0.2449425837320574
+      ]
+    },
+    {
+      "id": 1769871578470,
+      "nom": "ville",
+      "type": "text",
+      "lang": "ara+fra",
+      "preprocess": "auto",
+      "coords": [
+        0.6547101947308133,
+        0.9167248803827751,
+        0.730483390607102,
+        0.9841578947368418
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "DZA"
+      ],
+      "position_base": [
+        0.503061224489796,
+        0.1323943661971831
+      ]
+    },
+    "droite": {
+      "labels": [
+        "délivrance"
+      ],
+      "position_base": [
+        0.9244897959183673,
+        0.45140845070422536
+      ]
+    },
+    "gauche_bas": {
+      "labels": [
+        "regex:\\d{18}"
+      ],
+      "position_base": [
+        0.0336734693877551,
+        0.7211267605633803
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710
+    },
+    "dimensions_absolues": {
+      "largeur": 873,
+      "hauteur": 418,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  }
+}

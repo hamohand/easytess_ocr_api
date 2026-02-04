@@ -1,0 +1,205 @@
+{
+  "nom": "pele012",
+  "description": "pele012",
+  "date_creation": "2026-01-29T18:02:05.935417",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_f31d5047-92f6-4a6a-a325-1313551be292_passeport-dz_24-34.jpg",
+  "zones": [
+    {
+      "coords": [
+        0.295,
+        0.59,
+        0.56,
+        0.6145
+      ],
+      "id": 1769663095638,
+      "lang": "ara",
+      "nom": "nom",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.295,
+        0.65,
+        0.56,
+        0.673
+      ],
+      "id": 1769675700013,
+      "lang": "ara",
+      "nom": "prenom",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.295,
+        0.71,
+        0.335,
+        0.7397
+      ],
+      "id": 1769678150912,
+      "lang": "fra",
+      "nom": "dateNaissanceJ",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.295,
+        0.752,
+        0.51,
+        0.7811
+      ],
+      "id": 1769678580603,
+      "lang": "ara",
+      "nom": "lieuNaissance",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.695,
+        0.55,
+        0.8085,
+        0.5763
+      ],
+      "id": 1769679737549,
+      "nom": "numeroPiece",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.295,
+        0.6687,
+        0.61,
+        0.6914
+      ],
+      "id": 1769679958403,
+      "lang": "fra",
+      "nom": "prenomLat",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.2935,
+        0.6099,
+        0.6098,
+        0.6344
+      ],
+      "id": 1769680592523,
+      "lang": "fra",
+      "nom": "nomLat",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.6116,
+        0.695,
+        0.6478,
+        0.715
+      ],
+      "id": 1769681468227,
+      "lang": "ara",
+      "nom": "sexe",
+      "type": "text",
+      "valeurs_attendues": [
+        "ا",
+        "ذ"
+      ]
+    },
+    {
+      "coords": [
+        0.6591,
+        0.6919,
+        0.6941,
+        0.7164
+      ],
+      "id": 1769681901669,
+      "lang": "fra",
+      "nom": "sexeLat",
+      "type": "text",
+      "valeurs_attendues": [
+        "M",
+        "F"
+      ]
+    },
+    {
+      "coords": [
+        0.6153,
+        0.735,
+        0.8653,
+        0.756
+      ],
+      "id": 1769682441862,
+      "lang": "ara+fra",
+      "nom": "delivreLe",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.6166,
+        0.775,
+        0.8666,
+        0.801
+      ],
+      "id": 1769682463394,
+      "lang": "ara+fra",
+      "nom": "expireLe",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.6166,
+        0.838,
+        0.8653,
+        0.8617
+      ],
+      "id": 1769682577817,
+      "lang": "fra",
+      "nom": "delivrePar",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.2881,
+        0.9271,
+        0.4131,
+        0.9571
+      ],
+      "id": 1769705267512,
+      "lang": "fra",
+      "nom": "dateAMJ",
+      "preprocess": "none",
+      "type": "text"
+    },
+    {
+      "id": 1769706017659,
+      "nom": "dateNaissanceM",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "auto",
+      "coords": [
+        0.3918,
+        0.7094,
+        0.4443,
+        0.734
+      ]
+    },
+    {
+      "id": 1769706090788,
+      "nom": "dateNaissanceA",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "auto",
+      "coords": [
+        0.4393,
+        0.7075,
+        0.4956,
+        0.7339
+      ]
+    }
+  ],
+  "metadata": {
+    "nombre_zones": 15,
+    "image_dimensions": {
+      "width": 1488,
+      "height": 2048
+    }
+  }
+}

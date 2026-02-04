@@ -1,0 +1,37 @@
+{
+  "nom": "pepe04",
+  "description": "pepe04",
+  "date_creation": "2026-01-28T11:59:18.967892",
+  "image_reference": "/app/uploads/temp_entite_bbf559f1-dcdb-4d93-8f83-9e4943cca3e0_passeport-dz_24-34.jpg",
+  "zones": [
+    {
+      "id": 1769601485163,
+      "nom": "nom",
+      "type": "text",
+      "coords": [
+        0.2958,
+        0.5875,
+        0.5795,
+        0.6165
+      ]
+    },
+    {
+      "id": 1769601505919,
+      "nom": "prenom",
+      "type": "text",
+      "coords": [
+        0.297,
+        0.65,
+        0.5858,
+        0.6751
+      ]
+    }
+  ],
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 1488,
+      "height": 2048
+    }
+  }
+}

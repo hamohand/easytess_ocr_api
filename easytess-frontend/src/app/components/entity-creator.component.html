@@ -1,0 +1,379 @@
+<!-- entity-creator.component.html -->
+<div class="entity-creator">
+    <div class="header">
+        <h1>🎨 Gestion des Entités OCR</h1>
+        <p>Créez et gérez vos modèles de zones OCR</p>
+    </div>
+
+    <!-- Messages -->
+    @if (errorMessage()) {
+    <div class="error-message">
+        ⚠️ {{ errorMessage() }}
+    </div>
+    }
+
+    @if (successMessage()) {
+    <div class="success-message">
+        {{ successMessage() }}
+    </div>
+    }
+
+    <!-- ==================== LISTE DES ENTITÉS EXISTANTES ==================== -->
+    <div class="entities-section">
+        <div class="section-header">
+            <h2>📂 Entités existantes</h2>
+            <button class="btn btn-small btn-outline" (click)="chargerEntites()" [disabled]="isLoadingEntites()">
+                🔄 Rafraîchir
+            </button>
+        </div>
+
+        @if (isLoadingEntites()) {
+        <div class="loading">Chargement...</div>
+        } @else if (entites().length === 0) {
+        <div class="empty-state">
+            <p>Aucune entité créée. Utilisez le formulaire ci-dessous pour en créer une.</p>
+        </div>
+        } @else {
+        <div class="entities-grid">
+            @for (entite of entites(); track entite.nom) {
+            <div class="entity-card" [class.editing]="editingEntityName() === entite.nom">
+                <div class="entity-info">
+                    <h4>{{ entite.nom }}</h4>
+                    <p class="entity-desc">{{ entite.description || 'Aucune description' }}</p>
+                    <span class="zones-count">{{ entite.zones.length }} zone(s)</span>
+                </div>
+                <div class="entity-actions">
+                    <button class="btn btn-small btn-primary" (click)="chargerEntite(entite.nom)" title="Modifier">
+                        ✏️
+                    </button>
+                    <button class="btn btn-small btn-danger" (click)="supprimerEntite(entite.nom)" title="Supprimer">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+            }
+        </div>
+        }
+    </div>
+
+    <!-- ==================== FORMULAIRE DE CRÉATION/ÉDITION ==================== -->
+    <div class="creator-section">
+        <div class="section-header">
+            @if (editMode()) {
+            <h2>✏️ Modifier l'entité: {{ editingEntityName() }}</h2>
+            } @else {
+            <h2>➕ Créer une nouvelle entité</h2>
+            }
+        </div>
+
+        <!-- Entity Info Form -->
+        <div class="entity-form">
+            <div class="form-group">
+                <label for="entityName">Nom de l'entité *</label>
+                <input type="text" id="entityName" [(ngModel)]="entityName"
+                    placeholder="Ex: Facture EDF, Carte d'identité..." [value]="entityName()" [disabled]="editMode()">
+            </div>
+
+            <div class="form-group">
+                <label for="entityDesc">Description</label>
+                <textarea id="entityDesc" [(ngModel)]="entityDescription" [value]="entityDescription()"
+                    placeholder="Description optionnelle de l'entité..." rows="2"></textarea>
+            </div>
+        </div>
+
+        <!-- Image Upload -->
+        <div class="upload-section">
+            <input type="file" #imageInput accept="image/*,application/pdf" (change)="onImageSelected($event)"
+                style="display: none">
+            <button class="btn btn-primary" (click)="imageInput.click()">
+                📁 Choisir une image de référence
+            </button>
+            @if (uploadedImageFilename()) {
+            <span class="filename">{{ uploadedImageFilename() }}</span>
+            }
+        </div>
+
+        <!-- Canvas Drawing Area -->
+        @if (imageUrl()) {
+        <div class="canvas-section">
+            <div class="canvas-controls">
+                <div class="zone-name-input">
+                    <label for="zoneName">Nom de la prochaine zone :</label>
+                    <input type="text" id="zoneName" [(ngModel)]="currentZoneName" [value]="currentZoneName()"
+                        placeholder="Ex: Date, Montant, Nom...">
+                </div>
+                <div class="instructions">
+                    💡 Cliquez et glissez sur l'image pour dessiner une zone
+                </div>
+            </div>
+
+            <div class="canvas-wrapper">
+                <canvas #canvas (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)"
+                    (mouseup)="onMouseUp($event)" [class.drawing]="isDrawing()">
+                </canvas>
+            </div>
+        </div>
+
+        <!-- NOUVEAU: Section Cadre de Référence (3 étiquettes) -->
+        <div class="anchors-section">
+            <h3>📐 Cadre de Référence</h3>
+            <p class="section-help">
+                Définissez 3 étiquettes pour créer un système de coordonnées stable.<br>
+                <strong>Texte:</strong> PASSPORT, PASSEPORT (séparés par virgule)<br>
+                <strong>Regex:</strong> <code>regex:\d&#123;9&#125;</code> (9 chiffres consécutifs)
+            </p>
+
+            <div class="cadre-labels">
+                <!-- Étiquette HAUT (Y min) -->
+                <div class="cadre-label-item ref-haut">
+                    <div class="label-header">
+                        <span class="label-icon">🔼</span>
+                        <span class="label-title">HAUT</span>
+                        <span class="label-hint">(définit la limite haute)</span>
+                    </div>
+                    <div class="input-with-action">
+                        <input type="text" [ngModel]="cadreHaut().labels_str"
+                            (ngModelChange)="cadreHaut.set({labels_str: $event, position_base: cadreHaut().position_base})"
+                            placeholder="Ex: RÉPUBLIQUE ALGÉRIENNE" class="cadre-input">
+                        <button type="button" class="btn-target" [class.active]="activeReferenceSelection() === 'haut'"
+                            (click)="startReferenceSelection('haut')"
+                            title="Cliquer pour définir la position sur l'image">
+                            📍
+                        </button>
+                    </div>
+                    <div class="coords-display">
+                        Pos: [ {{cadreHaut().position_base[0] | number:'1.3-3'}}, {{cadreHaut().position_base[1] |
+                        number:'1.3-3'}} ]
+                    </div>
+                </div>
+
+                <!-- Étiquette DROITE (X max) -->
+                <div class="cadre-label-item ref-droite">
+                    <div class="label-header">
+                        <span class="label-icon">⏩</span>
+                        <span class="label-title">DROITE</span>
+                        <span class="label-hint">(définit la limite droite)</span>
+                    </div>
+                    <div class="input-with-action">
+                        <input type="text" [ngModel]="cadreDroite().labels_str"
+                            (ngModelChange)="cadreDroite.set({labels_str: $event, position_base: cadreDroite().position_base})"
+                            placeholder="Ex: P<DZA (texte à droite)" class="cadre-input">
+                        <button type="button" class="btn-target"
+                            [class.active]="activeReferenceSelection() === 'droite'"
+                            (click)="startReferenceSelection('droite')"
+                            title="Cliquer pour définir la position sur l'image">
+                            📍
+                        </button>
+                    </div>
+                    <div class="coords-display">
+                        Pos: [ {{cadreDroite().position_base[0] | number:'1.3-3'}}, {{cadreDroite().position_base[1] |
+                        number:'1.3-3'}} ]
+                    </div>
+                </div>
+
+                <!-- Étiquette GAUCHE-BAS (X min, Y max) -->
+                <div class="cadre-label-item ref-gauche-bas">
+                    <div class="label-header">
+                        <span class="label-icon">↙️</span>
+                        <span class="label-title">GAUCHE-BAS</span>
+                        <span class="label-hint">(définit origines X et Y)</span>
+                    </div>
+                    <div class="input-with-action">
+                        <input type="text" [ngModel]="cadreGaucheBas().labels_str"
+                            (ngModelChange)="cadreGaucheBas.set({labels_str: $event, position_base: cadreGaucheBas().position_base})"
+                            placeholder="Ex: SIGNATURE (texte en bas à gauche)" class="cadre-input">
+                        <button type="button" class="btn-target"
+                            [class.active]="activeReferenceSelection() === 'gauche_bas'"
+                            (click)="startReferenceSelection('gauche_bas')"
+                            title="Cliquer pour définir la position sur l'image">
+                            📍
+                        </button>
+                    </div>
+                    <div class="coords-display">
+                        Pos: [ {{cadreGaucheBas().position_base[0] | number:'1.3-3'}},
+                        {{cadreGaucheBas().position_base[1] |
+                        number:'1.3-3'}} ]
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bouton de détection automatique -->
+            <div class="detection-actions">
+                <button type="button" class="btn-detect" (click)="detecterEtiquettes()"
+                    [disabled]="isDetecting() || !uploadedImageFilename()">
+                    @if (isDetecting()) {
+                    ⏳ Détection en cours...
+                    } @else {
+                    🔍 Détecter automatiquement
+                    }
+                </button>
+                <p class="detection-help">
+                    Cliquez pour détecter automatiquement les positions des étiquettes via OCR.
+                </p>
+            </div>
+
+            <!-- Indicateur de validité -->
+            @if (isCadreValide()) {
+            <div class="anchors-info success">
+                ✅ Cadre de référence complet. Les zones seront définies par rapport à ce cadre.
+            </div>
+            } @else {
+            <div class="anchors-info warning">
+                ⚠️ Remplissez les 3 étiquettes puis cliquez sur "Détecter automatiquement".
+            </div>
+            }
+
+            <!-- Affichage des paramètres calculés -->
+            @if (cadreParams()) {
+            <div class="reference-params">
+                <h4>📏 Paramètres du cadre de référence</h4>
+                <div class="params-grid">
+                    <div class="param-item">
+                        <span class="param-label">Largeur:</span>
+                        <span class="param-value">{{ cadreParams()?.largeur }}% ({{ cadreParams()?.largeur_px
+                            }}px)</span>
+                    </div>
+                    <div class="param-item">
+                        <span class="param-label">Hauteur:</span>
+                        <span class="param-value">{{ cadreParams()?.hauteur }}% ({{ cadreParams()?.hauteur_px
+                            }}px)</span>
+                    </div>
+                    <div class="param-item">
+                        <span class="param-label">Angle:</span>
+                        <span class="param-value">{{ cadreParams()?.angle }}°</span>
+                    </div>
+                    <div class="param-item">
+                        <span class="param-label">Origine (X, Y):</span>
+                        <span class="param-value">[{{ cadreParams()?.x_min | number:'1.3-3' }}, {{ cadreParams()?.y_min
+                            | number:'1.3-3' }}]</span>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+
+        <!-- Zones List -->
+        @if (zones().length > 0) {
+        <div class="zones-list">
+            <h3>📋 Zones définies ({{ zones().length }})</h3>
+            
+            <!-- NOUVEAU: Indicateur de système de coordonnées -->
+            <div class="coordinate-info">
+                @if (isCadreValide()) {
+                    <div class="info-box info-primary">
+                        📐 <strong>Coordonnées relatives à l'image</strong>
+                        <p class="info-detail">Les coordonnées affichées sont relatives à l'image complète (0-1). 
+                        À la sauvegarde, elles seront converties en coordonnées relatives au cadre de référence.</p>
+                    </div>
+                } @else {
+                    <div class="info-box info-warning">
+                        ⚠️ <strong>Aucun cadre de référence</strong>
+                        <p class="info-detail">Les coordonnées sont relatives à l'image complète. 
+                        Définissez un cadre de référence pour plus de robustesse.</p>
+                    </div>
+                }
+            </div>
+            
+            <div class="zones-grid">
+                @for (zone of zones(); track zone.id) {
+                <div class="zone-card">
+                    <div class="zone-header">
+                        <span class="zone-number">{{ $index + 1 }}</span>
+                        <input type="text" [(ngModel)]="zone.nom" class="zone-name-edit" placeholder="Nom de la zone"
+                            (ngModelChange)="onZoneChanged()">
+                    </div>
+
+                    <!-- Coordonnées éditables (format relatif 0.0-1.0) -->
+                    <div class="zone-coords-edit">
+                        <div class="coords-row">
+                            <label>X1:</label>
+                            <input type="number" [(ngModel)]="zone.coords[0]" class="coord-input" step="0.01" min="0"
+                                max="1" (ngModelChange)="onZoneChanged()">
+                            <label>Y1:</label>
+                            <input type="number" [(ngModel)]="zone.coords[1]" class="coord-input" step="0.01" min="0"
+                                max="1" (ngModelChange)="onZoneChanged()">
+                        </div>
+                        <div class="coords-row">
+                            <label>X2:</label>
+                            <input type="number" [(ngModel)]="zone.coords[2]" class="coord-input" step="0.01" min="0"
+                                max="1" (ngModelChange)="onZoneChanged()">
+                            <label>Y2:</label>
+                            <input type="number" [(ngModel)]="zone.coords[3]" class="coord-input" step="0.01" min="0"
+                                max="1" (ngModelChange)="onZoneChanged()">
+                        </div>
+                    </div>
+
+                    <!-- Config Zone -->
+                    <div class="zone-config">
+                        <div class="config-row">
+                            <label>Type:</label>
+                            <select [(ngModel)]="zone.type" class="sm-input">
+                                <option value="text">Texte OCR</option>
+                                <option value="qrcode">QR Code</option>
+                                <option value="barcode">Code Barre</option>
+                            </select>
+                        </div>
+
+                        @if (!zone.type || zone.type === 'text') {
+                        <div class="config-row">
+                            <label>Langue OCR:</label>
+                            <select [(ngModel)]="zone.lang" class="sm-input">
+                                <option value="ara+fra">Arabe + Français</option>
+                                <option value="fra">Français seul</option>
+                                <option value="ara">Arabe seul</option>
+                                <option value="eng">Anglais</option>
+                            </select>
+                        </div>
+
+                        <div class="config-row">
+                            <label title="Mode de prétraitement d'image">Prétraitement:</label>
+                            <select [(ngModel)]="zone.preprocess" class="sm-input">
+                                <option value="auto">Auto (selon langue)</option>
+                                <option value="arabic_textured">Arabe texturé</option>
+                                <option value="latin_simple">Latin simple</option>
+                                <option value="none">Aucun</option>
+                            </select>
+                        </div>
+
+                        <div class="config-row">
+                            <label title="Valeurs possibles séparées par des virgules">Valeurs attendues:</label>
+                            <input type="text" [(ngModel)]="zone.valeurs_str" placeholder="Ex: M, F (optionnel)"
+                                class="sm-input full-width">
+                        </div>
+                        }
+                    </div>
+
+                    <button class="btn-delete" (click)="deleteZone(zone.id)" title="Supprimer">
+                        🗑️
+                    </button>
+                </div>
+                }
+            </div>
+        </div>
+        }
+
+        <!-- Save Button -->
+        <div class="save-section">
+            <button class="btn btn-success" (click)="saveEntity()"
+                [disabled]="isSaving() || zones().length === 0 || !entityName()">
+                @if (isSaving()) {
+                <span class="spinner"></span> Sauvegarde...
+                } @else if (editMode()) {
+                💾 Mettre à jour l'entité
+                } @else {
+                💾 Sauvegarder l'entité
+                }
+            </button>
+            @if (editMode()) {
+            <button class="btn btn-outline" (click)="cancelEdit()">
+                ❌ Annuler
+            </button>
+            } @else {
+            <button class="btn btn-outline" (click)="reset()">
+                🔄 Réinitialiser
+            </button>
+            }
+        </div>
+        }
+    </div>
+</div>

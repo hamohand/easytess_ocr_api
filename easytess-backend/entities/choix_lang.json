@@ -1,0 +1,72 @@
+{
+  "nom": "choix_lang",
+  "description": "choix_lang",
+  "date_creation": "2026-01-30T12:14:54.371914",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_c8528c2a-c645-4c52-99fa-d9607566c058_passeport-dz_24-34.jpg",
+  "zones": [
+    {
+      "coords": [
+        0.2993,
+        0.595,
+        0.38,
+        0.614
+      ],
+      "id": 1769686169813,
+      "lang": "ara",
+      "nom": "nom",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.6168,
+        0.84,
+        0.68,
+        0.858
+      ],
+      "id": 1769686191840,
+      "lang": "fra",
+      "nom": "delivraPar",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "origine": {
+      "labels": [
+        "PASSPORT / PASSEPORT"
+      ],
+      "position_base": [
+        0,
+        0
+      ]
+    },
+    "largeur": {
+      "labels": [
+        "délivrance"
+      ],
+      "position_base": [
+        1,
+        0
+      ]
+    },
+    "hauteur": {
+      "labels": [
+        "P>DZA"
+      ],
+      "position_base": [
+        0,
+        1
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 1488,
+      "height": 2048
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 1488,
+      "height": 2048
+    }
+  }
+}

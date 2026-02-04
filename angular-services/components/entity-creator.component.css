@@ -1,0 +1,387 @@
+/* entity-creator.component.css */
+
+.entity-creator {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    color: #2c3e50;
+    font-size: 2rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.header p {
+    color: #6c757d;
+    margin: 0;
+}
+
+/* Entity Form */
+.entity-form {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* Upload Section */
+.upload-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.filename {
+    color: #495057;
+    font-style: italic;
+}
+
+/* Canvas Section */
+.canvas-section {
+    margin-bottom: 2rem;
+}
+
+.canvas-controls {
+    background: #e7f3ff;
+    padding: 1rem;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.zone-name-input {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.zone-name-input label {
+    font-weight: 600;
+    color: #495057;
+    white-space: nowrap;
+}
+
+.zone-name-input input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.instructions {
+    color: #0066cc;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.canvas-wrapper {
+    background: #fff;
+    border: 2px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    overflow: auto;
+}
+
+canvas {
+    cursor: crosshair;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+canvas.drawing {
+    cursor: crosshair;
+}
+
+/* Zones List */
+.zones-list {
+    margin-bottom: 2rem;
+}
+
+.zones-list h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.zones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.zone-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
+    transition: all 0.3s;
+}
+
+.zone-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.zone-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.zone-number {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.zone-name {
+    font-weight: 600;
+    color: #2c3e50;
+    flex: 1;
+}
+
+.zone-coords {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-family: 'Courier New', monospace;
+}
+
+/* Zone Config */
+.zone-config {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #dee2e6;
+}
+
+.config-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.config-row label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    min-width: 40px;
+}
+
+.sm-input {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    flex: 1;
+}
+
+.sm-input.full-width {
+    width: 100%;
+}
+
+.btn-delete {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s;
+}
+
+.btn-delete:hover {
+    background: #c82333;
+}
+
+/* Save Section */
+.save-section {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+    font-size: 1.1rem;
+    padding: 1rem 2rem;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: #218838;
+}
+
+.btn-outline {
+    background: white;
+    color: #6c757d;
+    border: 2px solid #6c757d;
+}
+
+.btn-outline:hover {
+    background: #6c757d;
+    color: white;
+}
+
+/* Spinner */
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Messages */
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid #f5c6cb;
+    margin-bottom: 1rem;
+    animation: slideIn 0.3s;
+}
+
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid #c3e6cb;
+    margin-bottom: 1rem;
+    animation: slideIn 0.3s;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .entity-creator {
+        padding: 1rem;
+    }
+
+    .canvas-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .zone-name-input {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .instructions {
+        white-space: normal;
+        text-align: center;
+    }
+
+    .zones-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .save-section {
+        flex-direction: column;
+    }
+}

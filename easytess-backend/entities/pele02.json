@@ -1,0 +1,37 @@
+{
+  "nom": "pele02",
+  "description": "pele 02",
+  "date_creation": "2026-01-28T10:12:47.083465",
+  "image_reference": "/app/uploads/temp_entite_c887ad99-9ec9-4312-859f-9ede1bfa2f6b_passeport-dz_24-34.jpg",
+  "zones": [
+    {
+      "coords": [
+        0.29,
+        0.5858,
+        0.6131,
+        0.6184
+      ],
+      "id": 1769593747852,
+      "nom": "nom",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.2908,
+        0.645,
+        0.6093,
+        0.6722
+      ],
+      "id": 1769593788093,
+      "nom": "prenom",
+      "type": "text"
+    }
+  ],
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 1488,
+      "height": 2048
+    }
+  }
+}

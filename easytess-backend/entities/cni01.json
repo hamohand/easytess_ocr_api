@@ -1,0 +1,37 @@
+{
+  "nom": "cni01",
+  "description": "Carte d'identité.",
+  "date_creation": "2026-01-27T09:18:06.862621",
+  "image_reference": "/app/uploads/temp_entite_fb7fed7f-422d-4bf3-9928-960d43a8cca5_cni_dz_recto.jpeg",
+  "zones": [
+    {
+      "id": 1769505447163,
+      "nom": "nom",
+      "type": "text",
+      "coords": [
+        0.8226,
+        0.6082,
+        0.9177,
+        0.6706
+      ]
+    },
+    {
+      "id": 1769505469167,
+      "nom": "prenom",
+      "type": "text",
+      "coords": [
+        0.8226,
+        0.7228,
+        0.9192,
+        0.7806
+      ]
+    }
+  ],
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 663,
+      "height": 433
+    }
+  }
+}
