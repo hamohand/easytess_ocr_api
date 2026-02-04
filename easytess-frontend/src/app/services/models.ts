@@ -17,12 +17,15 @@ export interface EtiquetteReference {
 }
 
 // Cadre de référence pour définir le système de coordonnées
-// Cadre de référence pour définir le système de coordonnées
 export interface CadreReference {
-    // NOUVEAU SYSTÈME (HAUT, DROITE, GAUCHE-BAS)
+    // NOUVEAU SYSTÈME (HAUT, DROITE, GAUCHE, BAS) - 4 étiquettes
     haut: EtiquetteReference;        // Y min
     droite: EtiquetteReference;      // X max
-    gauche_bas: EtiquetteReference;  // X min, Y max
+    gauche: EtiquetteReference;      // X min
+    bas: EtiquetteReference;         // Y max
+
+    // Backward compatibility (deprecated - old 3-anchor system)
+    gauche_bas?: EtiquetteReference;  // X min, Y max (sera migré automatiquement)
 
     // Legacy support (deprecated)
     origine?: EtiquetteReference;

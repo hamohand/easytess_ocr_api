@@ -114,11 +114,11 @@
             </div>
         </div>
 
-        <!-- NOUVEAU: Section Cadre de Référence (3 étiquettes) -->
+        <!-- NOUVEAU: Section Cadre de Référence (4 étiquettes) -->
         <div class="anchors-section">
             <h3>📐 Cadre de Référence</h3>
             <p class="section-help">
-                Définissez 3 étiquettes pour créer un système de coordonnées stable.<br>
+                Définissez 4 étiquettes pour créer un système de coordonnées stable (HAUT, DROITE, GAUCHE, BAS).<br>
                 <strong>Texte:</strong> PASSPORT, PASSEPORT (séparés par virgule)<br>
                 <strong>Regex:</strong> <code>regex:\d&#123;9&#125;</code> (9 chiffres consécutifs)
             </p>
@@ -171,28 +171,51 @@
                     </div>
                 </div>
 
-                <!-- Étiquette GAUCHE-BAS (X min, Y max) -->
-                <div class="cadre-label-item ref-gauche-bas">
+
+                <!-- Étiquette GAUCHE (X min) -->
+                <div class="cadre-label-item ref-gauche">
                     <div class="label-header">
-                        <span class="label-icon">↙️</span>
-                        <span class="label-title">GAUCHE-BAS</span>
-                        <span class="label-hint">(définit origines X et Y)</span>
+                        <span class="label-icon">⏪</span>
+                        <span class="label-title">GAUCHE</span>
+                        <span class="label-hint">(définit origine X)</span>
                     </div>
                     <div class="input-with-action">
-                        <input type="text" [ngModel]="cadreGaucheBas().labels_str"
-                            (ngModelChange)="cadreGaucheBas.set({labels_str: $event, position_base: cadreGaucheBas().position_base})"
-                            placeholder="Ex: SIGNATURE (texte en bas à gauche)" class="cadre-input">
+                        <input type="text" [ngModel]="cadreGauche().labels_str"
+                            (ngModelChange)="cadreGauche.set({labels_str: $event, position_base: cadreGauche().position_base})"
+                            placeholder="Ex: PHOTO (texte à gauche)" class="cadre-input">
                         <button type="button" class="btn-target"
-                            [class.active]="activeReferenceSelection() === 'gauche_bas'"
-                            (click)="startReferenceSelection('gauche_bas')"
+                            [class.active]="activeReferenceSelection() === 'gauche'"
+                            (click)="startReferenceSelection('gauche')"
                             title="Cliquer pour définir la position sur l'image">
                             📍
                         </button>
                     </div>
                     <div class="coords-display">
-                        Pos: [ {{cadreGaucheBas().position_base[0] | number:'1.3-3'}},
-                        {{cadreGaucheBas().position_base[1] |
-                        number:'1.3-3'}} ]
+                        Pos: [ {{cadreGauche().position_base[0] | number:'1.3-3'}},
+                        {{cadreGauche().position_base[1] | number:'1.3-3'}} ]
+                    </div>
+                </div>
+
+                <!-- Étiquette BAS (Y max) -->
+                <div class="cadre-label-item ref-bas">
+                    <div class="label-header">
+                        <span class="label-icon">🔽</span>
+                        <span class="label-title">BAS</span>
+                        <span class="label-hint">(définit origine Y)</span>
+                    </div>
+                    <div class="input-with-action">
+                        <input type="text" [ngModel]="cadreBas().labels_str"
+                            (ngModelChange)="cadreBas.set({labels_str: $event, position_base: cadreBas().position_base})"
+                            placeholder="Ex: SIGNATURE (texte en bas)" class="cadre-input">
+                        <button type="button" class="btn-target" [class.active]="activeReferenceSelection() === 'bas'"
+                            (click)="startReferenceSelection('bas')"
+                            title="Cliquer pour définir la position sur l'image">
+                            📍
+                        </button>
+                    </div>
+                    <div class="coords-display">
+                        Pos: [ {{cadreBas().position_base[0] | number:'1.3-3'}},
+                        {{cadreBas().position_base[1] | number:'1.3-3'}} ]
                     </div>
                 </div>
             </div>
@@ -256,24 +279,24 @@
         @if (zones().length > 0) {
         <div class="zones-list">
             <h3>📋 Zones définies ({{ zones().length }})</h3>
-            
+
             <!-- NOUVEAU: Indicateur de système de coordonnées -->
             <div class="coordinate-info">
                 @if (isCadreValide()) {
-                    <div class="info-box info-primary">
-                        📐 <strong>Coordonnées relatives à l'image</strong>
-                        <p class="info-detail">Les coordonnées affichées sont relatives à l'image complète (0-1). 
+                <div class="info-box info-primary">
+                    📐 <strong>Coordonnées relatives à l'image</strong>
+                    <p class="info-detail">Les coordonnées affichées sont relatives à l'image complète (0-1).
                         À la sauvegarde, elles seront converties en coordonnées relatives au cadre de référence.</p>
-                    </div>
+                </div>
                 } @else {
-                    <div class="info-box info-warning">
-                        ⚠️ <strong>Aucun cadre de référence</strong>
-                        <p class="info-detail">Les coordonnées sont relatives à l'image complète. 
+                <div class="info-box info-warning">
+                    ⚠️ <strong>Aucun cadre de référence</strong>
+                    <p class="info-detail">Les coordonnées sont relatives à l'image complète.
                         Définissez un cadre de référence pour plus de robustesse.</p>
-                    </div>
+                </div>
                 }
             </div>
-            
+
             <div class="zones-grid">
                 @for (zone of zones(); track zone.id) {
                 <div class="zone-card">

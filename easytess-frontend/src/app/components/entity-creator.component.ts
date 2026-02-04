@@ -41,13 +41,15 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
     errorMessage = signal<string>('');
     successMessage = signal<string>('');
 
-    // NOUVEAU: Signaux pour Cadre de Référence (3 étiquettes)
+    // NOUVEAU: Signaux pour Cadre de Référence (4 étiquettes)
     // HAUT : pour déterminer le point le plus haut (Y min)
     cadreHaut = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0.5, 0] });
     // DROITE : pour déterminer le point le plus à droite (X max)
     cadreDroite = signal<EtiquetteDrawing>({ labels_str: '', position_base: [1, 0.5] });
-    // GAUCHE-BAS : pour déterminer le point le plus à gauche et le point le plus bas (X min, Y max)
-    cadreGaucheBas = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0, 1] });
+    // GAUCHE : pour déterminer le point le plus à gauche (X min)
+    cadreGauche = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0, 0.5] });
+    // BAS : pour déterminer le point le plus bas (Y max)
+    cadreBas = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0.5, 1] });
 
     // Paramètres calculés du cadre de référence
     cadreParams = signal<{
@@ -67,7 +69,7 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
     editingEntityName = signal<string>(''); // Nom de l'entité en cours d'édition
 
     // NOUVEAU: Mode de sélection visuelle pour le cadre
-    activeReferenceSelection = signal<'haut' | 'droite' | 'gauche_bas' | null>(null);
+    activeReferenceSelection = signal<'haut' | 'droite' | 'gauche' | 'bas' | null>(null);
     isDetecting = signal<boolean>(false); // État de détection OCR en cours
 
     // Canvas state
@@ -176,7 +178,7 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
     /**
      * Active le mode de sélection visuelle pour une étiquette du cadre
      */
-    startReferenceSelection(type: 'haut' | 'droite' | 'gauche_bas') {
+    startReferenceSelection(type: 'haut' | 'droite' | 'gauche' | 'bas') {
         this.activeReferenceSelection.set(type);
         // Curseur en mode cible
         if (this.canvasRef) {
@@ -204,8 +206,10 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                 this.cadreHaut.update(c => ({ ...c, position_base: [relX, relY] }));
             } else if (selectionType === 'droite') {
                 this.cadreDroite.update(c => ({ ...c, position_base: [relX, relY] }));
-            } else if (selectionType === 'gauche_bas') {
-                this.cadreGaucheBas.update(c => ({ ...c, position_base: [relX, relY] }));
+            } else if (selectionType === 'gauche') {
+                this.cadreGauche.update(c => ({ ...c, position_base: [relX, relY] }));
+            } else if (selectionType === 'bas') {
+                this.cadreBas.update(c => ({ ...c, position_base: [relX, relY] }));
             }
 
             console.log(`📍 Position ${selectionType} définie à: [${relX}, ${relY}]`);
@@ -336,24 +340,26 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
      * Dessine le cadre de référence sur le canvas (ORIGINE, LARGEUR, HAUTEUR)
      */
     /**
-     * Dessine le cadre de référence sur le canvas (HAUT, DROITE, GAUCHE-BAS)
+     * Dessine le cadre de référence sur le canvas (HAUT, DROITE, GAUCHE, BAS)
      */
     drawCadreReference(canvas: HTMLCanvasElement) {
         if (!this.ctx || !this.isCadreValide()) return;
 
         const hautPos = this.cadreHaut().position_base;
         const droitePos = this.cadreDroite().position_base;
-        const gaucheBasPos = this.cadreGaucheBas().position_base;
+        const gauchePos = this.cadreGauche().position_base;
+        const basPos = this.cadreBas().position_base;
 
         // Convertir en pixels canvas
         const hPos = { x: hautPos[0] * canvas.width, y: hautPos[1] * canvas.height };
         const dPos = { x: droitePos[0] * canvas.width, y: droitePos[1] * canvas.height };
-        const gbPos = { x: gaucheBasPos[0] * canvas.width, y: gaucheBasPos[1] * canvas.height };
+        const gPos = { x: gauchePos[0] * canvas.width, y: gauchePos[1] * canvas.height };
+        const bPos = { x: basPos[0] * canvas.width, y: basPos[1] * canvas.height };
 
         // Calculer les limites du cadre
         const yMin = hPos.y;
-        const yMax = gbPos.y;
-        const xMin = gbPos.x;
+        const yMax = bPos.y;
+        const xMin = gPos.x;
         const xMax = dPos.x;
 
         // Dessiner le rectangle du cadre calculé
@@ -378,14 +384,11 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         // Ligne DROITE
         this.ctx.beginPath(); this.ctx.moveTo(xMax, 0); this.ctx.lineTo(xMax, canvas.height); this.ctx.stroke();
 
-        // Marqueur HAUT (Triangle Orange)
+        // Marqueurs pour les 4 étiquettes
         this.drawMarker(hPos.x, hPos.y, 'Haut', '#ff9800');
-
-        // Marqueur DROITE (Triangle Bleu)
         this.drawMarker(dPos.x, dPos.y, 'Dr.', '#2196f3');
-
-        // Marqueur GAUCHE-BAS (Triangle Vert)
-        this.drawMarker(gbPos.x, gbPos.y, 'G-B', '#4caf50');
+        this.drawMarker(gPos.x, gPos.y, 'G', '#4caf50');
+        this.drawMarker(bPos.x, bPos.y, 'Bas', '#f44336');
     }
 
     private drawMarker(x: number, y: number, label: string, color: string) {
@@ -440,12 +443,13 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
      * Vérifie si le cadre de référence est valide (les 3 étiquettes ont des labels)
      */
     /**
-     * Vérifie si le cadre de référence est valide (les 3 étiquettes ont des labels)
+     * Vérifie si le cadre de référence est valide (les 4 étiquettes ont des labels)
      */
     isCadreValide(): boolean {
         return this.cadreHaut().labels_str.trim().length > 0 &&
             this.cadreDroite().labels_str.trim().length > 0 &&
-            this.cadreGaucheBas().labels_str.trim().length > 0;
+            this.cadreGauche().labels_str.trim().length > 0 &&
+            this.cadreBas().labels_str.trim().length > 0;
     }
 
     /**
@@ -462,13 +466,15 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         // Note: on utilise des clés qui correspondent au backend/service
         const etiquettes: any = {};
 
-        const hautLabels = this.cadreHaut().labels_str.split(',').map(s => s.trim()).filter(s => s);
-        const droiteLabels = this.cadreDroite().labels_str.split(',').map(s => s.trim()).filter(s => s);
-        const gaucheBasLabels = this.cadreGaucheBas().labels_str.split(',').map(s => s.trim()).filter(s => s);
+        const hautLabels = this.cadreHaut().labels_str.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+        const droiteLabels = this.cadreDroite().labels_str.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+        const gaucheLabels = this.cadreGauche().labels_str.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+        const basLabels = this.cadreBas().labels_str.split(',').map((s: string) => s.trim()).filter((s: string) => s);
 
         if (hautLabels.length > 0) etiquettes.haut = hautLabels;
         if (droiteLabels.length > 0) etiquettes.droite = droiteLabels;
-        if (gaucheBasLabels.length > 0) etiquettes.gauche_bas = gaucheBasLabels;
+        if (gaucheLabels.length > 0) etiquettes.gauche = gaucheLabels;
+        if (basLabels.length > 0) etiquettes.bas = basLabels;
 
         if (Object.keys(etiquettes).length === 0) {
             this.errorMessage.set('Veuillez renseigner au moins une étiquette à détecter');
@@ -496,10 +502,16 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                             position_base: [result.positions['droite'].x, result.positions['droite'].y]
                         }));
                     }
-                    if (result.positions['gauche_bas']?.found) {
-                        this.cadreGaucheBas.update(c => ({
+                    if (result.positions['gauche']?.found) {
+                        this.cadreGauche.update((c: EtiquetteDrawing) => ({
                             ...c,
-                            position_base: [result.positions['gauche_bas'].x, result.positions['gauche_bas'].y]
+                            position_base: [result.positions['gauche'].x, result.positions['gauche'].y]
+                        }));
+                    }
+                    if (result.positions['bas']?.found) {
+                        this.cadreBas.update((c: EtiquetteDrawing) => ({
+                            ...c,
+                            position_base: [result.positions['bas'].x, result.positions['bas'].y]
                         }));
                     }
 
@@ -534,21 +546,22 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
     calculerParametresCadre(): void {
         const haut = this.cadreHaut().position_base;
         const droite = this.cadreDroite().position_base;
-        const gaucheBas = this.cadreGaucheBas().position_base;
+        const gauche = this.cadreGauche().position_base;
+        const bas = this.cadreBas().position_base;
 
-        // Largeur relative du cadre (Droite.x - GaucheBas.x)
-        const largeurRel = Math.abs(droite[0] - gaucheBas[0]);
-        // Hauteur relative du cadre (GaucheBas.y - Haut.y)
-        const hauteurRel = Math.abs(gaucheBas[1] - haut[1]);
+        // Largeur relative du cadre (Droite.x - Gauche.x)
+        const largeurRel = Math.abs(droite[0] - gauche[0]);
+        // Hauteur relative du cadre (Bas.y - Haut.y)
+        const hauteurRel = Math.abs(bas[1] - haut[1]);
 
-        // Valurs absolues
+        // Valeurs absolues
         const largeurPx = Math.round(largeurRel * this.imgWidth);
         const hauteurPx = Math.round(hauteurRel * this.imgHeight);
 
         this.cadreParams.set({
             largeur: parseFloat((largeurRel * 100).toFixed(2)),
             hauteur: parseFloat((hauteurRel * 100).toFixed(2)),
-            x_min: gaucheBas[0],
+            x_min: gauche[0],
             y_min: haut[1],
             largeur_px: largeurPx,
             hauteur_px: hauteurPx,
@@ -562,12 +575,13 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
 
         const haut = this.cadreHaut().position_base;
         const droite = this.cadreDroite().position_base;
-        const gaucheBas = this.cadreGaucheBas().position_base;
+        const gauche = this.cadreGauche().position_base;
+        const bas = this.cadreBas().position_base;
 
-        const x = gaucheBas[0];
+        const x = gauche[0];
         const y = haut[1];
-        let w = Math.abs(droite[0] - gaucheBas[0]);
-        let h = Math.abs(gaucheBas[1] - haut[1]);
+        let w = Math.abs(droite[0] - gauche[0]);
+        let h = Math.abs(bas[1] - haut[1]);
 
         // Protection
         if (w < 0.001) w = 1;
@@ -662,9 +676,13 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                     labels: parseLabels(this.cadreDroite().labels_str),
                     position_base: this.cadreDroite().position_base
                 },
-                gauche_bas: {
-                    labels: parseLabels(this.cadreGaucheBas().labels_str),
-                    position_base: this.cadreGaucheBas().position_base
+                gauche: {
+                    labels: parseLabels(this.cadreGauche().labels_str),
+                    position_base: this.cadreGauche().position_base
+                },
+                bas: {
+                    labels: parseLabels(this.cadreBas().labels_str),
+                    position_base: this.cadreBas().position_base
                 },
                 image_base_dimensions: {
                     width: this.imgWidth,
@@ -708,10 +726,11 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         this.uploadedImageFilename.set('');
         this.imageUrl.set('');
         this.zones.set([]);
-        // Réinitialiser les étiquettes du cadre de référence
+        // Réinitialiser les étiquettes du cadre de référence (4 anchors)
         this.cadreHaut.set({ labels_str: '', position_base: [0.5, 0] });
         this.cadreDroite.set({ labels_str: '', position_base: [1, 0.5] });
-        this.cadreGaucheBas.set({ labels_str: '', position_base: [0, 1] });
+        this.cadreGauche.set({ labels_str: '', position_base: [0, 0.5] });
+        this.cadreBas.set({ labels_str: '', position_base: [0.5, 1] });
         this.cadreParams.set(null);
         this.currentZoneName.set('');
         this.successMessage.set('');
@@ -762,8 +781,8 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                 if (entite.cadre_reference) {
                     const cadre = entite.cadre_reference;
 
-                    if (cadre.haut) {
-                        // Nouveau format
+                    if (cadre.haut && cadre.droite) {
+                        // Charger HAUT et DROITE (toujours présents)
                         this.cadreHaut.set({
                             labels_str: cadre.haut.labels.join(', '),
                             position_base: cadre.haut.position_base
@@ -772,12 +791,36 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                             labels_str: cadre.droite.labels.join(', '),
                             position_base: cadre.droite.position_base
                         });
-                        this.cadreGaucheBas.set({
-                            labels_str: cadre.gauche_bas.labels.join(', '),
-                            position_base: cadre.gauche_bas.position_base
-                        });
+
+                        // Migration automatique: ancien format 3-étiquettes (GAUCHE-BAS) → nouveau 4-étiquettes (GAUCHE + BAS)
+                        if (cadre.gauche && cadre.bas) {
+                            // Nouveau format 4 anchors: charger directement
+                            this.cadreGauche.set({
+                                labels_str: cadre.gauche.labels.join(', '),
+                                position_base: cadre.gauche.position_base
+                            });
+                            this.cadreBas.set({
+                                labels_str: cadre.bas.labels.join(', '),
+                                position_base: cadre.bas.position_base
+                            });
+                            console.log('✅ Cadre 4-anchors chargé');
+                        } else if (cadre.gauche_bas) {
+                            // Ancien format 3 anchors: migrer GAUCHE-BAS → GAUCHE + BAS
+                            // GAUCHE récupère la position X, Y du GAUCHE-BAS
+                            this.cadreGauche.set({
+                                labels_str: cadre.gauche_bas.labels.join(', '),
+                                position_base: [cadre.gauche_bas.position_base[0], 0.5]  // X de gauche_bas, Y au milieu
+                            });
+                            // BAS récupère la position Y du GAUCHE-BAS
+                            this.cadreBas.set({
+                                labels_str: cadre.gauche_bas.labels.join(', '),
+                                position_base: [0.5, cadre.gauche_bas.position_base[1]]  // X au milieu, Y de gauche_bas
+                            });
+                            console.log('⚠️ Migration automatique 3-anchors → 4-anchors effectuée');
+                            this.errorMessage.set('⚠️ Ancien format 3-étiquettes détecté et migré automatiquement vers 4-étiquettes.');
+                        }
                     } else if (cadre.origine) {
-                        // Legacy format fallback (migration approximative)
+                        // Legacy format fallback (migration approximative depuis l'ancien ancien système)
                         this.cadreHaut.set({
                             labels_str: cadre.origine.labels.join(', '),
                             position_base: cadre.origine.position_base
@@ -789,22 +832,28 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                             });
                         }
                         if (cadre.hauteur) {
-                            this.cadreGaucheBas.set({
+                            // Migrer hauteur vers GAUCHE + BAS
+                            this.cadreGauche.set({
+                                labels_str: cadre.hauteur.labels.join(', '),
+                                position_base: [0, 0.5]
+                            });
+                            this.cadreBas.set({
                                 labels_str: cadre.hauteur.labels.join(', '),
                                 position_base: cadre.hauteur.position_base
                             });
                         }
-                        this.errorMessage.set('⚠️ Format de cadre obsolète converti. Veuillez vérifier les positions (HAUT, DROITE, GAUCHE-BAS).');
+                        this.errorMessage.set('⚠️ Format de cadre très obsolète converti. Veuillez vérifier les positions.');
                     }
 
                     // Calculer les paramètres du cadre
                     this.calculerParametresCadre();
                     console.log('📐 Cadre de référence chargé:', this.cadreParams());
                 } else {
-                    // Réinitialiser les signaux du cadre
+                    // Réinitialiser les signaux du cadre (4 anchors)
                     this.cadreHaut.set({ labels_str: '', position_base: [0.5, 0] });
                     this.cadreDroite.set({ labels_str: '', position_base: [1, 0.5] });
-                    this.cadreGaucheBas.set({ labels_str: '', position_base: [0, 1] });
+                    this.cadreGauche.set({ labels_str: '', position_base: [0, 0.5] });
+                    this.cadreBas.set({ labels_str: '', position_base: [0.5, 1] });
                     this.cadreParams.set(null);
                 }
 

@@ -187,8 +187,14 @@ def detecter_etiquettes():
                     elif etiquette_id == 'droite':
                         # Pour DROITE, utiliser x_max (bord droit) et y centre
                         x = det.get('x_max', x)
+                    elif etiquette_id == 'gauche':
+                        # NEW: Pour GAUCHE (4-anchor system), utiliser x_min (bord gauche) et y centre
+                        x = det.get('x_min', x)
+                    elif etiquette_id == 'bas':
+                        # NEW: Pour BAS (4-anchor system), utiliser y_max (bord bas) et x centre
+                        y = det.get('y_max', y)
                     elif etiquette_id == 'gauche_bas':
-                        # Pour GAUCHE-BAS, utiliser x_min (bord gauche) et y_max (bord bas)
+                        # Pour GAUCHE-BAS (legacy 3-anchor system), utiliser x_min (bord gauche) et y_max (bord bas)
                         x = det.get('x_min', x)
                         y = det.get('y_max', y)
                     elif etiquette_id == 'origine':
