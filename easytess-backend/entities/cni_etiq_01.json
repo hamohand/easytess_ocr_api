@@ -1,0 +1,96 @@
+{
+  "nom": "cni_etiq_01",
+  "description": "aa",
+  "date_creation": "2026-02-05T19:00:04.526119",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_18b05d2a-e04d-4d8c-84b5-9fb7f75b93b9_cni_dz_recto.jpeg",
+  "zones": [
+    {
+      "id": 1770314274204,
+      "nom": "nom",
+      "type": "text",
+      "lang": "ara",
+      "preprocess": "auto",
+      "coords": [
+        0.7022895454545456,
+        0.5833809638554217,
+        0.9135454545454547,
+        0.6556867469879518
+      ]
+    },
+    {
+      "id": 1770314376299,
+      "nom": "date",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "auto",
+      "coords": [
+        0.5727031818181818,
+        0.8074975903614457,
+        0.8249445454545454,
+        0.8748995180722892
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.9509803921568627,
+        0.04157043879907621
+      ],
+      "template_coords": [
+        0.9246,
+        0.0427,
+        0.9774,
+        0.0935
+      ],
+      "template_path": "templates/cni_etiq_01/haut_template.png"
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        0.9773755656108597,
+        0.06928406466512702
+      ],
+      "template_coords": [
+        0.9216,
+        0.0441,
+        0.9774,
+        0.0949
+      ],
+      "template_path": "templates/cni_etiq_01/droite_template.png"
+    },
+    "gauche": {
+      "labels": [
+        "regex:\\d{9}"
+      ],
+      "position_base": [
+        0.3137254901960784,
+        0.24364896073903003
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 663,
+      "height": 433
+    },
+    "dimensions_absolues": {
+      "largeur": 440,
+      "hauteur": 415,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 663,
+      "height": 433
+    }
+  }
+}

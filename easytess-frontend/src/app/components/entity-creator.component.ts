@@ -14,6 +14,9 @@ interface ZoneDrawing extends Zone {
 interface EtiquetteDrawing {
     labels_str: string;      // Texte comma-separated pour l'input
     position_base: [number, number];
+    template_coords?: [number, number, number, number]; // Image template region
+    template_preview?: string; // Base64 preview of the template
+    detected_bbox?: [number, number, number, number]; // Bounding box detected by OCR/Image matching
 }
 
 @Component({
@@ -71,6 +74,9 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
     // NOUVEAU: Mode de sélection visuelle pour le cadre
     activeReferenceSelection = signal<'haut' | 'droite' | 'gauche' | 'bas' | null>(null);
     isDetecting = signal<boolean>(false); // État de détection OCR en cours
+
+    // NOUVEAU: Mode de sélection d'image template pour ancre
+    anchorTemplateSelection = signal<'haut' | 'droite' | 'gauche' | 'bas' | null>(null);
 
     // Canvas state
     private ctx: CanvasRenderingContext2D | null = null;
@@ -186,6 +192,45 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         }
     }
 
+    /**
+     * Active le mode de sélection d'image template pour une ancre
+     */
+    startAnchorTemplateSelection(type: 'haut' | 'droite' | 'gauche' | 'bas') {
+        this.anchorTemplateSelection.set(type);
+        // Curseur en mode sélection de zone
+        if (this.canvasRef) {
+            this.canvasRef.nativeElement.style.cursor = 'crosshair';
+        }
+        this.successMessage.set(`📷 Dessinez un rectangle autour de l'image à utiliser comme ancre ${type.toUpperCase()}`);
+    }
+
+    /**
+     * Efface le template image d'une ancre
+     */
+    clearAnchorTemplate(type: 'haut' | 'droite' | 'gauche' | 'bas') {
+        if (type === 'haut') {
+            this.cadreHaut.update(c => ({ ...c, template_coords: undefined }));
+        } else if (type === 'droite') {
+            this.cadreDroite.update(c => ({ ...c, template_coords: undefined }));
+        } else if (type === 'gauche') {
+            this.cadreGauche.update(c => ({ ...c, template_coords: undefined }));
+        } else if (type === 'bas') {
+            this.cadreBas.update(c => ({ ...c, template_coords: undefined }));
+        }
+        this.redrawCanvas();
+    }
+
+    /**
+     * Vérifie si une ancre a un template image défini
+     */
+    hasAnchorTemplate(type: 'haut' | 'droite' | 'gauche' | 'bas'): boolean {
+        if (type === 'haut') return !!this.cadreHaut().template_coords;
+        if (type === 'droite') return !!this.cadreDroite().template_coords;
+        if (type === 'gauche') return !!this.cadreGauche().template_coords;
+        if (type === 'bas') return !!this.cadreBas().template_coords;
+        return false;
+    }
+
     onMouseDown(event: MouseEvent) {
         if (!this.img) return;
 
@@ -252,10 +297,8 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
 
         this.isDrawing.set(false);
 
-        // Only add zone if it has a minimum size
+        // Only process if rectangle has minimum size
         if (this.currentRect.width > 10 && this.currentRect.height > 10) {
-            const zoneName = this.currentZoneName() || `Zone ${this.zones().length + 1}`;
-
             // Get canvas dimensions
             const canvas = this.canvasRef.nativeElement;
             const canvasWidth = canvas.width;
@@ -267,8 +310,6 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
             const x2_rel = (this.currentRect.x + this.currentRect.width) / canvasWidth;
             const y2_rel = (this.currentRect.y + this.currentRect.height) / canvasHeight;
 
-            // NOUVEAU: On stocke TOUJOURS en coordonnées image (0-1) dans l'éditeur
-            // La conversion vers le référentiel cadre se fait uniquement à la sauvegarde
             const finalCoords: [number, number, number, number] = [
                 parseFloat(x1_rel.toFixed(4)),
                 parseFloat(y1_rel.toFixed(4)),
@@ -276,6 +317,63 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                 parseFloat(y2_rel.toFixed(4))
             ];
 
+            // NOUVEAU: Mode sélection de template image pour ancre
+            const templateType = this.anchorTemplateSelection();
+            if (templateType) {
+                console.log(`📷 Template capturé pour ancre ${templateType}:`, finalCoords);
+
+                // Calculer le centre du template pour mettre à jour position_base également
+                // finalCoords = [x1, y1, x2, y2]
+                const centerX = parseFloat(((finalCoords[0] + finalCoords[2]) / 2).toFixed(4));
+                const centerY = parseFloat(((finalCoords[1] + finalCoords[3]) / 2).toFixed(4));
+                const centerPos: [number, number] = [centerX, centerY];
+
+                // Générer la preview image (Base64)
+                let previewUrl = '';
+                if (this.img) {
+                    const tempCanvas = document.createElement('canvas');
+                    const imgW = this.img.width; // Dimensions naturelles si chargée en mémoire
+                    const imgH = this.img.height;
+
+                    // Coordonnées en pixels image source
+                    const sx = finalCoords[0] * imgW;
+                    const sy = finalCoords[1] * imgH;
+                    const sw = (finalCoords[2] - finalCoords[0]) * imgW;
+                    const sh = (finalCoords[3] - finalCoords[1]) * imgH;
+
+                    tempCanvas.width = sw;
+                    tempCanvas.height = sh;
+                    const ctx = tempCanvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(this.img, sx, sy, sw, sh, 0, 0, sw, sh);
+                        previewUrl = tempCanvas.toDataURL('image/png');
+                    }
+                }
+
+                // Mettre à jour l'étiquette correspondante avec les coordonnées du template ET la position de base ET la preview
+                if (templateType === 'haut') {
+                    this.cadreHaut.update(c => ({ ...c, template_coords: finalCoords, position_base: centerPos, template_preview: previewUrl }));
+                } else if (templateType === 'droite') {
+                    this.cadreDroite.update(c => ({ ...c, template_coords: finalCoords, position_base: centerPos, template_preview: previewUrl }));
+                } else if (templateType === 'gauche') {
+                    this.cadreGauche.update(c => ({ ...c, template_coords: finalCoords, position_base: centerPos, template_preview: previewUrl }));
+                } else if (templateType === 'bas') {
+                    this.cadreBas.update(c => ({ ...c, template_coords: finalCoords, position_base: centerPos, template_preview: previewUrl }));
+                }
+
+                // Désactiver le mode de sélection template
+                this.anchorTemplateSelection.set(null);
+                canvas.style.cursor = 'default';
+                this.successMessage.set(`✅ Template image défini pour l'ancre ${templateType.toUpperCase()} (avec aperçu)`);
+                setTimeout(() => this.successMessage.set(''), 3000);
+
+                this.currentRect = null;
+                this.redrawCanvas();
+                return; // Ne pas créer de zone OCR
+            }
+
+            // Mode normal: créer une zone OCR
+            const zoneName = this.currentZoneName() || `Zone ${this.zones().length + 1}`;
             console.log(`✅ Zone créée (coords image):`, finalCoords);
 
             const zone: ZoneDrawing = {
@@ -346,15 +444,9 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         if (!this.ctx) return;
 
         // DEBUG: Log anchor states
-        console.log('🔍 drawCadreReference called');
-        console.log('  HAUT:', this.cadreHaut());
-        console.log('  DROITE:', this.cadreDroite());
-        console.log('  GAUCHE:', this.cadreGauche());
-        console.log('  BAS:', this.cadreBas());
-        console.log('  isCadreValide():', this.isCadreValide());
+        // console.log('🔍 drawCadreReference called', this.cadreHaut(), this.cadreDroite(), this.cadreGauche(), this.cadreBas());
 
         if (!this.isCadreValide()) {
-            console.warn('⚠️ Cadre invalide - dessin annulé');
             return;
         }
 
@@ -375,31 +467,57 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         const xMin = gPos.x;
         const xMax = dPos.x;
 
-        console.log(`📐 Frame coordinates: xMin=${xMin.toFixed(2)}, yMin=${yMin.toFixed(2)}, xMax=${xMax.toFixed(2)}, yMax=${yMax.toFixed(2)}`);
-
-        // Dessiner le rectangle du cadre calculé
+        // Dessiner le rectangle du cadre calculé (AABB Global)
         this.ctx.strokeStyle = '#ff00ff';
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([8, 4]);
         this.ctx.beginPath();
         this.ctx.rect(xMin, yMin, xMax - xMin, yMax - yMin);
         this.ctx.stroke();
+        // NOUVEAU: Remplissage semi-transparent pour visualiser l'aire effective
+        this.ctx.fillStyle = 'rgba(255, 0, 255, 0.1)';
+        this.ctx.fill();
         this.ctx.setLineDash([]);
 
         // Dessiner les limites étendues (lignes guides)
         this.ctx.strokeStyle = 'rgba(255, 0, 255, 0.3)';
         this.ctx.lineWidth = 1;
 
-        // Ligne HAUT
+        // Helper pour dessiner les BBoxes détectées
+        const drawDetectedBBox = (bbox: [number, number, number, number] | undefined, color: string) => {
+            if (!bbox || !this.img || !this.ctx) return;
+            const [bx, by, bx2, by2] = bbox;
+            // Conversion pixels image -> pixels canvas
+            const rX = canvas.width / this.img.width;
+            const rY = canvas.height / this.img.height;
+
+            const rx = bx * rX;
+            const ry = by * rY;
+            const rw = (bx2 - bx) * rX;
+            const rh = (by2 - by) * rY;
+
+            this.ctx.save();
+            this.ctx.strokeStyle = color;
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(rx, ry, rw, rh);
+            this.ctx.fillStyle = color + '44'; // Transparence
+            this.ctx.fillRect(rx, ry, rw, rh);
+            this.ctx.restore();
+        };
+
+        // Dessiner les bboxes individuelles des ancres détectées
+        drawDetectedBBox(this.cadreHaut().detected_bbox, '#ff9800');
+        drawDetectedBBox(this.cadreDroite().detected_bbox, '#2196f3');
+        drawDetectedBBox(this.cadreGauche().detected_bbox, '#9c27b0');
+        drawDetectedBBox(this.cadreBas().detected_bbox, '#4caf50');
+
+        // Lignes guides infinies
         this.ctx.beginPath(); this.ctx.moveTo(0, yMin); this.ctx.lineTo(canvas.width, yMin); this.ctx.stroke();
-        // Ligne BAS
         this.ctx.beginPath(); this.ctx.moveTo(0, yMax); this.ctx.lineTo(canvas.width, yMax); this.ctx.stroke();
-        // Ligne GAUCHE
         this.ctx.beginPath(); this.ctx.moveTo(xMin, 0); this.ctx.lineTo(xMin, canvas.height); this.ctx.stroke();
-        // Ligne DROITE
         this.ctx.beginPath(); this.ctx.moveTo(xMax, 0); this.ctx.lineTo(xMax, canvas.height); this.ctx.stroke();
 
-        // Marqueurs pour les 4 étiquettes
+        // Marqueurs pour les 4 étiquettes (Centres)
         this.drawMarker(hPos.x, hPos.y, 'Haut', '#ff9800');
         this.drawMarker(dPos.x, dPos.y, 'Dr.', '#2196f3');
         this.drawMarker(gPos.x, gPos.y, 'G', '#4caf50');
@@ -479,20 +597,41 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
             return;
         }
 
-        // Construire l'objet des étiquettes à chercher
+        // Construire l'objet des étiquettes à chercher (labels texte ET/OU templates image)
         const etiquettes: any = {};
 
-        const hautLabels = this.cadreHaut().labels_str.split(',').map((s: string) => s.trim()).filter((s: string) => s);
-        const droiteLabels = this.cadreDroite().labels_str.split(',').map((s: string) => s.trim()).filter((s: string) => s);
-        const gaucheLabels = this.cadreGauche().labels_str.split(',').map((s: string) => s.trim()).filter((s: string) => s);
-        const basLabels = this.cadreBas().labels_str.split(',').map((s: string) => s.trim()).filter((s: string) => s);
+        const addAnchorConfig = (type: 'haut' | 'droite' | 'gauche' | 'bas') => {
+            let labels: string[] = [];
+            let template_coords: [number, number, number, number] | undefined = undefined;
 
-        if (hautLabels.length > 0) etiquettes.haut = hautLabels;
-        if (droiteLabels.length > 0) etiquettes.droite = droiteLabels;
-        if (gaucheLabels.length > 0) etiquettes.gauche = gaucheLabels;
-        if (basLabels.length > 0) etiquettes.bas = basLabels;
+            if (type === 'haut') {
+                labels = this.cadreHaut().labels_str.split(',').map(s => s.trim()).filter(s => s);
+                template_coords = this.cadreHaut().template_coords;
+            } else if (type === 'droite') {
+                labels = this.cadreDroite().labels_str.split(',').map(s => s.trim()).filter(s => s);
+                template_coords = this.cadreDroite().template_coords;
+            } else if (type === 'gauche') {
+                labels = this.cadreGauche().labels_str.split(',').map(s => s.trim()).filter(s => s);
+                template_coords = this.cadreGauche().template_coords;
+            } else if (type === 'bas') {
+                labels = this.cadreBas().labels_str.split(',').map(s => s.trim()).filter(s => s);
+                template_coords = this.cadreBas().template_coords;
+            }
 
-        // Si aucune étiquette n'est définie, on reset tout aux bords par défaut (Plein écran)
+            if (labels.length > 0 || template_coords) {
+                etiquettes[type] = {
+                    labels: labels,
+                    template_coords: template_coords
+                };
+            }
+        };
+
+        addAnchorConfig('haut');
+        addAnchorConfig('droite');
+        addAnchorConfig('gauche');
+        addAnchorConfig('bas');
+
+        // Si aucune étiquette n'est définie (ni texte ni image), on reset aux bords par défaut (Plein écran)
         if (Object.keys(etiquettes).length === 0) {
             console.log('⚠️ Aucune étiquette définie -> Utilisation des bords par défaut (Plein écran)');
             this.cadreHaut.update(c => ({ ...c, position_base: [0.5, 0] }));
@@ -524,48 +663,52 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                         console.log('  ✅ Updating HAUT:', result.positions['haut']);
                         this.cadreHaut.update(c => ({
                             ...c,
-                            position_base: [result.positions['haut'].x, result.positions['haut'].y]
+                            position_base: [result.positions['haut'].x, result.positions['haut'].y],
+                            detected_bbox: result.positions['haut'].bbox
                         }));
                     } else {
                         // Reset default (Edge)
                         console.log('  defaults HAUT');
-                        this.cadreHaut.update(c => ({ ...c, position_base: [0.5, 0] }));
+                        this.cadreHaut.update(c => ({ ...c, position_base: [0.5, 0], detected_bbox: undefined }));
                     }
 
                     if (result.positions['droite']?.found) {
                         console.log('  ✅ Updating DROITE:', result.positions['droite']);
                         this.cadreDroite.update(c => ({
                             ...c,
-                            position_base: [result.positions['droite'].x, result.positions['droite'].y]
+                            position_base: [result.positions['droite'].x, result.positions['droite'].y],
+                            detected_bbox: result.positions['droite'].bbox
                         }));
                     } else {
                         // Reset default (Edge)
                         console.log('  defaults DROITE');
-                        this.cadreDroite.update(c => ({ ...c, position_base: [1, 0.5] }));
+                        this.cadreDroite.update(c => ({ ...c, position_base: [1, 0.5], detected_bbox: undefined }));
                     }
 
                     if (result.positions['gauche']?.found) {
                         console.log('  ✅ Updating GAUCHE:', result.positions['gauche']);
                         this.cadreGauche.update(c => ({
                             ...c,
-                            position_base: [result.positions['gauche'].x, result.positions['gauche'].y]
+                            position_base: [result.positions['gauche'].x, result.positions['gauche'].y],
+                            detected_bbox: result.positions['gauche'].bbox
                         }));
                     } else {
                         // Reset default (Edge)
                         console.log('  defaults GAUCHE');
-                        this.cadreGauche.update(c => ({ ...c, position_base: [0, 0.5] }));
+                        this.cadreGauche.update(c => ({ ...c, position_base: [0, 0.5], detected_bbox: undefined }));
                     }
 
                     if (result.positions['bas']?.found) {
                         console.log('  ✅ Updating BAS:', result.positions['bas']);
                         this.cadreBas.update(c => ({
                             ...c,
-                            position_base: [result.positions['bas'].x, result.positions['bas'].y]
+                            position_base: [result.positions['bas'].x, result.positions['bas'].y],
+                            detected_bbox: result.positions['bas'].bbox
                         }));
                     } else {
                         // Reset default (Edge)
                         console.log('  defaults BAS');
-                        this.cadreBas.update(c => ({ ...c, position_base: [0.5, 1] }));
+                        this.cadreBas.update(c => ({ ...c, position_base: [0.5, 1], detected_bbox: undefined }));
                     }
 
                     // Recalculer les paramètres
@@ -723,19 +866,23 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
             cadre_reference = {
                 haut: {
                     labels: parseLabels(this.cadreHaut().labels_str),
-                    position_base: this.cadreHaut().position_base
+                    position_base: this.cadreHaut().position_base,
+                    ...(this.cadreHaut().template_coords && { template_coords: this.cadreHaut().template_coords })
                 },
                 droite: {
                     labels: parseLabels(this.cadreDroite().labels_str),
-                    position_base: this.cadreDroite().position_base
+                    position_base: this.cadreDroite().position_base,
+                    ...(this.cadreDroite().template_coords && { template_coords: this.cadreDroite().template_coords })
                 },
                 gauche: {
                     labels: parseLabels(this.cadreGauche().labels_str),
-                    position_base: this.cadreGauche().position_base
+                    position_base: this.cadreGauche().position_base,
+                    ...(this.cadreGauche().template_coords && { template_coords: this.cadreGauche().template_coords })
                 },
                 bas: {
                     labels: parseLabels(this.cadreBas().labels_str),
-                    position_base: this.cadreBas().position_base
+                    position_base: this.cadreBas().position_base,
+                    ...(this.cadreBas().template_coords && { template_coords: this.cadreBas().template_coords })
                 },
                 image_base_dimensions: {
                     width: this.imgWidth,

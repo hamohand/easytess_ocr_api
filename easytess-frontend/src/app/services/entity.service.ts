@@ -112,9 +112,11 @@ export class EntityService {
     detecterEtiquettes(
         filename: string,
         etiquettes: {
-            haut?: string[];
-            droite?: string[];
-            gauche_bas?: string[];
+            haut?: { labels?: string[], template_coords?: number[] } | string[];
+            droite?: { labels?: string[], template_coords?: number[] } | string[];
+            gauche?: { labels?: string[], template_coords?: number[] } | string[];
+            bas?: { labels?: string[], template_coords?: number[] } | string[];
+            gauche_bas?: string[]; // Legacy (toujours string[])
             origine?: string[]; // Legacy
             largeur?: string[]; // Legacy
             hauteur?: string[]; // Legacy
@@ -123,7 +125,7 @@ export class EntityService {
         success: boolean;
         toutes_trouvees: boolean;
         positions: {
-            [key: string]: { x: number; y: number; found: boolean; text?: string }
+            [key: string]: { x: number; y: number; found: boolean; text?: string; bbox?: [number, number, number, number]; }
         };
         image_dimensions?: { width: number; height: number };
         error?: string;

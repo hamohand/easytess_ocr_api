@@ -6,6 +6,7 @@ from difflib import SequenceMatcher
 from PIL import Image, ImageOps
 from app.utils.image_utils import apply_pillow_patch
 from app.utils.qrcode_utils import decoder_code_hybride
+from app.services.image_matcher import find_template_orb
 
 # Apply patch
 apply_pillow_patch()
@@ -335,7 +336,7 @@ def ocr_global_avec_positions(image_path, lang='ara+fra'):
         return [], (img_w, img_h)
 
 
-def detecter_ancres(mots_ocr, ancres_config, img_dims, seuil_similarite=0.7):
+def detecter_ancres(mots_ocr, ancres_config, img_dims, seuil_similarite=0.7, image_path=None):
     """
     Cherche les ancres définies dans les résultats OCR.
     
@@ -344,6 +345,7 @@ def detecter_ancres(mots_ocr, ancres_config, img_dims, seuil_similarite=0.7):
         ancres_config: Liste d'ancres avec leurs labels à chercher
         img_dims: (width, height) de l'image
         seuil_similarite: Seuil minimum pour accepter un match (0.0 à 1.0)
+        image_path: Chemin image source (optionnel, requis pour image matching)
     
     Formats de labels supportés:
         - Texte simple: "PASSEPORT" (recherche exacte ou fuzzy)
@@ -365,69 +367,110 @@ def detecter_ancres(mots_ocr, ancres_config, img_dims, seuil_similarite=0.7):
         meilleur_match = None
         meilleure_similarite = 0
         
-        for mot in mots_ocr:
-            texte_mot = mot['text']
-            texte_mot_upper = texte_mot.upper()
-            
-            for label in labels:
-                similarite = 0
-                is_regex = label.startswith('regex:')
+        # 1. Recherche Textuelle (OCR)
+        if labels and len(labels) > 0 and mots_ocr:
+            for mot in mots_ocr:
+                texte_mot = mot['text']
+                texte_mot_upper = texte_mot.upper()
                 
-                if is_regex:
-                    # Mode expression régulière
-                    pattern = label[6:]  # Enlever le préfixe "regex:"
-                    try:
-                        if re.search(pattern, texte_mot, re.IGNORECASE):
-                            similarite = 1.0
-                            logger.debug(f"  Regex match: '{texte_mot}' matches '{pattern}'")
-                    except re.error as e:
-                        logger.warning(f"  Regex invalide '{pattern}': {e}")
-                        continue
-                else:
-                    # Mode texte normal
-                    label_upper = label.upper()
+                for label in labels:
+                    similarite = 0
+                    is_regex = label.startswith('regex:')
                     
-                    # Vérifier si le label est contenu dans le mot (ex: "ID" dans "ID:")
-                    if label_upper in texte_mot_upper:
-                        similarite = 1.0
-                    # Vérifier si le mot est dans le label (ex: "REPUBL" dans "REPUBLIQUE")
-                    # Protection: Le mot doit être significatif (>=3 chars ou >70% du label)
-                    elif texte_mot_upper in label_upper:
-                        if len(texte_mot_upper) >= 3 or len(texte_mot_upper) / len(label_upper) > 0.7:
-                            similarite = 1.0
-                        else:
-                            # Trop court pour être certain -> Fuzzy matching
-                            similarite = SequenceMatcher(None, texte_mot_upper, label_upper).ratio()
+                    if is_regex:
+                        # Mode expression régulière
+                        pattern = label[6:]  # Enlever le préfixe "regex:"
+                        try:
+                            if re.search(pattern, texte_mot, re.IGNORECASE):
+                                similarite = 1.0
+                                logger.debug(f"  Regex match: '{texte_mot}' matches '{pattern}'")
+                        except re.error as e:
+                            logger.warning(f"  Regex invalide '{pattern}': {e}")
+                            continue
                     else:
-                        # Matching fuzzy
-                        similarite = SequenceMatcher(None, texte_mot_upper, label_upper).ratio()
-                
-                if similarite > meilleure_similarite and similarite >= seuil_similarite:
-                    meilleure_similarite = similarite
-                    # Centre du mot en pourcentage
-                    meilleur_match = {
-                        'text': texte_mot,
-                        'x': (mot['x'] + mot['width'] / 2) / img_w,
-                        'y': (mot['y'] + mot['height'] / 2) / img_h,
-                        'x_min': mot['x'] / img_w,
-                        'y_min': mot['y'] / img_h,
-                        'x_max': (mot['x'] + mot['width']) / img_w,
-                        'y_max': (mot['y'] + mot['height']) / img_h,
-                        'x_abs': mot['x'] + mot['width'] / 2,
-                        'y_abs': mot['y'] + mot['height'] / 2,
-                        'similarite': similarite,
-                        'label_matched': label,
-                        'is_regex': is_regex
-                    }
+                        # Mode texte normal
+                        label_upper = label.upper()
+                        
+                        # Vérifier si le label est contenu dans le mot (ex: "ID" dans "ID:")
+                        if label_upper in texte_mot_upper:
+                            similarite = 1.0
+                        # Vérifier si le mot est dans le label (ex: "REPUBL" dans "REPUBLIQUE")
+                        # Protection: Le mot doit être significatif (>=3 chars ou >70% du label)
+                        elif texte_mot_upper in label_upper:
+                            if len(texte_mot_upper) >= 3 or len(texte_mot_upper) / len(label_upper) > 0.7:
+                                similarite = 1.0
+                            else:
+                                # Trop court pour être certain -> Fuzzy matching
+                                similarite = SequenceMatcher(None, texte_mot_upper, label_upper).ratio()
+                        else:
+                            # Matching fuzzy
+                            similarite = SequenceMatcher(None, texte_mot_upper, label_upper).ratio()
+                    
+                    if similarite > meilleure_similarite and similarite >= seuil_similarite:
+                        meilleure_similarite = similarite
+                        # Centre du mot en pourcentage
+                        meilleur_match = {
+                            'text': texte_mot,
+                            'x': (mot['x'] + mot['width'] / 2) / img_w,
+                            'y': (mot['y'] + mot['height'] / 2) / img_h,
+                            'x_min': mot['x'] / img_w,
+                            'y_min': mot['y'] / img_h,
+                            'x_max': (mot['x'] + mot['width']) / img_w,
+                            'y_max': (mot['y'] + mot['height']) / img_h,
+                            'x_abs': mot['x'] + mot['width'] / 2,
+                            'y_abs': mot['y'] + mot['height'] / 2,
+                            'similarite': similarite,
+                            'label_matched': label,
+                            'is_regex': is_regex
+                        }
         
+        # Si trouvé par OCR, on enregistre
         if meilleur_match:
             resultats[ancre_id] = {**meilleur_match, 'found': True}
             match_type = "regex" if meilleur_match.get('is_regex') else "text"
             logger.info(f"✅ Ancre '{ancre_id}' trouvée ({match_type}): '{meilleur_match['text']}' (sim={meilleure_similarite:.0%})")
         else:
-            resultats[ancre_id] = {'found': False}
-            logger.warning(f"❌ Ancre '{ancre_id}' non trouvée (labels: {labels})")
-    
+            # 2. Fallback: Recherche par Template Image (ORB)
+            template_path = ancre.get('template_path_abs') # Priorité au chemin absolu (temp files)
+            if not template_path:
+                 # Résoudre chemin relatif si nécessaire
+                 rel_path = ancre.get('template_path')
+                 if rel_path:
+                     import flask
+                     upload_folder = flask.current_app.config.get('UPLOAD_FOLDER', 'uploads')
+                     template_path = os.path.join(upload_folder, rel_path)
+            
+            orb_match_found = False
+            
+            if template_path and os.path.exists(template_path) and image_path and os.path.exists(image_path):
+                 logger.info(f"📷 Fallback OCR échoué: Tentative matching image pour ancre {ancre_id}...")
+                 result = find_template_orb(image_path, template_path)
+                 
+                 if result.get('found'):
+                     resultats[ancre_id] = {
+                        'found': True,
+                        'text': f'[Image: {ancre_id}]',
+                        'x': result['x'],
+                        'y': result['y'],
+                        'x_min': result['x_min'],
+                        'y_min': result['y_min'],
+                        'x_max': result['x_max'],
+                        'y_max': result['y_max'],
+                        'source': 'image_template',
+                        'confidence': result.get('confidence', 0)
+                    }
+                     logger.info(f"  ✅ Template {ancre_id} trouvé à ({result['x']:.3f}, {result['y']:.3f})")
+                     orb_match_found = True
+                 else:
+                     logger.warning(f"  ⚠️ Template {ancre_id} non trouvé via ORB: {result.get('error')}")
+
+            if not orb_match_found:
+                resultats[ancre_id] = {'found': False}
+                if labels:
+                    logger.warning(f"❌ Ancre '{ancre_id}' non trouvée par OCR ni par Image (labels: {labels})")
+                else:
+                    logger.warning(f"❌ Ancre '{ancre_id}' non trouvée (pas de labels ni template valide)")
+
     toutes_trouvees = all(r['found'] for r in resultats.values())
     return resultats, toutes_trouvees
 
@@ -697,67 +740,83 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
         
         logger.info(f"🔍 DEBUG: Cadre reference reçu: {cadre_reference}")
         
-        if cadre_reference.get('haut') and cadre_reference['haut'].get('labels'):
-            ancres_config.append({'id': 'haut', 'labels': cadre_reference['haut'].get('labels', []), 'position_base': cadre_reference['haut'].get('position_base', [0.5, 0])})
-            logger.info(f"  ✅ Ancre HAUT configurée: {cadre_reference['haut'].get('labels', [])}")
-        if cadre_reference.get('droite') and cadre_reference['droite'].get('labels'):
-            ancres_config.append({'id': 'droite', 'labels': cadre_reference['droite'].get('labels', []), 'position_base': cadre_reference['droite'].get('position_base', [1, 0.5])})
-            logger.info(f"  ✅ Ancre DROITE configurée: {cadre_reference['droite'].get('labels', [])}")
         
-        # NOUVEAU: Support 4 ancres séparées (GAUCHE + BAS)
-        if cadre_reference.get('gauche') and cadre_reference['gauche'].get('labels'):
-            ancres_config.append({'id': 'gauche', 'labels': cadre_reference['gauche'].get('labels', []), 'position_base': cadre_reference['gauche'].get('position_base', [0, 0.5])})
-            logger.info(f"  ✅ Ancre GAUCHE configurée: {cadre_reference['gauche'].get('labels', [])}")
-        if cadre_reference.get('bas') and cadre_reference['bas'].get('labels'):
-            ancres_config.append({'id': 'bas', 'labels': cadre_reference['bas'].get('labels', []), 'position_base': cadre_reference['bas'].get('position_base', [0.5, 1])})
-            logger.info(f"  ✅ Ancre BAS configurée: {cadre_reference['bas'].get('labels', [])}")
+        # Helper pour construire la config ancre
+        def add_anchor_config(anchor_id, ref_data, default_pos):
+            if not ref_data: return
+            
+            labels = ref_data.get('labels', [])
+            template_path = ref_data.get('template_path')
+            
+            # Ajouter si labels OU template présent
+            if labels or template_path:
+                conf = {
+                    'id': anchor_id, 
+                    'labels': labels, 
+                    'position_base': ref_data.get('position_base', default_pos),
+                    'template_path': template_path
+                }
+                ancres_config.append(conf)
+                
+                log_msg = f"  ✅ Ancre {anchor_id.upper()} configurée:"
+                if labels: log_msg += f" Labels={labels}"
+                if template_path: log_msg += f" Template={template_path}"
+                logger.info(log_msg)
+
+        add_anchor_config('haut', cadre_reference.get('haut'), [0.5, 0])
+        add_anchor_config('droite', cadre_reference.get('droite'), [1, 0.5])
+        add_anchor_config('gauche', cadre_reference.get('gauche'), [0, 0.5])
+        add_anchor_config('bas', cadre_reference.get('bas'), [0.5, 1])
         
         # Support ancien format 3 ancres (backward compatibility)
-        if not cadre_reference.get('gauche') and not cadre_reference.get('bas') and cadre_reference.get('gauche_bas') and cadre_reference['gauche_bas'].get('labels'):
-            ancres_config.append({'id': 'gauche_bas', 'labels': cadre_reference['gauche_bas'].get('labels', []), 'position_base': cadre_reference['gauche_bas'].get('position_base', [0, 1])})
-            logger.info(f"  ✅ Ancre GAUCHE_BAS (legacy) configurée: {cadre_reference['gauche_bas'].get('labels', [])}")
+        if not cadre_reference.get('gauche') and not cadre_reference.get('bas'):
+             add_anchor_config('gauche_bas', cadre_reference.get('gauche_bas'), [0, 1])
             
         # Mapping legacy (si nouveau format absent)
         if not ancres_config and cadre_reference.get('origine'):
-            if cadre_reference.get('origine'):
-                ancres_config.append({'id': 'origine', 'labels': cadre_reference['origine'].get('labels', []), 'position_base': cadre_reference['origine'].get('position_base', [0, 0])})
-            if cadre_reference.get('largeur'):
-                ancres_config.append({'id': 'largeur', 'labels': cadre_reference['largeur'].get('labels', []), 'position_base': cadre_reference['largeur'].get('position_base', [1, 0])})
-            if cadre_reference.get('hauteur'):
-                ancres_config.append({'id': 'hauteur', 'labels': cadre_reference['hauteur'].get('labels', []), 'position_base': cadre_reference['hauteur'].get('position_base', [0, 1])})
+             add_anchor_config('origine', cadre_reference.get('origine'), [0, 0])
+             add_anchor_config('largeur', cadre_reference.get('largeur'), [1, 0])
+             add_anchor_config('hauteur', cadre_reference.get('hauteur'), [0, 1])
         
-        logger.info(f"📋 Total ancres configurées (avec labels): {len(ancres_config)}")
+        logger.info(f"📋 Total ancres configurées: {len(ancres_config)}")
         
         etiquettes_detectees = {}
         
-        # S'il y a des ancres textuelles à chercher
+        # S'il y a des ancres à chercher
         if len(ancres_config) > 0:
             # OCR global pour trouver les étiquettes
             mots_ocr, img_dims = ocr_global_avec_positions(image_path, lang='fra+eng')
             
+            # Note: mots_ocr peut être vide si pas de texte, mais on continue pour les templates
             if not mots_ocr:
-                erreur = "Impossible de lire le document (OCR global échoué)"
-                logger.error(f"❌ {erreur}")
-                return None, erreur
+                logger.warning("⚠️ OCR global vide (pas de texte détecté)")
+                mots_ocr = []
+                # Besoin de img_dims si OCR n'a rien renvoyé
+                if not img_dims:
+                    try: 
+                        with Image.open(image_path) as img: img_dims = img.size
+                    except: pass
+
+            if not img_dims: # Si toujours pas de dims, erreur
+                 return None, "Impossible de lire les dimensions de l'image"
             
-            # Détecter les étiquettes
+            # Détecter les étiquettes (avec image_path pour fallback template)
             etiquettes_detectees, toutes_trouvees = detecter_ancres(
                 mots_ocr, 
                 ancres_config, 
-                img_dims
+                img_dims,
+                image_path=image_path
             )
             
             if not toutes_trouvees:
                 etiquettes_manquantes = [k for k, v in etiquettes_detectees.items() if not v.get('found')]
-                # NOUVEAU: Au lieu de planter, on log un warning et on continue avec les valeurs par défaut (bords image)
                 logger.warning(f"⚠️ Certaines étiquettes non trouvées: {', '.join(etiquettes_manquantes)} -> Utilisation des bords de l'image par défaut")
-                # return None, erreur  <-- SUPPRIMÉ: On continue !
         else:
-            # Pas d'ancres textuelles, on utilise juste les dimensions de l'image
+            # Pas d'ancres configurées
             try:
                 with Image.open(image_path) as img:
                     img_dims = img.size
-                    logger.info(f"📏 Pas d'ancres textuelles, dimensions image: {img_dims}")
+                    logger.info(f"📏 Pas d'ancres configurées, dimensions image: {img_dims}")
             except Exception as e:
                 logger.error(f"❌ Impossible d'ouvrir l'image: {e}")
                 return None, str(e)
@@ -770,29 +829,29 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
         
         # 1. TOP (Y Min)
         if 'haut' in etiquettes_detectees and etiquettes_detectees['haut']['found']:
-            y_ref_min = etiquettes_detectees['haut']['y_min']
+            y_ref_min = etiquettes_detectees['haut']['y_min'] * img_h
         else:
             y_ref_min = 0 # Default to Image Top
             
         # 2. BOTTOM (Y Max)
         if 'bas' in etiquettes_detectees and etiquettes_detectees['bas']['found']:
-            y_ref_max = etiquettes_detectees['bas']['y_max']
+            y_ref_max = etiquettes_detectees['bas']['y_max'] * img_h
         elif 'gauche_bas' in etiquettes_detectees and etiquettes_detectees['gauche_bas']['found']:
-             y_ref_max = etiquettes_detectees['gauche_bas']['y_max']
+             y_ref_max = etiquettes_detectees['gauche_bas']['y_max'] * img_h
         else:
             y_ref_max = img_h # Default to Image Bottom
             
         # 3. LEFT (X Min)
         if 'gauche' in etiquettes_detectees and etiquettes_detectees['gauche']['found']:
-            x_ref_min = etiquettes_detectees['gauche']['x_min']
+            x_ref_min = etiquettes_detectees['gauche']['x_min'] * img_w
         elif 'gauche_bas' in etiquettes_detectees and etiquettes_detectees['gauche_bas']['found']:
-             x_ref_min = etiquettes_detectees['gauche_bas']['x_min']
+             x_ref_min = etiquettes_detectees['gauche_bas']['x_min'] * img_w
         else:
             x_ref_min = 0 # Default to Image Left
             
         # 4. RIGHT (X Max)
         if 'droite' in etiquettes_detectees and etiquettes_detectees['droite']['found']:
-            x_ref_max = etiquettes_detectees['droite']['x_max']
+            x_ref_max = etiquettes_detectees['droite']['x_max'] * img_w
         else:
             x_ref_max = img_w # Default to Image Right
             

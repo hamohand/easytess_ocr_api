@@ -133,17 +133,34 @@
                     </div>
                     <div class="input-with-action">
                         <input type="text" [ngModel]="cadreHaut().labels_str"
-                            (ngModelChange)="cadreHaut.set({labels_str: $event, position_base: cadreHaut().position_base})"
+                            (ngModelChange)="cadreHaut.set({labels_str: $event, position_base: cadreHaut().position_base, template_coords: cadreHaut().template_coords})"
                             placeholder="Ex: RÉPUBLIQUE ALGÉRIENNE" class="cadre-input">
                         <button type="button" class="btn-target" [class.active]="activeReferenceSelection() === 'haut'"
                             (click)="startReferenceSelection('haut')"
                             title="Cliquer pour définir la position sur l'image">
                             📍
                         </button>
+                        <button type="button" class="btn-camera" [class.active]="anchorTemplateSelection() === 'haut'"
+                            [class.has-template]="hasAnchorTemplate('haut')"
+                            (click)="startAnchorTemplateSelection('haut')"
+                            title="Dessiner un rectangle image comme ancre">
+                            📷
+                        </button>
+                        @if (hasAnchorTemplate('haut')) {
+                        <button type="button" class="btn-clear-template" (click)="clearAnchorTemplate('haut')"
+                            title="Supprimer le template">✖</button>
+                        }
                     </div>
                     <div class="coords-display">
                         Pos: [ {{cadreHaut().position_base[0] | number:'1.3-3'}}, {{cadreHaut().position_base[1] |
                         number:'1.3-3'}} ]
+                        @if (hasAnchorTemplate('haut')) {
+                        <span class="template-badge">📷 Image</span>
+                        @if (cadreHaut().template_preview) {
+                        <img [src]="cadreHaut().template_preview" class="template-thumbnail"
+                            title="Aperçu du template" />
+                        }
+                        }
                     </div>
                 </div>
 
@@ -156,7 +173,7 @@
                     </div>
                     <div class="input-with-action">
                         <input type="text" [ngModel]="cadreDroite().labels_str"
-                            (ngModelChange)="cadreDroite.set({labels_str: $event, position_base: cadreDroite().position_base})"
+                            (ngModelChange)="cadreDroite.set({labels_str: $event, position_base: cadreDroite().position_base, template_coords: cadreDroite().template_coords})"
                             placeholder="Ex: P<DZA (texte à droite)" class="cadre-input">
                         <button type="button" class="btn-target"
                             [class.active]="activeReferenceSelection() === 'droite'"
@@ -164,10 +181,27 @@
                             title="Cliquer pour définir la position sur l'image">
                             📍
                         </button>
+                        <button type="button" class="btn-camera" [class.active]="anchorTemplateSelection() === 'droite'"
+                            [class.has-template]="hasAnchorTemplate('droite')"
+                            (click)="startAnchorTemplateSelection('droite')"
+                            title="Dessiner un rectangle image comme ancre">
+                            📷
+                        </button>
+                        @if (hasAnchorTemplate('droite')) {
+                        <button type="button" class="btn-clear-template" (click)="clearAnchorTemplate('droite')"
+                            title="Supprimer le template">✖</button>
+                        }
                     </div>
                     <div class="coords-display">
                         Pos: [ {{cadreDroite().position_base[0] | number:'1.3-3'}}, {{cadreDroite().position_base[1] |
                         number:'1.3-3'}} ]
+                        @if (hasAnchorTemplate('droite')) {
+                        <span class="template-badge">📷 Image</span>
+                        @if (cadreDroite().template_preview) {
+                        <img [src]="cadreDroite().template_preview" class="template-thumbnail"
+                            title="Aperçu du template" />
+                        }
+                        }
                     </div>
                 </div>
 
@@ -181,7 +215,7 @@
                     </div>
                     <div class="input-with-action">
                         <input type="text" [ngModel]="cadreGauche().labels_str"
-                            (ngModelChange)="cadreGauche.set({labels_str: $event, position_base: cadreGauche().position_base})"
+                            (ngModelChange)="cadreGauche.set({labels_str: $event, position_base: cadreGauche().position_base, template_coords: cadreGauche().template_coords})"
                             placeholder="Ex: PHOTO (texte à gauche)" class="cadre-input">
                         <button type="button" class="btn-target"
                             [class.active]="activeReferenceSelection() === 'gauche'"
@@ -189,10 +223,27 @@
                             title="Cliquer pour définir la position sur l'image">
                             📍
                         </button>
+                        <button type="button" class="btn-camera" [class.active]="anchorTemplateSelection() === 'gauche'"
+                            [class.has-template]="hasAnchorTemplate('gauche')"
+                            (click)="startAnchorTemplateSelection('gauche')"
+                            title="Dessiner un rectangle image comme ancre">
+                            📷
+                        </button>
+                        @if (hasAnchorTemplate('gauche')) {
+                        <button type="button" class="btn-clear-template" (click)="clearAnchorTemplate('gauche')"
+                            title="Supprimer le template">✖</button>
+                        }
                     </div>
                     <div class="coords-display">
                         Pos: [ {{cadreGauche().position_base[0] | number:'1.3-3'}},
                         {{cadreGauche().position_base[1] | number:'1.3-3'}} ]
+                        @if (hasAnchorTemplate('gauche')) {
+                        <span class="template-badge">📷 Image</span>
+                        @if (cadreGauche().template_preview) {
+                        <img [src]="cadreGauche().template_preview" class="template-thumbnail"
+                            title="Aperçu du template" />
+                        }
+                        }
                     </div>
                 </div>
 
@@ -205,17 +256,34 @@
                     </div>
                     <div class="input-with-action">
                         <input type="text" [ngModel]="cadreBas().labels_str"
-                            (ngModelChange)="cadreBas.set({labels_str: $event, position_base: cadreBas().position_base})"
+                            (ngModelChange)="cadreBas.set({labels_str: $event, position_base: cadreBas().position_base, template_coords: cadreBas().template_coords})"
                             placeholder="Ex: SIGNATURE (texte en bas)" class="cadre-input">
                         <button type="button" class="btn-target" [class.active]="activeReferenceSelection() === 'bas'"
                             (click)="startReferenceSelection('bas')"
                             title="Cliquer pour définir la position sur l'image">
                             📍
                         </button>
+                        <button type="button" class="btn-camera" [class.active]="anchorTemplateSelection() === 'bas'"
+                            [class.has-template]="hasAnchorTemplate('bas')"
+                            (click)="startAnchorTemplateSelection('bas')"
+                            title="Dessiner un rectangle image comme ancre">
+                            📷
+                        </button>
+                        @if (hasAnchorTemplate('bas')) {
+                        <button type="button" class="btn-clear-template" (click)="clearAnchorTemplate('bas')"
+                            title="Supprimer le template">✖</button>
+                        }
                     </div>
                     <div class="coords-display">
                         Pos: [ {{cadreBas().position_base[0] | number:'1.3-3'}},
                         {{cadreBas().position_base[1] | number:'1.3-3'}} ]
+                        @if (hasAnchorTemplate('bas')) {
+                        <span class="template-badge">📷 Image</span>
+                        @if (cadreBas().template_preview) {
+                        <img [src]="cadreBas().template_preview" class="template-thumbnail"
+                            title="Aperçu du template" />
+                        }
+                        }
                     </div>
                 </div>
             </div>

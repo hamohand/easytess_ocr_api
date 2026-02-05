@@ -5,6 +5,7 @@ import uuid
 from PIL import Image
 from app.utils.pdf_utils import convert_pdf_to_image
 from app.services.ocr_engine import ocr_global_avec_positions, detecter_ancres
+from app.services.image_matcher import extract_and_save_template
 
 entity_bp = Blueprint('entity', __name__)
 
@@ -144,12 +145,39 @@ def detecter_etiquettes():
     
     # Construire la config des ancres à partir des étiquettes
     ancres_config = []
-    for etiquette_id, labels in etiquettes.items():
-        if labels:  # Si l'utilisateur a fourni des labels
-            ancres_config.append({
-                'id': etiquette_id,
-                'labels': labels if isinstance(labels, list) else [labels]
-            })
+    temp_files_to_cleanup = []
+
+    for etiquette_id, config in etiquettes.items():
+        # Support both simple list of strings and object with labels/template_coords
+        labels = []
+        template_coords = None
+
+        if isinstance(config, list):
+            labels = config
+        elif isinstance(config, dict):
+            labels = config.get('labels', [])
+            template_coords = config.get('template_coords')
+        
+        anchor_conf = {
+            'id': etiquette_id,
+            'labels': labels
+        }
+        
+        # Gestion des templates image temporaires pour la détection
+        if template_coords and len(template_coords) == 4 and image_path and os.path.exists(image_path):
+            try:
+                temp_filename = f"temp_template_{uuid.uuid4()}_{etiquette_id}.png"
+                temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], temp_filename)
+                
+                if extract_and_save_template(image_path, template_coords, temp_path):
+                    anchor_conf['template_path'] = temp_filename # Relatif pour compatibilité
+                    anchor_conf['template_path_abs'] = temp_path # Absolu pour usage direct
+                    temp_files_to_cleanup.append(temp_path)
+                    current_app.logger.info(f"📷 Template temporaire créé pour {etiquette_id}: {temp_path}")
+            except Exception as e:
+                current_app.logger.error(f"❌ Erreur extraction template temporaire: {e}")
+
+        ancres_config.append(anchor_conf)
     
     if not ancres_config:
         return jsonify({'error': 'Aucune étiquette à détecter'}), 400
@@ -157,19 +185,37 @@ def detecter_etiquettes():
     try:
         # OCR global pour obtenir tous les mots avec positions
         mots_ocr, img_dims = ocr_global_avec_positions(image_path, lang='fra+eng')
-        
-        if not mots_ocr:
-            return jsonify({
+
+        # NOTE: Si l'OCR échoue (pas de texte), mots_ocr peut être vide. 
+        # Mais on doit quand même continuer si on a des templates images.
+        if not mots_ocr and not any('template_path' in a for a in ancres_config):
+             return jsonify({
                 'success': False,
-                'error': 'OCR n\'a détecté aucun texte dans l\'image'
+                'error': 'OCR n\'a détecté aucun texte dans l\'image et aucun template image défini'
             }), 400
         
-        # Détecter les étiquettes
+        if not mots_ocr:
+             mots_ocr = [] # Ensure list if None
+             # Need img_dims if not returned by OCR
+             if not img_dims:
+                 img = Image.open(image_path)
+                 img_dims = img.size
+
+        # Détecter les étiquettes (Now passing image_path for template matching)
         etiquettes_detectees, toutes_trouvees = detecter_ancres(
             mots_ocr, 
             ancres_config, 
-            img_dims
+            img_dims,
+            image_path=image_path 
         )
+
+        # Cleanup temp files
+        for f in temp_files_to_cleanup:
+            if os.path.exists(f):
+                try:
+                    os.remove(f)
+                except:
+                    pass
         
         # Formater la réponse
         positions = {}
@@ -206,7 +252,8 @@ def detecter_etiquettes():
                     'x': x,
                     'y': y,
                     'found': det.get('found', False),
-                    'text': det.get('text', '')
+                    'text': det.get('text', ''),
+                    'bbox': [det.get('x_min'), det.get('y_min'), det.get('x_max'), det.get('y_max')] if det.get('found') and 'x_min' in det else None
                 }
             else:
                 positions[etiquette_id] = {'x': 0, 'y': 0, 'found': False}
@@ -242,6 +289,23 @@ def sauvegarder_entite():
     
     if not nom: return jsonify({'error': 'Nom manquant'}), 400
     if not zones: return jsonify({'error': 'Aucune zone définie'}), 400
+
+    # NOUVEAU: Extraire et sauvegarder les templates d'ancres image si définis
+    if cadre_reference and image_path and os.path.exists(image_path):
+        templates_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'templates', nom)
+        
+        for anchor_type in ['haut', 'droite', 'gauche', 'bas']:
+            anchor = cadre_reference.get(anchor_type, {})
+            template_coords = anchor.get('template_coords')
+            
+            if template_coords and len(template_coords) == 4:
+                template_filename = f"{anchor_type}_template.png"
+                template_path = os.path.join(templates_dir, template_filename)
+                
+                if extract_and_save_template(image_path, template_coords, template_path):
+                    # Stocker le chemin relatif du template dans le cadre_reference
+                    cadre_reference[anchor_type]['template_path'] = f"templates/{nom}/{template_filename}"
+                    current_app.logger.info(f"✅ Template {anchor_type} sauvegardé: {template_path}")
 
     try:
         get_manager().sauvegarder_entite(nom, zones, image_path=image_path, description=description, cadre_reference=cadre_reference)
