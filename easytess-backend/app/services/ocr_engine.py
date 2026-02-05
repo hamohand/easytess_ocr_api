@@ -600,8 +600,15 @@ def get_easyocr_reader(zone_lang='ara+fra'):
     
     if key not in _easyocr_readers and EASYOCR_DISPONIBLE:
         try:
-            logger.info(f"🔄 Chargement EasyOCR ({'+'.join(langs)})...")
-            _easyocr_readers[key] = easyocr.Reader(langs, gpu=False)
+            use_gpu = False
+            try:
+                import torch
+                use_gpu = torch.cuda.is_available()
+            except ImportError:
+                pass
+
+            logger.info(f"🔄 Chargement EasyOCR ({'+'.join(langs)}) [GPU={use_gpu}]...")
+            _easyocr_readers[key] = easyocr.Reader(langs, gpu=use_gpu)
             logger.info(f"✅ EasyOCR chargé ({key}).")
         except Exception as e:
             logger.error(f"❌ Erreur EasyOCR: {e}")
@@ -652,6 +659,8 @@ def corriger_avec_valeurs_connues(texte_ocr, valeurs_possibles, seuil=0.6):
     return texte_ocr, 0.0
 
 
+
+
 def analyser_hybride(image_path, zones_config, cadre_reference=None):
     """
     Analyse hybride avec support pour le cadre de référence à 3 étiquettes.
@@ -669,8 +678,12 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
     """
     resultats = {}
     temp_crop_path = None  # IMPORTANT: Initialiser au niveau fonction pour portée globale
+    x_ref_px = None
+    y_ref_px = None
+    largeur_cadre_rel = None
+    hauteur_cadre_rel = None
+    img_dims = None
     
-    # 0. NOUVEAU: Si un cadre de référence est défini, détecter les étiquettes et transformer les coordonnées
     # 0. NOUVEAU: Si un cadre de référence est défini, détecter les étiquettes et transformer les coordonnées
     # Support des clés: haut, droite, gauche_bas (Nouveau) OU origine, largeur, hauteur (Legacy)
     if not cadre_reference:
@@ -716,11 +729,6 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
         
         logger.info(f"📋 Total ancres configurées: {len(ancres_config)}")
         
-        # IMPORTANT: Initialiser les variables de remapping pour portée globale
-        x_ref_px = None
-        y_ref_px = None
-        img_dims = None
-        
         if len(ancres_config) >= 2:
             # OCR global pour trouver les étiquettes
             mots_ocr, img_dims = ocr_global_avec_positions(image_path, lang='fra+eng')
@@ -737,17 +745,23 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 img_dims
             )
             
-            if not toutes_trouvees:
-                etiquettes_manquantes = [k for k, v in etiquettes_detectees.items() if not v.get('found')]
-                # tolérance si on a au moins 2 points sur 3 pour essayer ? Non, restons strict pour le moment.
-                erreur = f"Étiquettes non trouvées: {', '.join(etiquettes_manquantes)}"
-                logger.error(f"❌ {erreur}")
-                return None, erreur
+            if not toutes_trouvees: # Note: 'toutes_trouvees' was likely meant
+                 etiquettes_manquantes = [k for k, v in etiquettes_detectees.items() if not v.get('found')]
+                 # tolérance si on a au moins 2 points sur 3 pour essayer ? Non, restons strict pour le moment.
+                 if len(etiquettes_manquantes) > 0 and len(ancres_config) > 2:
+                     # Si on a raté une ancre mais qu'on a les autres, peut-on continuer?
+                     # Pour l'instant, erreur.
+                     erreur = f"Étiquettes non trouvées: {', '.join(etiquettes_manquantes)}"
+                     logger.error(f"❌ {erreur}")
+                     return None, erreur
             
             # Calculer la transformation de coordonnées  
             # Logique NOUVELLE: 4 ancres (H, D, G, B) ou 3 ancres (H, D, GB)
             has_4_anchors = etiquettes_detectees.get('haut') and etiquettes_detectees.get('droite') and etiquettes_detectees.get('gauche') and etiquettes_detectees.get('bas')
             has_3_anchors = etiquettes_detectees.get('haut') and etiquettes_detectees.get('droite') and etiquettes_detectees.get('gauche_bas')
+            
+            detected_w_px = 0
+            detected_h_px = 0
             
             if has_4_anchors:
                 # NOUVEAU: Système 4 ancres
@@ -757,17 +771,8 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 b = etiquettes_detectees['bas']
                 
                 logger.info(f"📐 Système 4 ancres détecté (HAUT, DROITE, GAUCHE, BAS)")
-                logger.info(f"  HAUT: {h}")
-                logger.info(f"  DROITE: {d}")
-                logger.info(f"  GAUCHE: {g}")
-                logger.info(f"  BAS: {b}")
                 
                 # Bounding Box du cadre dans l'image réelle
-                # X min = Gauche.x_min
-                # X max = Droite.x_max
-                # Y min = Haut.y_min
-                # Y max = Bas.y_max
-                
                 x_ref_min = g['x_min']
                 y_ref_min = h['y_min']
                 
@@ -775,16 +780,6 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 hauteur_cadre_rel = b['y_max'] - h['y_min']
                 
                 logger.info(f"📊 AABB Cadre: x_min={x_ref_min:.4f}, y_min={y_ref_min:.4f}, largeur={largeur_cadre_rel:.4f}, hauteur={hauteur_cadre_rel:.4f}")
-                
-                # Calcul Pixels pour 4 ancres
-                img_w, img_h = img_dims
-                detected_w_px = largeur_cadre_rel * img_w
-                detected_h_px = hauteur_cadre_rel * img_h
-                x_ref_px = x_ref_min * img_w
-                y_ref_px = y_ref_min * img_h
-                
-                logger.info(f"📐 Cadre AABB (4 ancres): Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
-
 
             elif has_3_anchors:
                 h = etiquettes_detectees['haut']
@@ -792,12 +787,6 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 gb = etiquettes_detectees['gauche_bas']
                 
                 # Bounding Box du cadre dans l'image réelle
-                # X min = GaucheBas.x_min
-                # X max = Droite.x_max
-                # Y min = Haut.y_min
-                # Y max = GaucheBas.y_max
-                
-                # Utiliser les bords des étiquettes (min/max) plutôt que le centre
                 x_ref_min = gb['x_min']
                 y_ref_min = h['y_min']
                 
@@ -807,27 +796,18 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 # Protection
                 if largeur_cadre_rel <= 0.01: largeur_cadre_rel = 1.0
                 if hauteur_cadre_rel <= 0.01: hauteur_cadre_rel = 1.0
-                
-                # Calcul Pixels
+
+            # --- Code Commun : Calcul Pixels ---
+            if has_4_anchors or has_3_anchors:
+                # Calcul des pixels
                 img_w, img_h = img_dims
                 detected_w_px = largeur_cadre_rel * img_w
                 detected_h_px = hauteur_cadre_rel * img_h
                 x_ref_px = x_ref_min * img_w
                 y_ref_px = y_ref_min * img_h
                 
-                logger.info(f"📐 Cadre AABB détecté: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
+                logger.info(f"📐 Cadre AABB Final: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
 
-                # Comparaison avec Dimensions de l'Entité (Reference)
-                dims_ref = cadre_reference.get('dimensions_absolues')
-                if dims_ref:
-                    ref_w_px = dims_ref.get('largeur', 0)
-                    ref_h_px = dims_ref.get('hauteur', 0)
-                    ref_angle = dims_ref.get('angle', 0)
-                    
-                    if ref_w_px > 0 and ref_h_px > 0:
-                        ratio_w = detected_w_px / ref_w_px
-                        ratio_h = detected_h_px / ref_h_px
-                        logger.info(f"📊 Comparaison Image/Entité: Ratio L={ratio_w:.2f}, Ratio H={ratio_h:.2f} (Angle Ref={ref_angle}°)")
 
             # --- Code Commun : Rognage physique ---
             if (has_4_anchors or has_3_anchors) and x_ref_px is not None:
@@ -846,16 +826,19 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                         right = min(img_pil.width, right)
                         bottom = min(img_pil.height, bottom)
                         
-                        img_crop = img_pil.crop((left, top, right, bottom))
-                        
-                        temp_filename = f"crop_{uuid.uuid4().hex[:8]}.jpg"
-                        temp_path = os.path.join(os.path.dirname(image_path), temp_filename)
-                        img_crop.save(temp_path)
-                        
-                        logger.info(f"✂️ Image sauvegardée: {temp_path}")
-                        
-                        image_path = temp_path
-                        temp_crop_path = temp_path
+                        if right > left and bottom > top:
+                            img_crop = img_pil.crop((left, top, right, bottom))
+                            
+                            temp_filename = f"crop_{uuid.uuid4().hex[:8]}.jpg"
+                            temp_path = os.path.join(os.path.dirname(image_path), temp_filename)
+                            img_crop.save(temp_path)
+                            
+                            logger.info(f"✂️ Image sauvegardée: {temp_path}")
+                            
+                            image_path = temp_path
+                            temp_crop_path = temp_path
+                        else:
+                            logger.error(f"❌ Crop invalide: L={left}, T={top}, R={right}, B={bottom}")
                         
                 except Exception as e:
                     logger.error(f"❌ Erreur lors du rognage: {e}")
@@ -996,36 +979,36 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
         for k, v in resultats.items():
             if 'coords' in v:
                 c = v['coords']
-
                 
-                # Les coords sont soit relatives (0-1) soit en pixels, relatives au CADRE/CROP
-                is_relative = all(v <= 1.0 for v in c)
+                # Coords relatives au crop (0-1) -> Pixels dans le Crop
+                # ATTENTION: Tesseract/EasyOCR renvoient des PIXELS absolus (valeurs > 1) relativement au crop.
+                # Si les valeurs sont <= 1.0, on considère que c'est du relatif.
                 
-                if is_relative:
-                    # Convertir en pixels du cadre
-                    x1_cadre_px = c[0] * cadre_w_px
-                    y1_cadre_px = c[1] * cadre_h_px
-                    x2_cadre_px = c[2] * cadre_w_px
-                    y2_cadre_px = c[3] * cadre_h_px
+                if all(val <= 1.0 for val in c):
+                    x1_c = c[0] * cadre_w_px
+                    y1_c = c[1] * cadre_h_px
+                    x2_c = c[2] * cadre_w_px
+                    y2_c = c[3] * cadre_h_px
                 else:
-                    # Déjà en pixels par rapport au crop
-                    x1_cadre_px = c[0]
-                    y1_cadre_px = c[1]
-                    x2_cadre_px = c[2]
-                    y2_cadre_px = c[3]
+                    # Déjà en pixels (relatif au crop)
+                    x1_c = c[0]
+                    y1_c = c[1]
+                    x2_c = c[2]
+                    y2_c = c[3]
                 
-                # Ajouter l'offset du cadre pour obtenir coords dans l'image originale
-                x1_abs = x1_cadre_px + x_ref_px
-                y1_abs = y1_cadre_px + y_ref_px
-                x2_abs = x2_cadre_px + x_ref_px
-                y2_abs = y2_cadre_px + y_ref_px
+                # Pixels dans le Crop -> Pixels dans l'image Originale
+                # (Simple translation psq pas de rotation)
+                x1_orig = x1_c + x_ref_px
+                y1_orig = y1_c + y_ref_px
+                x2_orig = x2_c + x_ref_px
+                y2_orig = y2_c + y_ref_px
                 
-                # Normaliser 0-1 par rapport à l'image originale
+                # Pixels Orig -> Relatif Orig
                 v['coords'] = [
-                    x1_abs / orig_w if orig_w else 0,
-                    y1_abs / orig_h if orig_h else 0,
-                    x2_abs / orig_w if orig_w else 0,
-                    y2_abs / orig_h if orig_h else 0
+                    x1_orig / orig_w if orig_w else 0,
+                    y1_orig / orig_h if orig_h else 0,
+                    x2_orig / orig_w if orig_w else 0,
+                    y2_orig / orig_h if orig_h else 0
                 ]
     
     # NETTOYAGE DU CROP TEMPORAIRE
@@ -1035,6 +1018,30 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
             logger.info(f"🗑️ Fichier temporaire supprimé: {temp_crop_path}")
         except Exception as e:
             logger.warning(f"⚠️ Nettoyage impossible: {e}")
+
+    # NORMALISATION FINALE DES COORDONNÉES
+    # Assurer que toutes les coordonnées renvoyées sont en relatif (0-1) par rapport à l'image originale
+    if not img_dims: # Si non défini plus tôt
+        try:
+            with Image.open(image_path) as img:
+                img_dims = img.size
+        except:
+            img_dims = (1, 1) # Fallback pour éviter division par zero
+            
+    img_w, img_h = img_dims
+    
+    for k, v in resultats.items():
+        if 'coords' in v and v['coords']:
+            c = v['coords']
+            # Détection heuristique: si valeurs > 1, ce sont des pixels -> convertir en relatif
+            if any(val > 1.5 for val in c):
+                v['coords'] = [
+                    c[0] / img_w,
+                    c[1] / img_h,
+                    c[2] / img_w,
+                    c[3] / img_h
+                ]
+                logger.debug(f"📏 Normalisation coords zone '{k}': {c} -> {v['coords']}")
 
     alertes = [k for k, v in resultats.items() if v['statut'] != 'ok']
     return resultats, alertes
