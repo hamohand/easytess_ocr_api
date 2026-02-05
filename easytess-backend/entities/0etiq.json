@@ -1,0 +1,67 @@
+{
+  "nom": "0etiq",
+  "description": "00",
+  "date_creation": "2026-02-05T12:25:22.348517",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_c5a1a675-8038-4e46-8be1-a8b05d00c02c_pp_Moh_moit.png",
+  "zones": [
+    {
+      "id": 1770290716300,
+      "nom": "Zone 1",
+      "type": "text",
+      "lang": "ara+fra",
+      "preprocess": "auto",
+      "coords": [
+        0.2888,
+        0.3428,
+        0.4462,
+        0.3911
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ]
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710
+    },
+    "dimensions_absolues": {
+      "largeur": 980,
+      "hauteur": 710,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 1,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  }
+}

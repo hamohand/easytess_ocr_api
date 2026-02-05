@@ -697,24 +697,23 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
         
         logger.info(f"🔍 DEBUG: Cadre reference reçu: {cadre_reference}")
         
-        # Mapping nouveau format 4 ancres
-        if cadre_reference.get('haut'):
+        if cadre_reference.get('haut') and cadre_reference['haut'].get('labels'):
             ancres_config.append({'id': 'haut', 'labels': cadre_reference['haut'].get('labels', []), 'position_base': cadre_reference['haut'].get('position_base', [0.5, 0])})
             logger.info(f"  ✅ Ancre HAUT configurée: {cadre_reference['haut'].get('labels', [])}")
-        if cadre_reference.get('droite'):
+        if cadre_reference.get('droite') and cadre_reference['droite'].get('labels'):
             ancres_config.append({'id': 'droite', 'labels': cadre_reference['droite'].get('labels', []), 'position_base': cadre_reference['droite'].get('position_base', [1, 0.5])})
             logger.info(f"  ✅ Ancre DROITE configurée: {cadre_reference['droite'].get('labels', [])}")
         
         # NOUVEAU: Support 4 ancres séparées (GAUCHE + BAS)
-        if cadre_reference.get('gauche'):
+        if cadre_reference.get('gauche') and cadre_reference['gauche'].get('labels'):
             ancres_config.append({'id': 'gauche', 'labels': cadre_reference['gauche'].get('labels', []), 'position_base': cadre_reference['gauche'].get('position_base', [0, 0.5])})
             logger.info(f"  ✅ Ancre GAUCHE configurée: {cadre_reference['gauche'].get('labels', [])}")
-        if cadre_reference.get('bas'):
+        if cadre_reference.get('bas') and cadre_reference['bas'].get('labels'):
             ancres_config.append({'id': 'bas', 'labels': cadre_reference['bas'].get('labels', []), 'position_base': cadre_reference['bas'].get('position_base', [0.5, 1])})
             logger.info(f"  ✅ Ancre BAS configurée: {cadre_reference['bas'].get('labels', [])}")
         
         # Support ancien format 3 ancres (backward compatibility)
-        if not cadre_reference.get('gauche') and not cadre_reference.get('bas') and cadre_reference.get('gauche_bas'):
+        if not cadre_reference.get('gauche') and not cadre_reference.get('bas') and cadre_reference.get('gauche_bas') and cadre_reference['gauche_bas'].get('labels'):
             ancres_config.append({'id': 'gauche_bas', 'labels': cadre_reference['gauche_bas'].get('labels', []), 'position_base': cadre_reference['gauche_bas'].get('position_base', [0, 1])})
             logger.info(f"  ✅ Ancre GAUCHE_BAS (legacy) configurée: {cadre_reference['gauche_bas'].get('labels', [])}")
             
@@ -727,9 +726,12 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
             if cadre_reference.get('hauteur'):
                 ancres_config.append({'id': 'hauteur', 'labels': cadre_reference['hauteur'].get('labels', []), 'position_base': cadre_reference['hauteur'].get('position_base', [0, 1])})
         
-        logger.info(f"📋 Total ancres configurées: {len(ancres_config)}")
+        logger.info(f"📋 Total ancres configurées (avec labels): {len(ancres_config)}")
         
-        if len(ancres_config) >= 2:
+        etiquettes_detectees = {}
+        
+        # S'il y a des ancres textuelles à chercher
+        if len(ancres_config) > 0:
             # OCR global pour trouver les étiquettes
             mots_ocr, img_dims = ocr_global_avec_positions(image_path, lang='fra+eng')
             
@@ -745,124 +747,119 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 img_dims
             )
             
-            if not toutes_trouvees: # Note: 'toutes_trouvees' was likely meant
-                 etiquettes_manquantes = [k for k, v in etiquettes_detectees.items() if not v.get('found')]
-                 # tolérance si on a au moins 2 points sur 3 pour essayer ? Non, restons strict pour le moment.
-                 if len(etiquettes_manquantes) > 0 and len(ancres_config) > 2:
-                     # Si on a raté une ancre mais qu'on a les autres, peut-on continuer?
-                     # Pour l'instant, erreur.
-                     erreur = f"Étiquettes non trouvées: {', '.join(etiquettes_manquantes)}"
-                     logger.error(f"❌ {erreur}")
-                     return None, erreur
-            
-            # Calculer la transformation de coordonnées  
-            # Logique NOUVELLE: 4 ancres (H, D, G, B) ou 3 ancres (H, D, GB)
-            has_4_anchors = etiquettes_detectees.get('haut') and etiquettes_detectees.get('droite') and etiquettes_detectees.get('gauche') and etiquettes_detectees.get('bas')
-            has_3_anchors = etiquettes_detectees.get('haut') and etiquettes_detectees.get('droite') and etiquettes_detectees.get('gauche_bas')
-            
-            detected_w_px = 0
-            detected_h_px = 0
-            
-            if has_4_anchors:
-                # NOUVEAU: Système 4 ancres
-                h = etiquettes_detectees['haut']
-                d = etiquettes_detectees['droite']
-                g = etiquettes_detectees['gauche']
-                b = etiquettes_detectees['bas']
-                
-                logger.info(f"📐 Système 4 ancres détecté (HAUT, DROITE, GAUCHE, BAS)")
-                
-                # Bounding Box du cadre dans l'image réelle
-                x_ref_min = g['x_min']
-                y_ref_min = h['y_min']
-                
-                largeur_cadre_rel = d['x_max'] - g['x_min']
-                hauteur_cadre_rel = b['y_max'] - h['y_min']
-                
-                logger.info(f"📊 AABB Cadre: x_min={x_ref_min:.4f}, y_min={y_ref_min:.4f}, largeur={largeur_cadre_rel:.4f}, hauteur={hauteur_cadre_rel:.4f}")
+            if not toutes_trouvees:
+                etiquettes_manquantes = [k for k, v in etiquettes_detectees.items() if not v.get('found')]
+                # NOUVEAU: Au lieu de planter, on log un warning et on continue avec les valeurs par défaut (bords image)
+                logger.warning(f"⚠️ Certaines étiquettes non trouvées: {', '.join(etiquettes_manquantes)} -> Utilisation des bords de l'image par défaut")
+                # return None, erreur  <-- SUPPRIMÉ: On continue !
+        else:
+            # Pas d'ancres textuelles, on utilise juste les dimensions de l'image
+            try:
+                with Image.open(image_path) as img:
+                    img_dims = img.size
+                    logger.info(f"📏 Pas d'ancres textuelles, dimensions image: {img_dims}")
+            except Exception as e:
+                logger.error(f"❌ Impossible d'ouvrir l'image: {e}")
+                return None, str(e)
 
-            elif has_3_anchors:
-                h = etiquettes_detectees['haut']
-                d = etiquettes_detectees['droite']
-                gb = etiquettes_detectees['gauche_bas']
-                
-                # Bounding Box du cadre dans l'image réelle
-                x_ref_min = gb['x_min']
-                y_ref_min = h['y_min']
-                
-                largeur_cadre_rel = d['x_max'] - gb['x_min']
-                hauteur_cadre_rel = gb['y_max'] - h['y_min']
-                
-                # Protection
-                if largeur_cadre_rel <= 0.01: largeur_cadre_rel = 1.0
-                if hauteur_cadre_rel <= 0.01: hauteur_cadre_rel = 1.0
-
-            # --- Code Commun : Calcul Pixels ---
-            if has_4_anchors or has_3_anchors:
-                # Calcul des pixels
-                img_w, img_h = img_dims
-                detected_w_px = largeur_cadre_rel * img_w
-                detected_h_px = hauteur_cadre_rel * img_h
-                x_ref_px = x_ref_min * img_w
-                y_ref_px = y_ref_min * img_h
-                
-                logger.info(f"📐 Cadre AABB Final: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
-
-
-            # --- Code Commun : Rognage physique ---
-            if (has_4_anchors or has_3_anchors) and x_ref_px is not None:
-                logger.info(f"✂️ Début du rognage de l'image sur le cadre...")
-                import uuid
-                try:
-                    with Image.open(image_path) as img_pil:
-                        left = int(x_ref_px)
-                        top = int(y_ref_px)
-                        right = int(left + detected_w_px)
-                        bottom = int(top + detected_h_px)
-                        
-                        # Clamp
-                        left = max(0, left)
-                        top = max(0, top)
-                        right = min(img_pil.width, right)
-                        bottom = min(img_pil.height, bottom)
-                        
-                        if right > left and bottom > top:
-                            img_crop = img_pil.crop((left, top, right, bottom))
-                            
-                            temp_filename = f"crop_{uuid.uuid4().hex[:8]}.jpg"
-                            temp_path = os.path.join(os.path.dirname(image_path), temp_filename)
-                            img_crop.save(temp_path)
-                            
-                            logger.info(f"✂️ Image sauvegardée: {temp_path}")
-                            
-                            image_path = temp_path
-                            temp_crop_path = temp_path
-                        else:
-                            logger.error(f"❌ Crop invalide: L={left}, T={top}, R={right}, B={bottom}")
-                        
-                except Exception as e:
-                    logger.error(f"❌ Erreur lors du rognage: {e}")
+        # Calculer la transformation de coordonnées (Unified Logic)
+        # On consruit les 4 bornes (Top, Bottom, Left, Right)
+        # Priority: Detected Anchor > Legacy Anchor > Image Edge
+        
+        img_w, img_h = img_dims
+        
+        # 1. TOP (Y Min)
+        if 'haut' in etiquettes_detectees and etiquettes_detectees['haut']['found']:
+            y_ref_min = etiquettes_detectees['haut']['y_min']
+        else:
+            y_ref_min = 0 # Default to Image Top
             
-            # Logique LEGACY (Origine offset only) - Changé de elif à if car chaine brisée
-            if not (has_4_anchors or has_3_anchors) and etiquettes_detectees.get('origine'):
-                origine_detectee = etiquettes_detectees.get('origine', {})
-                if origine_detectee.get('found'):
-                    origine_x = origine_detectee.get('x', 0)
-                    origine_y = origine_detectee.get('y', 0)
+        # 2. BOTTOM (Y Max)
+        if 'bas' in etiquettes_detectees and etiquettes_detectees['bas']['found']:
+            y_ref_max = etiquettes_detectees['bas']['y_max']
+        elif 'gauche_bas' in etiquettes_detectees and etiquettes_detectees['gauche_bas']['found']:
+             y_ref_max = etiquettes_detectees['gauche_bas']['y_max']
+        else:
+            y_ref_max = img_h # Default to Image Bottom
+            
+        # 3. LEFT (X Min)
+        if 'gauche' in etiquettes_detectees and etiquettes_detectees['gauche']['found']:
+            x_ref_min = etiquettes_detectees['gauche']['x_min']
+        elif 'gauche_bas' in etiquettes_detectees and etiquettes_detectees['gauche_bas']['found']:
+             x_ref_min = etiquettes_detectees['gauche_bas']['x_min']
+        else:
+            x_ref_min = 0 # Default to Image Left
+            
+        # 4. RIGHT (X Max)
+        if 'droite' in etiquettes_detectees and etiquettes_detectees['droite']['found']:
+            x_ref_max = etiquettes_detectees['droite']['x_max']
+        else:
+            x_ref_max = img_w # Default to Image Right
+            
+        
+        # Validation des dimensions calculées
+        detected_w_px = x_ref_max - x_ref_min
+        detected_h_px = y_ref_max - y_ref_min
+        
+        # Protection contre croisements ou dimensions nulles
+        if detected_w_px <= 10: detected_w_px = max(10, img_w - x_ref_min)
+        if detected_h_px <= 10: detected_h_px = max(10, img_h - y_ref_min)
+        
+        # Set Global Variables for Crop Logic
+        # Note: largeur_cadre_rel et hauteur_cadre_rel ne sont plus utilisés pour le calcul final pixel
+        # mais peuvent être utiles pour le remapping si on devait recalculer.
+        # Ici on a direct les pixels.
+        
+        x_ref_px = x_ref_min
+        y_ref_px = y_ref_min
+        
+        # Pseudo-relative (juste pour info/log, pas critique car on a les pixels)
+        largeur_cadre_rel = detected_w_px / img_w if img_w else 1
+        hauteur_cadre_rel = detected_h_px / img_h if img_h else 1
+
+        logger.info(f"📐 AABB Unifiée: H={y_ref_min:.0f}({'Ancre' if 'haut' in etiquettes_detectees else 'Edge'}), B={y_ref_max:.0f}, G={x_ref_min:.0f}, D={x_ref_max:.0f}")
+        logger.info(f"📐 Cadre Final: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
+
+        # Flag pour déclencher le rognage
+        has_4_anchors = True # On a toujours 4 bornes (réelles ou virtuelles)
+
+
+    # --- Code Commun : Rognage physique ---
+    if x_ref_px is not None:
+        logger.info(f"✂️ Début du rognage de l'image sur le cadre...")
+        import uuid
+        try:
+            with Image.open(image_path) as img_pil:
+                left = int(x_ref_px)
+                top = int(y_ref_px)
+                right = int(left + detected_w_px)
+                bottom = int(top + detected_h_px)
+                
+                # Clamp
+                left = max(0, left)
+                top = max(0, top)
+                right = min(img_pil.width, right)
+                bottom = min(img_pil.height, bottom)
+                
+                if right > left and bottom > top:
+                    img_crop = img_pil.crop((left, top, right, bottom))
                     
-                    logger.info(f"📐 ORIGINE (Legacy) détectée à ({origine_x:.3f}, {origine_y:.3f})")
+                    temp_filename = f"crop_{uuid.uuid4().hex[:8]}.jpg"
+                    temp_path = os.path.join(os.path.dirname(image_path), temp_filename)
+                    img_crop.save(temp_path)
                     
-                    for nom_zone, config in zones_config.items():
-                        coords = config.get('coords', [0, 0, 1, 1])
-                        config['coords'] = [
-                            coords[0] + origine_x,
-                            coords[1] + origine_y,
-                            coords[2] + origine_x,
-                            coords[3] + origine_y
-                        ]
-                        logger.debug(f"  Zone '{nom_zone}': {coords} -> {config['coords']}")
+                    logger.info(f"✂️ Image sauvegardée: {temp_path}")
+                    
+                    image_path = temp_path
+                    temp_crop_path = temp_path
+                else:
+                    logger.error(f"❌ Crop invalide: L={left}, T={top}, R={right}, B={bottom}")
+                
+        except Exception as e:
+            logger.error(f"❌ Erreur lors du rognage: {e}")
             
-            logger.info(f"✅ Coordonnées ajustées selon cadre de référence")
+    logger.info(f"✅ Coordonnées ajustées selon cadre de référence")
+
     
     # 1. Détection QR codes/codes-barres pour les zones marquées
     zones_qr = {k: v for k, v in zones_config.items() if v.get('type') == 'qrcode' or v.get('type') == 'barcode'}

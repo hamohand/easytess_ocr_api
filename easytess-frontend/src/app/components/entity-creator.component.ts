@@ -462,11 +462,11 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
     /**
      * Vérifie si le cadre de référence est valide (les 4 étiquettes ont des labels)
      */
+    /**
+     * Le cadre est toujours valide maintenant (si vide = plein écran)
+     */
     isCadreValide(): boolean {
-        return this.cadreHaut().labels_str.trim().length > 0 &&
-            this.cadreDroite().labels_str.trim().length > 0 &&
-            this.cadreGauche().labels_str.trim().length > 0 &&
-            this.cadreBas().labels_str.trim().length > 0;
+        return true;
     }
 
     /**
@@ -480,7 +480,6 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         }
 
         // Construire l'objet des étiquettes à chercher
-        // Note: on utilise des clés qui correspondent au backend/service
         const etiquettes: any = {};
 
         const hautLabels = this.cadreHaut().labels_str.split(',').map((s: string) => s.trim()).filter((s: string) => s);
@@ -493,8 +492,18 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         if (gaucheLabels.length > 0) etiquettes.gauche = gaucheLabels;
         if (basLabels.length > 0) etiquettes.bas = basLabels;
 
+        // Si aucune étiquette n'est définie, on reset tout aux bords par défaut (Plein écran)
         if (Object.keys(etiquettes).length === 0) {
-            this.errorMessage.set('Veuillez renseigner au moins une étiquette à détecter');
+            console.log('⚠️ Aucune étiquette définie -> Utilisation des bords par défaut (Plein écran)');
+            this.cadreHaut.update(c => ({ ...c, position_base: [0.5, 0] }));
+            this.cadreDroite.update(c => ({ ...c, position_base: [1, 0.5] }));
+            this.cadreGauche.update(c => ({ ...c, position_base: [0, 0.5] }));
+            this.cadreBas.update(c => ({ ...c, position_base: [0.5, 1] }));
+
+            this.calculerParametresCadre();
+            this.redrawCanvas();
+            this.successMessage.set('✅ Cadre défini sur l\'image entière (par défaut)');
+            setTimeout(() => this.successMessage.set(''), 3000);
             return;
         }
 
@@ -510,34 +519,53 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
 
                 if (result.success && result.positions) {
                     // Mettre à jour les positions détectées
+                    // Mettre à jour les positions détectées ou réinitialiser par défaut
                     if (result.positions['haut']?.found) {
                         console.log('  ✅ Updating HAUT:', result.positions['haut']);
                         this.cadreHaut.update(c => ({
                             ...c,
                             position_base: [result.positions['haut'].x, result.positions['haut'].y]
                         }));
+                    } else {
+                        // Reset default (Edge)
+                        console.log('  defaults HAUT');
+                        this.cadreHaut.update(c => ({ ...c, position_base: [0.5, 0] }));
                     }
+
                     if (result.positions['droite']?.found) {
                         console.log('  ✅ Updating DROITE:', result.positions['droite']);
                         this.cadreDroite.update(c => ({
                             ...c,
                             position_base: [result.positions['droite'].x, result.positions['droite'].y]
                         }));
+                    } else {
+                        // Reset default (Edge)
+                        console.log('  defaults DROITE');
+                        this.cadreDroite.update(c => ({ ...c, position_base: [1, 0.5] }));
                     }
+
                     if (result.positions['gauche']?.found) {
                         console.log('  ✅ Updating GAUCHE:', result.positions['gauche']);
-                        this.cadreGauche.update((c: EtiquetteDrawing) => ({
+                        this.cadreGauche.update(c => ({
                             ...c,
                             position_base: [result.positions['gauche'].x, result.positions['gauche'].y]
                         }));
-                        console.log('  🔍 GAUCHE after update:', this.cadreGauche());
+                    } else {
+                        // Reset default (Edge)
+                        console.log('  defaults GAUCHE');
+                        this.cadreGauche.update(c => ({ ...c, position_base: [0, 0.5] }));
                     }
+
                     if (result.positions['bas']?.found) {
                         console.log('  ✅ Updating BAS:', result.positions['bas']);
-                        this.cadreBas.update((c: EtiquetteDrawing) => ({
+                        this.cadreBas.update(c => ({
                             ...c,
                             position_base: [result.positions['bas'].x, result.positions['bas'].y]
                         }));
+                    } else {
+                        // Reset default (Edge)
+                        console.log('  defaults BAS');
+                        this.cadreBas.update(c => ({ ...c, position_base: [0.5, 1] }));
                     }
 
                     // Recalculer les paramètres
