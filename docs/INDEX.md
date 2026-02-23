@@ -1,6 +1,6 @@
 # 📚 Documentation EasyTess OCR
 
-Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analyse OCR avec support PDF et QR Code.
+Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analyse OCR avec support PDF, QR Code et batch processing.
 
 ---
 
@@ -26,6 +26,9 @@ Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analy
 
 ### Moteur OCR & Algorithmes
 - **[OCR_ENGINE.md](./technical/OCR_ENGINE.md)** ⚙️ Pipeline hybride, AABB et Rognage physique
+
+### Analyse par Lot (Batch)
+- **[CLAUDE.md](../CLAUDE.md)** 🤖 Guide de développement pour agents IA (architecture, endpoints, gotchas)
 
 ### Exemples pratiques
 - **[DEMO_SCENARIOS.md](./guides/DEMO_SCENARIOS.md)** 🎬 Cas d'usage réels et exemples
@@ -74,6 +77,7 @@ Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analy
 | **PDF_SUPPORT.md** | Doc technique | Développeurs | Implémentation PDF |
 | **ZBAR_INSTALLATION.md** | Guide technique | Développeurs | Installation zbar |
 | **OCR_ENGINE.md** | Doc technique | Développeurs | Architecture & AABB |
+| **CLAUDE.md** | Guide dev | Agents IA | Architecture, endpoints, gotchas |
 | **CHANGELOG.md** | Historique | Tous | Versions et modifications |
 
 ---
@@ -144,8 +148,8 @@ Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analy
 
 ## 📅 Informations
 
-**Version actuelle** : 2.1.0  
-**Dernière mise à jour** : Janvier 2026  
+**Version actuelle** : 2.4.0  
+**Dernière mise à jour** : Février 2026  
 **Statut** : ✅ Production Ready
 
 ---

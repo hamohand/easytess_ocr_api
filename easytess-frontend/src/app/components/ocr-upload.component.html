@@ -1,17 +1,20 @@
-<!-- ocr-upload.component.html - Analyse simple et batch -->
+<!-- ocr-upload.component.html - Analyse simple, multi-fichiers et dossier -->
 <div class="ocr-container">
   <div class="header">
     <h1>🔍 Analyse OCR</h1>
     <p>Sélectionnez une entité et analysez vos documents</p>
   </div>
 
-  <!-- Mode Toggle -->
+  <!-- Mode Toggle (3 modes) -->
   <div class="mode-toggle">
-    <button class="toggle-btn" [class.active]="!isBatchMode()" (click)="isBatchMode() && toggleMode()">
+    <button class="toggle-btn" [class.active]="activeMode() === 'single'" (click)="setMode('single')">
       📄 Fichier unique
     </button>
-    <button class="toggle-btn" [class.active]="isBatchMode()" (click)="!isBatchMode() && toggleMode()">
-      📁 Multi-fichiers
+    <button class="toggle-btn" [class.active]="activeMode() === 'multi'" (click)="setMode('multi')">
+      📑 Multi-fichiers
+    </button>
+    <button class="toggle-btn" [class.active]="activeMode() === 'folder'" (click)="setMode('folder')">
+      📁 Dossier
     </button>
   </div>
 
@@ -27,8 +30,7 @@
   </div>
 
   <!-- ==================== SINGLE FILE MODE ==================== -->
-  @if (!isBatchMode()) {
-  <!-- Upload Section -->
+  @if (activeMode() === 'single') {
   <div class="upload-section">
     <div class="file-input-wrapper">
       <input type="file" id="fileInput" accept="image/*,.pdf" (change)="onFileSelected($event)" #fileInput>
@@ -49,7 +51,6 @@
     </button>
   </div>
 
-  <!-- Image Preview with Canvas -->
   @if (imageUrl()) {
   <div class="image-preview">
     <h3>Image uploadée avec zones de l'entité :</h3>
@@ -57,7 +58,6 @@
   </div>
   }
 
-  <!-- Analyse Button -->
   @if (uploadedFilename()) {
   <div class="analyze-section">
     <button class="btn btn-success" (click)="analyser()" [disabled]="isAnalyzing()">
@@ -80,7 +80,6 @@
       </button>
     </div>
 
-    <!-- Stats -->
     <div class="stats">
       <div class="stat-card">
         <span class="stat-label">Zones analysées</span>
@@ -98,7 +97,6 @@
       }
     </div>
 
-    <!-- Results Table -->
     <div class="results-table">
       <table>
         <thead>
@@ -117,11 +115,8 @@
             <td class="text-content">{{ result.texte_auto || '(vide)' }}</td>
             <td class="confidence">
               <div class="confidence-bar">
-                <div class="confidence-fill" [style.width.%]="result.confiance_auto * 100">
-                </div>
-                <span class="confidence-text">
-                  {{ (result.confiance_auto * 100).toFixed(0) }}%
-                </span>
+                <div class="confidence-fill" [style.width.%]="result.confiance_auto * 100"></div>
+                <span class="confidence-text">{{ (result.confiance_auto * 100).toFixed(0) }}%</span>
               </div>
             </td>
             <td class="moteur">
@@ -131,9 +126,7 @@
               }
             </td>
             <td>
-              <span [class]="'badge ' + getStatutClass(result.statut)">
-                {{ result.statut }}
-              </span>
+              <span [class]="'badge ' + getStatutClass(result.statut)">{{ result.statut }}</span>
             </td>
           </tr>
           }
@@ -141,22 +134,19 @@
       </table>
     </div>
 
-    <button class="btn btn-outline" (click)="reset()">
-      🔄 Nouvelle analyse
-    </button>
+    <button class="btn btn-outline" (click)="reset()">🔄 Nouvelle analyse</button>
   </div>
   }
   }
 
-  <!-- ==================== BATCH MODE ==================== -->
-  @if (isBatchMode()) {
-  <!-- Batch Upload Section -->
+  <!-- ==================== MULTI-FILE MODE ==================== -->
+  @if (activeMode() === 'multi') {
   <div class="upload-section">
     <div class="file-input-wrapper">
       <input type="file" id="batchFileInput" accept="image/*,.pdf" multiple (change)="onMultiFileSelected($event)"
         #batchFileInput>
       <label for="batchFileInput" class="file-label">
-        📁 Choisir plusieurs fichiers
+        📑 Choisir plusieurs fichiers
       </label>
       @if (selectedFiles().length > 0) {
       <span class="file-name">{{ selectedFiles().length }} fichier(s) sélectionné(s)</span>
@@ -185,20 +175,79 @@
   }
 
   <!-- Batch Analyse Button -->
-  @if (uploadedBatchFilenames().length > 0 && !batchResults()) {
+  @if (uploadedBatchFilenames().length > 0 && !batchResults() && !isAnalyzing()) {
   <div class="analyze-section">
     <p class="upload-success-msg">✅ {{ uploadedBatchFilenames().length }} fichiers prêts pour l'analyse</p>
-    <button class="btn btn-success btn-large" (click)="analyserBatch()" [disabled]="isAnalyzing()">
-      @if (isAnalyzing()) {
-      <span class="spinner"></span> Analyse batch en cours...
-      } @else {
-      🔍 Analyser tous les fichiers
-      }
+    <button class="btn btn-success btn-large" (click)="analyserBatch()">
+      🔍 Analyser tous les fichiers (async)
     </button>
   </div>
   }
+  }
 
-  <!-- Batch Results -->
+  <!-- ==================== FOLDER MODE ==================== -->
+  @if (activeMode() === 'folder') {
+  <div class="upload-section">
+    <div class="file-input-wrapper">
+      <input type="file" id="folderInput" webkitdirectory directory multiple (change)="onFolderSelected($event)"
+        #folderInput>
+      <label for="folderInput" class="file-label">
+        📁 Sélectionner un dossier
+      </label>
+      @if (selectedFiles().length > 0) {
+      <span class="file-name">{{ selectedFiles().length }} fichier(s) image trouvé(s)</span>
+      }
+    </div>
+
+    <button class="btn btn-primary" (click)="uploadBatch()" [disabled]="selectedFiles().length === 0 || isUploading()">
+      @if (isUploading()) {
+      <span class="spinner"></span> Upload en cours...
+      } @else {
+      ⬆️ Uploader le dossier
+      }
+    </button>
+  </div>
+
+  <!-- Folder File List -->
+  @if (selectedFiles().length > 0) {
+  <div class="batch-file-list">
+    <h3>📋 Fichiers du dossier ({{ selectedFiles().length }})</h3>
+    <div class="file-chips">
+      @for (file of selectedFiles(); track file.name) {
+      <span class="file-chip">{{ file.name }}</span>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Folder Analyse Button -->
+  @if (uploadedBatchFilenames().length > 0 && !batchResults() && !isAnalyzing()) {
+  <div class="analyze-section">
+    <p class="upload-success-msg">✅ {{ uploadedBatchFilenames().length }} fichiers prêts pour l'analyse</p>
+    <button class="btn btn-success btn-large" (click)="analyserBatch()">
+      🔍 Analyser tout le dossier (async)
+    </button>
+  </div>
+  }
+  }
+
+  <!-- ==================== SHARED: PROGRESS BAR ==================== -->
+  @if (batchProgress()) {
+  <div class="progress-section">
+    <div class="progress-info">
+      <span>⏳ Analyse en cours... {{ batchProgress()!.completed }}/{{ batchProgress()!.total }}</span>
+      @if (batchProgress()!.currentFile) {
+      <span class="current-file">📄 {{ batchProgress()!.currentFile }}</span>
+      }
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" [style.width.%]="getProgressPercent()"></div>
+      <span class="progress-bar-text">{{ getProgressPercent() }}%</span>
+    </div>
+  </div>
+  }
+
+  <!-- ==================== SHARED: BATCH RESULTS ==================== -->
   @if (batchResults()) {
   <div class="results-section">
     <div class="results-header">
@@ -208,7 +257,6 @@
       </button>
     </div>
 
-    <!-- Batch Stats -->
     <div class="stats">
       <div class="stat-card">
         <span class="stat-label">Total fichiers</span>
@@ -283,11 +331,8 @@
       }
     </div>
 
-    <button class="btn btn-outline" (click)="reset()">
-      🔄 Nouvelle analyse batch
-    </button>
+    <button class="btn btn-outline" (click)="reset()">🔄 Nouvelle analyse</button>
   </div>
-  }
   }
 
   <!-- Error Message -->

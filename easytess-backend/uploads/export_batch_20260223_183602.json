@@ -1,0 +1,78 @@
+{
+  "date": "2026-02-23T18:36:02.020464",
+  "total": 2,
+  "resultats_batch": [
+    {
+      "alertes": [],
+      "filename": "ocr_0c903409-a191-4c4b-a29d-c219871eeaf4_pp_Moh.png",
+      "resultats": {
+        "prenom": {
+          "confiance_auto": 0.9,
+          "coords": [
+            0.3042168674698795,
+            0.6630276564774381,
+            0.4859437751004016,
+            0.6885007278020379
+          ],
+          "moteur": "tesseract",
+          "statut": "ok",
+          "texte_auto": "MOHAMMED",
+          "texte_final": "MOHAMMED"
+        },
+        "ville": {
+          "confiance_auto": 0.91,
+          "coords": [
+            0.6194779116465864,
+            0.8296943231441049,
+            0.7208835341365462,
+            0.8580786026200873
+          ],
+          "moteur": "tesseract",
+          "statut": "ok",
+          "texte_auto": "LILLE",
+          "texte_final": "LILLE"
+        }
+      },
+      "stats_moteurs": {
+        "tesseract": 2
+      },
+      "success": true
+    },
+    {
+      "alertes": [],
+      "filename": "ocr_8d407389-0c86-4691-b5de-013de38ab686_pp_Moh_moit.png",
+      "resultats": {
+        "prenom": {
+          "confiance_auto": 0.91,
+          "coords": [
+            0.29489795918367345,
+            0.34507042253521125,
+            0.4785714285714286,
+            0.39436619718309857
+          ],
+          "moteur": "tesseract",
+          "statut": "ok",
+          "texte_auto": "MOHAMMED",
+          "texte_final": "MOHAMMED"
+        },
+        "ville": {
+          "confiance_auto": 0.89,
+          "coords": [
+            0.613265306122449,
+            0.6633802816901408,
+            0.7153061224489796,
+            0.7183098591549296
+          ],
+          "moteur": "tesseract",
+          "statut": "ok",
+          "texte_auto": "LILLE",
+          "texte_final": "LILLE"
+        }
+      },
+      "stats_moteurs": {
+        "tesseract": 2
+      },
+      "success": true
+    }
+  ]
+}

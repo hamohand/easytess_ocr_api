@@ -1,0 +1,16 @@
+{
+  "date": "2026-02-23T19:10:58.265692",
+  "total": 2,
+  "resultats_batch": [
+    {
+      "filename": "ocr_9894073a-e8d0-4419-aec5-2e79e45df93a_essai_pieces_pp_Moh.png",
+      "success": false,
+      "error": "'NoneType' object has no attribute 'items'"
+    },
+    {
+      "filename": "ocr_b92dff03-d91f-4a1c-b422-f5fa983a99de_essai_pieces_pp_Moh_moit.png",
+      "success": false,
+      "error": "'NoneType' object has no attribute 'items'"
+    }
+  ]
+}

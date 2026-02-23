@@ -28,6 +28,14 @@ Application complète d'analyse OCR avec gestion d'entités, support des fichier
 - Modification et suppression d'entités
 - Coordonnées relatives (adaptables à différentes tailles d'images)
 
+### 📦 Analyse par Lot (Batch)
+- **3 modes** : Fichier unique, multi-fichiers, dossier entier
+- Traitement asynchrone en arrière-plan avec progression SSE temps réel
+- Sélection de dossier via `webkitdirectory`
+- Barre de progression avec % et fichier en cours
+- Résultats dépliables par fichier
+- Export JSON consolidé de tous les résultats
+
 ### 📊 Résultats détaillés
 - Texte extrait par zone
 - Contenu des QR codes décodés
@@ -125,20 +133,31 @@ L'application est accessible sur `http://localhost:4200`
 
 ### 1. Analyser un document
 
-```typescript
-// Depuis l'interface Angular
+```
 1. Onglet "OCR Analysis"
-2. Sélectionner une entité (ou "Aucun")
-3. Uploader une image ou un PDF
-4. Cliquer sur "Analyser avec OCR"
-5. Consulter les résultats
-6. Exporter en JSON si nécessaire
+2. Mode "Fichier unique" (par défaut)
+3. Sélectionner une entité (ou "Aucun")
+4. Uploader une image ou un PDF
+5. Cliquer sur "Analyser avec OCR"
+6. Consulter les résultats
+7. Exporter en JSON si nécessaire
 ```
 
-### 2. Créer une entité
+### 2. Analyser un dossier entier
 
-```typescript
-// Depuis l'interface Angular
+```
+1. Onglet "OCR Analysis"
+2. Mode "Dossier" (clic sur 📁)
+3. Sélectionner une entité
+4. Sélectionner un dossier contenant des images
+5. Uploader → Analyser tout le dossier
+6. Suivre la progression en temps réel
+7. Exporter tous les résultats en JSON
+```
+
+### 3. Créer une entité
+
+```
 1. Onglet "Entity Management"
 2. Cliquer sur "Créer une nouvelle entité"
 3. Nommer l'entité
@@ -242,7 +261,7 @@ Le système utilise automatiquement :
 - [ ] Détection de codes-barres avec zbar (actuellement QR codes uniquement)
 - [ ] Support de plus de langues OCR
 - [ ] API REST complète avec documentation Swagger
-- [ ] Batch processing (traitement par lot)
+- [x] ~~Batch processing (traitement par lot)~~ ✅ Ajouté en v2.4.0
 - [ ] Interface de correction manuelle des résultats
 - [ ] Historique des analyses
 - [ ] Authentification et gestion des utilisateurs
@@ -257,7 +276,8 @@ Pour toute question ou suggestion, contactez l'équipe de développement.
 
 ---
 
-**Version** : 2.1.0 (avec support PDF et QR Code)  
-**Dernière mise à jour** : Janvier 2026
-#   e a s y t e s s _ o c r _ a p i  
+**Version** : 2.4.0 (avec batch processing, SSE et sélection de dossier)  
+**Dernière mise à jour** : Février 2026
+#   e a s y t e s s _ o c r _ a p i 
+ 
  

@@ -2,6 +2,57 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [2.4.0] - 2026-02-23
+
+### 🎉 Ajouts majeurs
+
+#### Analyse OCR par Lot (Batch Processing)
+- **3 modes d'analyse** : Fichier unique, Multi-fichiers, Dossier
+- **Batch synchrone** : `POST /api/analyser-batch` pour les petits lots
+- **Batch asynchrone** : `POST /api/analyser-batch-async` avec traitement en arrière-plan
+- **Progression SSE** : `GET /api/batch-progress/<job_id>` pour le suivi temps réel
+- **Polling fallback** : `GET /api/batch-result/<job_id>` si SSE indisponible
+- **Analyse dossier serveur** : `POST /api/analyser-dossier` pour analyser un dossier côté serveur
+- **Upload batch** : `POST /api/upload-batch` pour uploader N fichiers à la fois
+- **Export batch** : `POST /api/export-json-batch` pour exporter tous les résultats en JSON
+
+#### Frontend
+- **Toggle 3 modes** : Interface avec 3 boutons (📄 Fichier unique / 📑 Multi-fichiers / 📁 Dossier)
+- **Sélection dossier** : `webkitdirectory` pour sélectionner un dossier entier
+- **Barre de progression** : Temps réel avec pourcentage et nom du fichier en cours
+- **Résultats dépliables** : Clic sur chaque fichier pour voir les détails par zone
+- **Export global** : Bouton pour télécharger un JSON consolidé de tous les résultats
+
+### 🔧 Modifications techniques
+
+#### Backend (`ocr_routes.py`)
+- Fonction `_analyser_un_fichier()` extraite pour réutilisation
+- Thread unique avec `app.app_context()` (pas de ThreadPoolExecutor — les sous-threads perdent le contexte Flask)
+- Gestion thread-safe avec `threading.Lock`
+- Nettoyage automatique des jobs terminés après livraison SSE
+
+#### Backend (`file_routes.py`)
+- Endpoint `POST /api/upload-batch` : upload multi-fichiers avec conversion PDF
+- Endpoint `POST /api/export-json-batch` : export JSON consolidé
+
+#### Frontend
+- `models.ts` : Interfaces `BatchUploadResponse`, `BatchFileResult`, `BatchAnalyseResponse`
+- `file.service.ts` : `uploadMultipleImages()`, `downloadBatchJsonFile()`
+- `ocr.service.ts` : `analyserBatch()`, `analyserBatchAsync()`, `connectBatchProgress()`, `getBatchResult()`
+- `ocr-upload.component.ts` : 3 modes, SSE + polling fallback, NgZone, OnDestroy
+- `ocr-upload.component.html` : Toggle, folder input, barre de progression
+- `ocr-upload.component.css` : Styles toggle, file chips, batch cards, progress bar
+
+### 📚 Documentation
+- **CLAUDE.md** : Guide de développement pour agents IA (architecture, gotchas, endpoints)
+- **CHANGELOG.md** : Mise à jour avec v2.4.0
+- **README.md** : Ajout de la fonctionnalité batch dans les features
+
+### 🐛 Corrections
+- Fix `Working outside of application context` : Les threads utilisent `app.app_context()` et un traitement séquentiel (pas de ThreadPoolExecutor)
+
+---
+
 ## [2.3.0] - 2026-01-31
 
 ### 🎉 Ajouts majeurs
@@ -231,8 +282,8 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 - [ ] Paramétrage de la résolution dans l'interface
 - [ ] Support PNG pour la conversion (en plus de JPEG)
 
-### [2.3.0] - À venir
-- [ ] Batch processing (traitement par lot)
+### [2.5.0] - À venir
+- [x] ~~Batch processing (traitement par lot)~~ ✅ v2.4.0
 - [ ] Interface de correction manuelle des résultats
 - [ ] Historique des analyses
 - [ ] Comparaison de résultats

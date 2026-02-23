@@ -548,6 +548,61 @@ tbody tr:hover {
   padding: 0.5rem 0.75rem;
 }
 
+/* ==================== PROGRESS BAR ==================== */
+
+.progress-section {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  animation: fadeIn 0.3s;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.current-file {
+  font-size: 0.85rem;
+  color: #6c757d;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progress-bar-container {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  background: #e9ecef;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #007bff 0%, #0056b3 50%, #28a745 100%);
+  transition: width 0.4s ease;
+  border-radius: 14px;
+}
+
+.progress-bar-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .upload-section {
@@ -579,9 +634,15 @@ tbody tr:hover {
 
   .mode-toggle {
     max-width: 100%;
+    flex-wrap: wrap;
   }
 
   .batch-file-header {
     flex-wrap: wrap;
+  }
+
+  .progress-info {
+    flex-direction: column;
+    gap: 0.5rem;
   }
 }

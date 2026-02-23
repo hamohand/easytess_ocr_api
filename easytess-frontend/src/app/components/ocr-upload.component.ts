@@ -1,5 +1,5 @@
-// ocr-upload.component.ts - Analyse simple et batch
-import { Component, signal, inject, ViewChild, ElementRef, effect } from '@angular/core';
+// ocr-upload.component.ts - Analyse simple et batch (async avec SSE)
+import { Component, signal, inject, ViewChild, ElementRef, effect, OnDestroy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FileService } from '../services/file.service';
@@ -14,18 +14,20 @@ import { AnalyseResponse, Entite, UploadResponse, BatchAnalyseResponse, BatchFil
     templateUrl: './ocr-upload.component.html',
     styleUrls: ['./ocr-upload.component.css']
 })
-export class OcrUploadComponent {
+export class OcrUploadComponent implements OnDestroy {
     private fileService = inject(FileService);
     private ocrService = inject(OcrService);
     private entityService = inject(EntityService);
+    private ngZone = inject(NgZone);
 
     @ViewChild('canvas') canvasRef!: ElementRef<HTMLCanvasElement>;
     private ctx: CanvasRenderingContext2D | null = null;
     private currentImage: HTMLImageElement | null = null;
     private scale = 1;
+    private eventSource: EventSource | null = null;
 
-    // Mode toggle
-    isBatchMode = signal<boolean>(false);
+    // Mode toggle: 'single' | 'multi' | 'folder'
+    activeMode = signal<'single' | 'multi' | 'folder'>('single');
 
     // Signals - Single mode
     selectedFile = signal<File | null>(null);
@@ -38,11 +40,17 @@ export class OcrUploadComponent {
     selectedEntite = signal<string>('none');
     errorMessage = signal<string>('');
 
-    // Signals - Batch mode
+    // Signals - Batch mode (multi + folder)
     selectedFiles = signal<File[]>([]);
     uploadedBatchFilenames = signal<string[]>([]);
     batchResults = signal<BatchAnalyseResponse | null>(null);
     expandedFileIndex = signal<number | null>(null);
+
+    // Signals - Async progress
+    batchProgress = signal<{ completed: number; total: number; currentFile: string } | null>(null);
+
+    // Signals - Folder mode (server-side)
+    folderPath = signal<string>('');
 
     constructor() {
         effect(() => {
@@ -52,6 +60,10 @@ export class OcrUploadComponent {
                 setTimeout(() => this.drawCanvas(), 50);
             }
         });
+    }
+
+    ngOnDestroy() {
+        this.closeEventSource();
     }
 
     ngOnInit() {
@@ -65,9 +77,42 @@ export class OcrUploadComponent {
         });
     }
 
-    toggleMode() {
-        this.isBatchMode.set(!this.isBatchMode());
+    setMode(mode: 'single' | 'multi' | 'folder') {
         this.reset();
+        this.activeMode.set(mode);
+    }
+
+    private closeEventSource() {
+        if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
+        }
+    }
+
+    private buildZonesConfig(): { zonesConfig: any; cadre_reference: any } {
+        const entiteNom = this.selectedEntite();
+        let zonesConfig: any = null;
+        let cadre_reference: any = null;
+
+        if (entiteNom !== 'none') {
+            const entite = this.entites().find(e => e.nom === entiteNom);
+            if (entite && entite.zones && entite.zones.length > 0) {
+                zonesConfig = {};
+                entite.zones.forEach(z => {
+                    zonesConfig[z.nom] = {
+                        coords: z.coords,
+                        type: z.type || 'text',
+                        lang: z.lang || 'ara+fra',
+                        preprocess: z.preprocess || 'auto'
+                    };
+                });
+
+                if (entite.cadre_reference) {
+                    cadre_reference = entite.cadre_reference;
+                }
+            }
+        }
+        return { zonesConfig, cadre_reference };
     }
 
     // =============================================
@@ -143,32 +188,7 @@ export class OcrUploadComponent {
 
         this.isAnalyzing.set(true);
         this.errorMessage.set('');
-
-        const entiteNom = this.selectedEntite();
-        let zonesConfig: any = null;
-        let cadre_reference: any = null;
-
-        if (entiteNom !== 'none') {
-            const entite = this.entites().find(e => e.nom === entiteNom);
-            if (entite && entite.zones && entite.zones.length > 0) {
-                zonesConfig = {};
-                entite.zones.forEach(z => {
-                    zonesConfig[z.nom] = {
-                        coords: z.coords,
-                        type: z.type || 'text',
-                        lang: z.lang || 'ara+fra',
-                        preprocess: z.preprocess || 'auto'
-                    };
-                });
-                console.log('✅ Zones configurées pour API:', zonesConfig);
-
-                if (entite.cadre_reference) {
-                    cadre_reference = entite.cadre_reference;
-                    console.log('📐 Cadre de référence activé:', cadre_reference);
-                }
-            }
-        }
-
+        const { zonesConfig, cadre_reference } = this.buildZonesConfig();
         this.performAnalyse(filename, zonesConfig, cadre_reference);
     }
 
@@ -188,7 +208,7 @@ export class OcrUploadComponent {
     }
 
     // =============================================
-    // BATCH FILE MODE
+    // MULTI-FILE BATCH MODE (upload + async)
     // =============================================
 
     onMultiFileSelected(event: Event) {
@@ -239,42 +259,128 @@ export class OcrUploadComponent {
 
         this.isAnalyzing.set(true);
         this.errorMessage.set('');
+        this.batchProgress.set({ completed: 0, total: filenames.length, currentFile: '' });
 
-        const entiteNom = this.selectedEntite();
-        let zonesConfig: any = null;
-        let cadre_reference: any = null;
+        const { zonesConfig, cadre_reference } = this.buildZonesConfig();
 
-        if (entiteNom !== 'none') {
-            const entite = this.entites().find(e => e.nom === entiteNom);
-            if (entite && entite.zones && entite.zones.length > 0) {
-                zonesConfig = {};
-                entite.zones.forEach(z => {
-                    zonesConfig[z.nom] = {
-                        coords: z.coords,
-                        type: z.type || 'text',
-                        lang: z.lang || 'ara+fra',
-                        preprocess: z.preprocess || 'auto'
-                    };
-                });
-
-                if (entite.cadre_reference) {
-                    cadre_reference = entite.cadre_reference;
-                }
-            }
-        }
-
-        this.ocrService.analyserBatch(filenames, zonesConfig, cadre_reference).subscribe({
-            next: (response: BatchAnalyseResponse) => {
-                this.batchResults.set(response);
-                this.isAnalyzing.set(false);
-                console.log('✅ Analyse batch terminée:', response);
+        // Async batch with SSE progress
+        this.ocrService.analyserBatchAsync(filenames, zonesConfig, cadre_reference).subscribe({
+            next: (response) => {
+                console.log('✅ Job batch lancé:', response.job_id);
+                this.listenToProgress(response.job_id);
             },
             error: (err: any) => {
-                this.errorMessage.set('Erreur lors de l\'analyse batch: ' + err.message);
+                this.errorMessage.set('Erreur lors du lancement batch: ' + err.message);
                 this.isAnalyzing.set(false);
+                this.batchProgress.set(null);
             }
         });
     }
+
+    private listenToProgress(jobId: string) {
+        this.closeEventSource();
+        const eventSource = this.ocrService.connectBatchProgress(jobId);
+        this.eventSource = eventSource;
+
+        eventSource.onmessage = (event) => {
+            this.ngZone.run(() => {
+                const data = JSON.parse(event.data);
+
+                if (data.error) {
+                    this.errorMessage.set('Erreur SSE: ' + data.error);
+                    this.isAnalyzing.set(false);
+                    this.batchProgress.set(null);
+                    this.closeEventSource();
+                    return;
+                }
+
+                this.batchProgress.set({
+                    completed: data.completed,
+                    total: data.total,
+                    currentFile: data.current_file
+                });
+
+                if (data.status === 'done') {
+                    this.batchResults.set({
+                        success: true,
+                        total: data.total,
+                        reussis: data.reussis,
+                        echoues: data.echoues,
+                        resultats_batch: data.resultats_batch
+                    });
+                    this.isAnalyzing.set(false);
+                    this.batchProgress.set(null);
+                    this.closeEventSource();
+                    console.log('✅ Analyse batch async terminée');
+                }
+            });
+        };
+
+        eventSource.onerror = () => {
+            this.ngZone.run(() => {
+                // Fallback to polling if SSE fails
+                this.closeEventSource();
+                this.pollBatchResult(jobId);
+            });
+        };
+    }
+
+    private pollBatchResult(jobId: string) {
+        const interval = setInterval(() => {
+            this.ocrService.getBatchResult(jobId).subscribe({
+                next: (data) => {
+                    this.batchProgress.set({
+                        completed: data.completed,
+                        total: data.total,
+                        currentFile: data.current_file
+                    });
+
+                    if (data.status === 'done') {
+                        clearInterval(interval);
+                        this.batchResults.set({
+                            success: true,
+                            total: data.total,
+                            reussis: data.reussis,
+                            echoues: data.echoues,
+                            resultats_batch: data.resultats_batch
+                        });
+                        this.isAnalyzing.set(false);
+                        this.batchProgress.set(null);
+                    }
+                },
+                error: () => {
+                    clearInterval(interval);
+                    this.errorMessage.set('Erreur lors du suivi de la progression');
+                    this.isAnalyzing.set(false);
+                    this.batchProgress.set(null);
+                }
+            });
+        }, 1000);
+    }
+
+    // =============================================
+    // FOLDER MODE (upload à plat via webkitdirectory)
+    // =============================================
+
+    onFolderSelected(event: Event) {
+        const input = event.target as HTMLInputElement;
+        if (input.files && input.files.length > 0) {
+            const files = Array.from(input.files).filter(f => {
+                const ext = f.name.toLowerCase();
+                return ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png')
+                    || ext.endsWith('.bmp') || ext.endsWith('.tiff') || ext.endsWith('.pdf');
+            });
+            this.selectedFiles.set(files);
+            this.errorMessage.set('');
+            if (files.length === 0) {
+                this.errorMessage.set('Aucun fichier image trouvé dans le dossier sélectionné');
+            }
+        }
+    }
+
+    // =============================================
+    // SHARED UTILITIES
+    // =============================================
 
     toggleFileDetail(index: number) {
         if (this.expandedFileIndex() === index) {
@@ -311,9 +417,11 @@ export class OcrUploadComponent {
         });
     }
 
-    // =============================================
-    // SHARED
-    // =============================================
+    getProgressPercent(): number {
+        const p = this.batchProgress();
+        if (!p || p.total === 0) return 0;
+        return Math.round((p.completed / p.total) * 100);
+    }
 
     drawCanvas(retryCount = 0) {
         if (!this.canvasRef) {
@@ -336,7 +444,6 @@ export class OcrUploadComponent {
 
         this.ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        // MODE 1: AFFICHER RÉSULTATS ANALYSE (Si disponibles)
         const results = this.analyseResults();
         if (results && results.resultats) {
             Object.entries(results.resultats).forEach(([nom, data]: [string, any]) => {
@@ -365,7 +472,6 @@ export class OcrUploadComponent {
             return;
         }
 
-        // MODE 2: PREVIEW DÉFINITION ENTITÉ (Fallback)
         const entiteNom = this.selectedEntite();
         if (entiteNom !== 'none') {
             const entite = this.entites().find(e => e.nom === entiteNom);
@@ -446,6 +552,7 @@ export class OcrUploadComponent {
     }
 
     reset() {
+        this.closeEventSource();
         // Single mode
         this.selectedFile.set(null);
         this.uploadedFilename.set('');
@@ -461,5 +568,8 @@ export class OcrUploadComponent {
         this.uploadedBatchFilenames.set([]);
         this.batchResults.set(null);
         this.expandedFileIndex.set(null);
+        this.batchProgress.set(null);
+        // Folder mode
+        this.folderPath.set('');
     }
 }
