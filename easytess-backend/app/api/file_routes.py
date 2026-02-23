@@ -46,6 +46,50 @@ def upload_file():
         'url': f"/uploads/{saved_filename}"
     })
 
+@file_bp.route('/api/upload-batch', methods=['POST'])
+def upload_batch():
+    if 'images' not in request.files:
+        return jsonify({'error': 'No files part'}), 400
+    
+    files = request.files.getlist('images')
+    if not files or all(f.filename == '' for f in files):
+        return jsonify({'error': 'No selected files'}), 400
+    
+    uploaded = []
+    for file in files:
+        if file.filename == '':
+            continue
+        filename = secure_filename(file.filename)
+        unique_id = str(uuid.uuid4())
+        saved_filename = f"ocr_{unique_id}_{filename}"
+        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], saved_filename)
+        file.save(filepath)
+        
+        # Conversion PDF -> Image si nécessaire
+        if filename.lower().endswith('.pdf'):
+            try:
+                image_filename = f"{os.path.splitext(saved_filename)[0]}.jpg"
+                image_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
+                convert_pdf_to_image(filepath, image_filepath)
+                saved_filename = image_filename
+            except Exception as e:
+                uploaded.append({
+                    'filename': filename,
+                    'saved_filename': None,
+                    'error': f'Erreur conversion PDF: {str(e)}'
+                })
+                continue
+        
+        uploaded.append({
+            'filename': filename,
+            'saved_filename': saved_filename
+        })
+    
+    return jsonify({
+        'success': True,
+        'files': uploaded
+    })
+
 @file_bp.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
@@ -77,6 +121,24 @@ def export_json_file():
     }
     
     filename = f"export_{filename_base}.json"
+    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(export_data, f, ensure_ascii=False, indent=2)
+        
+    return send_file(filepath, as_attachment=True, download_name=filename)
+
+@file_bp.route('/api/export-json-batch', methods=['POST'])
+def export_json_batch():
+    data = request.json or {}
+    resultats_batch = data.get('resultats_batch', [])
+    
+    export_data = {
+        'date': datetime.now().isoformat(),
+        'total': len(resultats_batch),
+        'resultats_batch': resultats_batch
+    }
+    
+    filename = f"export_batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(export_data, f, ensure_ascii=False, indent=2)

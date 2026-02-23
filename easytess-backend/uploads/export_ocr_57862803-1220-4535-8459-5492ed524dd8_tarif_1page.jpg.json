@@ -1,0 +1,19 @@
+{
+  "filename": "ocr_57862803-1220-4535-8459-5492ed524dd8_tarif_1page.jpg",
+  "date": "2026-02-23T15:40:17.163167",
+  "resultats": {
+    "bloc_lignes": {
+      "confiance_auto": 0.8491379310344827,
+      "coords": [
+        0.08786779524385328,
+        0.12229190421892816,
+        0.6952841596130592,
+        0.2576966932725199
+      ],
+      "moteur": "tesseract",
+      "statut": "ok",
+      "texte_auto": "8703503100 G 7 U Collections destinees aux industries de montage\nL Autres\nL Vehicules tous terrains\n\n8703503911 N 7 U Blindes\n\n8703503919 X 7 U Autres\n\n8703503920 Y î U Vehicules de transport specialise (ambulance etc )\n\n8703503930 J 7 U Vehicules de camping (caravanes automotrces)\nL Autres\n\n8703503991 ÀA 7 U Blindes\n\n8703503999 J 7 U Autres",
+      "texte_final": "8703503100 G 7 U Collections destinees aux industries de montage\nL Autres\nL Vehicules tous terrains\n\n8703503911 N 7 U Blindes\n\n8703503919 X 7 U Autres\n\n8703503920 Y î U Vehicules de transport specialise (ambulance etc )\n\n8703503930 J 7 U Vehicules de camping (caravanes automotrces)\nL Autres\n\n8703503991 ÀA 7 U Blindes\n\n8703503999 J 7 U Autres"
+    }
+  }
+}

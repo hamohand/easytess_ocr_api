@@ -1,0 +1,80 @@
+{
+  "nom": "tarif_col_01",
+  "description": "Une colonne du tableau",
+  "date_creation": "2026-02-23T15:26:40.538516",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_ac68c295-f1d2-4fbc-8bbf-b3cbceebff9e_tarif_1page.jpg",
+  "zones": [
+    {
+      "id": 1771856666799,
+      "nom": "col1",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "latin_simple",
+      "coords": [
+        0.0869,
+        0.1206,
+        0.185,
+        0.2568
+      ]
+    },
+    {
+      "id": 1771856676042,
+      "nom": "col4",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "latin_simple",
+      "coords": [
+        0.3119,
+        0.1215,
+        0.6919,
+        0.2559
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ]
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 2481,
+      "height": 3508
+    },
+    "dimensions_absolues": {
+      "largeur": 0,
+      "hauteur": 0,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 2481,
+      "height": 3508
+    }
+  }
+}

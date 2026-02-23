@@ -26,6 +26,7 @@ pip install -r requirements.txt
 # Lancer le serveur
 python run.py
 ```
+Generating
 
 Le serveur démarre sur `http://localhost:8082`
 

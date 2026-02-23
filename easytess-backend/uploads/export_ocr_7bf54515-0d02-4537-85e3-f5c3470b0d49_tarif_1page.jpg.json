@@ -1,0 +1,32 @@
+{
+  "filename": "ocr_7bf54515-0d02-4537-85e3-f5c3470b0d49_tarif_1page.jpg",
+  "date": "2026-02-23T15:28:19.011616",
+  "resultats": {
+    "col1": {
+      "confiance_auto": 0.9592857142857143,
+      "coords": [
+        0.08665860540104796,
+        0.12058152793614595,
+        0.18460298266827893,
+        0.25655644241733183
+      ],
+      "moteur": "tesseract",
+      "statut": "ok",
+      "texte_auto": "8703 50 31 00\n8703 50 39 11\n8703 50 39 19\n8703 50 39 20\n8703 50 39 30\n8703 50 39 91\n8703 50 39 99",
+      "texte_final": "8703 50 31 00\n8703 50 39 11\n8703 50 39 19\n8703 50 39 20\n8703 50 39 30\n8703 50 39 91\n8703 50 39 99"
+    },
+    "col4": {
+      "confiance_auto": 0.8993103448275862,
+      "coords": [
+        0.3115679161628376,
+        0.12143671607753706,
+        0.6916565900846433,
+        0.2557012542759407
+      ],
+      "moteur": "tesseract",
+      "statut": "ok",
+      "texte_auto": "Collections destinees aux industries de montage\nAutres\n- Vehicules tous terrains\nBlindes\nAutres\nVehicules de transport specialise (ambulance etc )\nVehicules de camping (caravanes automotrces)\nAutres\nBlindes\n- Autres",
+      "texte_final": "Collections destinees aux industries de montage\nAutres\n- Vehicules tous terrains\nBlindes\nAutres\nVehicules de transport specialise (ambulance etc )\nVehicules de camping (caravanes automotrces)\nAutres\nBlindes\n- Autres"
+    }
+  }
+}

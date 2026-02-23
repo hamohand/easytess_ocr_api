@@ -66,6 +66,72 @@ def api_analyser():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@ocr_bp.route('/api/analyser-batch', methods=['POST'])
+def api_analyser_batch():
+    data = request.json or {}
+    filenames = data.get('filenames', [])
+    zones_config = data.get('zones')
+    cadre_reference = data.get('cadre_reference')
+    
+    if not filenames:
+        return jsonify({'error': 'No filenames provided'}), 400
+    
+    resultats_batch = []
+    reussis = 0
+    echoues = 0
+    
+    for filename in filenames:
+        image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        
+        if not os.path.exists(image_path):
+            resultats_batch.append({
+                'filename': filename,
+                'success': False,
+                'error': f'Fichier non trouvé: {filename}'
+            })
+            echoues += 1
+            continue
+        
+        try:
+            resultats, alertes = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference)
+            
+            if resultats is None:
+                resultats_batch.append({
+                    'filename': filename,
+                    'success': False,
+                    'error': alertes
+                })
+                echoues += 1
+            else:
+                stats = {}
+                for r in resultats.values():
+                    m = r.get('moteur', 'inconnu')
+                    stats[m] = stats.get(m, 0) + 1
+                
+                resultats_batch.append({
+                    'filename': filename,
+                    'success': True,
+                    'resultats': resultats,
+                    'alertes': alertes,
+                    'stats_moteurs': stats
+                })
+                reussis += 1
+        except Exception as e:
+            resultats_batch.append({
+                'filename': filename,
+                'success': False,
+                'error': str(e)
+            })
+            echoues += 1
+    
+    return jsonify({
+        'success': True,
+        'total': len(filenames),
+        'reussis': reussis,
+        'echoues': echoues,
+        'resultats_batch': resultats_batch
+    })
+
 @ocr_bp.route('/api/resultats', methods=['GET', 'POST'])
 def api_resultats():
     if request.method == 'POST':
