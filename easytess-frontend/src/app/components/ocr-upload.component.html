@@ -1,8 +1,18 @@
-<!-- ocr-upload.component.html - Simplifié pour l'analyse -->
+<!-- ocr-upload.component.html - Analyse simple et batch -->
 <div class="ocr-container">
   <div class="header">
     <h1>🔍 Analyse OCR</h1>
     <p>Sélectionnez une entité et analysez vos documents</p>
+  </div>
+
+  <!-- Mode Toggle -->
+  <div class="mode-toggle">
+    <button class="toggle-btn" [class.active]="!isBatchMode()" (click)="isBatchMode() && toggleMode()">
+      📄 Fichier unique
+    </button>
+    <button class="toggle-btn" [class.active]="isBatchMode()" (click)="!isBatchMode() && toggleMode()">
+      📁 Multi-fichiers
+    </button>
   </div>
 
   <!-- Sélection d'entité -->
@@ -16,6 +26,8 @@
     </select>
   </div>
 
+  <!-- ==================== SINGLE FILE MODE ==================== -->
+  @if (!isBatchMode()) {
   <!-- Upload Section -->
   <div class="upload-section">
     <div class="file-input-wrapper">
@@ -58,14 +70,7 @@
   </div>
   }
 
-  <!-- Error Message -->
-  @if (errorMessage()) {
-  <div class="error-message">
-    ⚠️ {{ errorMessage() }}
-  </div>
-  }
-
-  <!-- Results -->
+  <!-- Single Results -->
   @if (analyseResults()) {
   <div class="results-section">
     <div class="results-header">
@@ -139,6 +144,156 @@
     <button class="btn btn-outline" (click)="reset()">
       🔄 Nouvelle analyse
     </button>
+  </div>
+  }
+  }
+
+  <!-- ==================== BATCH MODE ==================== -->
+  @if (isBatchMode()) {
+  <!-- Batch Upload Section -->
+  <div class="upload-section">
+    <div class="file-input-wrapper">
+      <input type="file" id="batchFileInput" accept="image/*,.pdf" multiple (change)="onMultiFileSelected($event)"
+        #batchFileInput>
+      <label for="batchFileInput" class="file-label">
+        📁 Choisir plusieurs fichiers
+      </label>
+      @if (selectedFiles().length > 0) {
+      <span class="file-name">{{ selectedFiles().length }} fichier(s) sélectionné(s)</span>
+      }
+    </div>
+
+    <button class="btn btn-primary" (click)="uploadBatch()" [disabled]="selectedFiles().length === 0 || isUploading()">
+      @if (isUploading()) {
+      <span class="spinner"></span> Upload en cours...
+      } @else {
+      ⬆️ Uploader tout
+      }
+    </button>
+  </div>
+
+  <!-- File List Preview -->
+  @if (selectedFiles().length > 0) {
+  <div class="batch-file-list">
+    <h3>📋 Fichiers sélectionnés ({{ selectedFiles().length }})</h3>
+    <div class="file-chips">
+      @for (file of selectedFiles(); track file.name) {
+      <span class="file-chip">{{ file.name }}</span>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Batch Analyse Button -->
+  @if (uploadedBatchFilenames().length > 0 && !batchResults()) {
+  <div class="analyze-section">
+    <p class="upload-success-msg">✅ {{ uploadedBatchFilenames().length }} fichiers prêts pour l'analyse</p>
+    <button class="btn btn-success btn-large" (click)="analyserBatch()" [disabled]="isAnalyzing()">
+      @if (isAnalyzing()) {
+      <span class="spinner"></span> Analyse batch en cours...
+      } @else {
+      🔍 Analyser tous les fichiers
+      }
+    </button>
+  </div>
+  }
+
+  <!-- Batch Results -->
+  @if (batchResults()) {
+  <div class="results-section">
+    <div class="results-header">
+      <h2>📊 Résultats batch</h2>
+      <button class="btn btn-secondary" (click)="exportBatchResults()">
+        💾 Exporter tout en JSON
+      </button>
+    </div>
+
+    <!-- Batch Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <span class="stat-label">Total fichiers</span>
+        <span class="stat-value">{{ batchResults()!.total }}</span>
+      </div>
+      <div class="stat-card stat-card-success">
+        <span class="stat-label">Réussis</span>
+        <span class="stat-value">{{ batchResults()!.reussis }}</span>
+      </div>
+      @if (batchResults()!.echoues > 0) {
+      <div class="stat-card stat-card-error">
+        <span class="stat-label">Échoués</span>
+        <span class="stat-value">{{ batchResults()!.echoues }}</span>
+      </div>
+      }
+    </div>
+
+    <!-- Per-file results -->
+    <div class="batch-results-list">
+      @for (fileResult of batchResults()!.resultats_batch; track fileResult.filename; let i = $index) {
+      <div class="batch-file-card" [class.expanded]="expandedFileIndex() === i">
+        <div class="batch-file-header" (click)="toggleFileDetail(i)">
+          <span class="batch-file-status">
+            @if (fileResult.success) { ✅ } @else { ❌ }
+          </span>
+          <span class="batch-file-name">{{ fileResult.filename }}</span>
+          @if (fileResult.success && fileResult.resultats) {
+          <span class="batch-file-zones">{{ (fileResult.resultats | keyvalue).length }} zones</span>
+          }
+          @if (!fileResult.success) {
+          <span class="batch-file-error-badge">{{ fileResult.error }}</span>
+          }
+          <span class="expand-icon">{{ expandedFileIndex() === i ? '▼' : '▶' }}</span>
+        </div>
+
+        @if (expandedFileIndex() === i && fileResult.success && fileResult.resultats) {
+        <div class="batch-file-detail">
+          <table>
+            <thead>
+              <tr>
+                <th>Zone</th>
+                <th>Texte détecté</th>
+                <th>Confiance</th>
+                <th>Moteur</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (result of getFileResultatsArray(fileResult); track result.zone) {
+              <tr>
+                <td class="zone-name">{{ result.zone }}</td>
+                <td class="text-content">{{ result.texte_auto || '(vide)' }}</td>
+                <td class="confidence">
+                  <div class="confidence-bar">
+                    <div class="confidence-fill" [style.width.%]="result.confiance_auto * 100"></div>
+                    <span class="confidence-text">{{ (result.confiance_auto * 100).toFixed(0) }}%</span>
+                  </div>
+                </td>
+                <td class="moteur">
+                  <span class="badge badge-moteur">{{ result.moteur }}</span>
+                </td>
+                <td>
+                  <span [class]="'badge ' + getStatutClass(result.statut)">{{ result.statut }}</span>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    <button class="btn btn-outline" (click)="reset()">
+      🔄 Nouvelle analyse batch
+    </button>
+  </div>
+  }
+  }
+
+  <!-- Error Message -->
+  @if (errorMessage()) {
+  <div class="error-message">
+    ⚠️ {{ errorMessage() }}
   </div>
   }
 </div>

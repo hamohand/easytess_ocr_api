@@ -1,11 +1,11 @@
-// ocr-upload.component.ts - Simplifié pour l'analyse uniquement
+// ocr-upload.component.ts - Analyse simple et batch
 import { Component, signal, inject, ViewChild, ElementRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FileService } from '../services/file.service';
 import { OcrService } from '../services/ocr.service';
 import { EntityService } from '../services/entity.service';
-import { AnalyseResponse, Entite, UploadResponse } from '../services/models';
+import { AnalyseResponse, Entite, UploadResponse, BatchAnalyseResponse, BatchFileResult } from '../services/models';
 
 @Component({
     selector: 'app-ocr-upload',
@@ -24,7 +24,10 @@ export class OcrUploadComponent {
     private currentImage: HTMLImageElement | null = null;
     private scale = 1;
 
-    // Signals
+    // Mode toggle
+    isBatchMode = signal<boolean>(false);
+
+    // Signals - Single mode
     selectedFile = signal<File | null>(null);
     uploadedFilename = signal<string>('');
     imageUrl = signal<string>('');
@@ -34,6 +37,12 @@ export class OcrUploadComponent {
     entites = signal<Entite[]>([]);
     selectedEntite = signal<string>('none');
     errorMessage = signal<string>('');
+
+    // Signals - Batch mode
+    selectedFiles = signal<File[]>([]);
+    uploadedBatchFilenames = signal<string[]>([]);
+    batchResults = signal<BatchAnalyseResponse | null>(null);
+    expandedFileIndex = signal<number | null>(null);
 
     constructor() {
         effect(() => {
@@ -56,6 +65,15 @@ export class OcrUploadComponent {
         });
     }
 
+    toggleMode() {
+        this.isBatchMode.set(!this.isBatchMode());
+        this.reset();
+    }
+
+    // =============================================
+    // SINGLE FILE MODE
+    // =============================================
+
     onFileSelected(event: Event) {
         const input = event.target as HTMLInputElement;
         if (input.files && input.files.length > 0) {
@@ -64,7 +82,6 @@ export class OcrUploadComponent {
             this.errorMessage.set('');
 
             if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                // PDF: Pas de prévisualisation locale immédiate
                 this.imageUrl.set('');
                 this.currentImage = null;
             } else {
@@ -145,7 +162,6 @@ export class OcrUploadComponent {
                 });
                 console.log('✅ Zones configurées pour API:', zonesConfig);
 
-                // NOUVEAU: Récupérer le cadre de référence si défini
                 if (entite.cadre_reference) {
                     cadre_reference = entite.cadre_reference;
                     console.log('📐 Cadre de référence activé:', cadre_reference);
@@ -162,7 +178,6 @@ export class OcrUploadComponent {
                 this.analyseResults.set(response);
                 this.isAnalyzing.set(false);
                 console.log('✅ Analyse terminée:', response);
-                // Redessiner le canvas avec les résultats
                 setTimeout(() => this.drawCanvas(), 100);
             },
             error: (err: any) => {
@@ -171,6 +186,134 @@ export class OcrUploadComponent {
             }
         });
     }
+
+    // =============================================
+    // BATCH FILE MODE
+    // =============================================
+
+    onMultiFileSelected(event: Event) {
+        const input = event.target as HTMLInputElement;
+        if (input.files && input.files.length > 0) {
+            const files = Array.from(input.files).filter(f => {
+                const ext = f.name.toLowerCase();
+                return ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png')
+                    || ext.endsWith('.bmp') || ext.endsWith('.tiff') || ext.endsWith('.pdf');
+            });
+            this.selectedFiles.set(files);
+            this.errorMessage.set('');
+        }
+    }
+
+    uploadBatch() {
+        const files = this.selectedFiles();
+        if (files.length === 0) {
+            this.errorMessage.set('Veuillez sélectionner des fichiers');
+            return;
+        }
+
+        this.isUploading.set(true);
+        this.errorMessage.set('');
+
+        this.fileService.uploadMultipleImages(files).subscribe({
+            next: (response) => {
+                const validFiles = response.files
+                    .filter(f => f.saved_filename)
+                    .map(f => f.saved_filename);
+                this.uploadedBatchFilenames.set(validFiles);
+                this.isUploading.set(false);
+                console.log(`✅ ${validFiles.length} fichiers uploadés`);
+            },
+            error: (err: any) => {
+                this.errorMessage.set('Erreur lors de l\'upload batch: ' + err.message);
+                this.isUploading.set(false);
+            }
+        });
+    }
+
+    analyserBatch() {
+        const filenames = this.uploadedBatchFilenames();
+        if (filenames.length === 0) {
+            this.errorMessage.set('Veuillez d\'abord uploader des fichiers');
+            return;
+        }
+
+        this.isAnalyzing.set(true);
+        this.errorMessage.set('');
+
+        const entiteNom = this.selectedEntite();
+        let zonesConfig: any = null;
+        let cadre_reference: any = null;
+
+        if (entiteNom !== 'none') {
+            const entite = this.entites().find(e => e.nom === entiteNom);
+            if (entite && entite.zones && entite.zones.length > 0) {
+                zonesConfig = {};
+                entite.zones.forEach(z => {
+                    zonesConfig[z.nom] = {
+                        coords: z.coords,
+                        type: z.type || 'text',
+                        lang: z.lang || 'ara+fra',
+                        preprocess: z.preprocess || 'auto'
+                    };
+                });
+
+                if (entite.cadre_reference) {
+                    cadre_reference = entite.cadre_reference;
+                }
+            }
+        }
+
+        this.ocrService.analyserBatch(filenames, zonesConfig, cadre_reference).subscribe({
+            next: (response: BatchAnalyseResponse) => {
+                this.batchResults.set(response);
+                this.isAnalyzing.set(false);
+                console.log('✅ Analyse batch terminée:', response);
+            },
+            error: (err: any) => {
+                this.errorMessage.set('Erreur lors de l\'analyse batch: ' + err.message);
+                this.isAnalyzing.set(false);
+            }
+        });
+    }
+
+    toggleFileDetail(index: number) {
+        if (this.expandedFileIndex() === index) {
+            this.expandedFileIndex.set(null);
+        } else {
+            this.expandedFileIndex.set(index);
+        }
+    }
+
+    getFileResultatsArray(fileResult: BatchFileResult) {
+        if (!fileResult.resultats) return [];
+        return Object.entries(fileResult.resultats).map(([zone, data]) => ({
+            zone,
+            ...(data as any)
+        }));
+    }
+
+    exportBatchResults() {
+        const results = this.batchResults();
+        if (!results) return;
+
+        this.fileService.downloadBatchJsonFile(results.resultats_batch).subscribe({
+            next: (blob: Blob) => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `resultats_batch_${Date.now()}.json`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            },
+            error: (err: any) => {
+                this.errorMessage.set('Erreur lors de l\'export: ' + err.message);
+            }
+        });
+    }
+
+    // =============================================
+    // SHARED
+    // =============================================
 
     drawCanvas(retryCount = 0) {
         if (!this.canvasRef) {
@@ -199,9 +342,6 @@ export class OcrUploadComponent {
             Object.entries(results.resultats).forEach(([nom, data]: [string, any]) => {
                 if (data.coords) {
                     let [x1, y1, x2, y2] = data.coords;
-                    // Les coords venant du backend (post-fix) sont normalisées IMAGE (0-1)
-
-                    // Sécurité types
                     x1 = Number(x1); y1 = Number(y1);
                     x2 = Number(x2); y2 = Number(y2);
 
@@ -211,10 +351,9 @@ export class OcrUploadComponent {
                     const h = (y2 - y1) * img.height * this.scale;
 
                     this.ctx!.lineWidth = 2;
-                    this.ctx!.strokeStyle = '#0066cc'; // Bleu pour résultats
+                    this.ctx!.strokeStyle = '#0066cc';
                     this.ctx!.strokeRect(sx1, sy1, w, h);
 
-                    // Texte
                     this.ctx!.fillStyle = '#0066cc';
                     const textWidth = this.ctx!.measureText(nom).width;
                     this.ctx!.fillRect(sx1, sy1 - 20, textWidth + 10, 20);
@@ -227,8 +366,6 @@ export class OcrUploadComponent {
         }
 
         // MODE 2: PREVIEW DÉFINITION ENTITÉ (Fallback)
-        // Attention: Affiche les zones relatives au cadre comme si c'était l'image (0,0)
-        // Car on ne connait pas encore la position du cadre.
         const entiteNom = this.selectedEntite();
         if (entiteNom !== 'none') {
             const entite = this.entites().find(e => e.nom === entiteNom);
@@ -239,7 +376,6 @@ export class OcrUploadComponent {
                 entite.zones.forEach(zone => {
                     let [x1, y1, x2, y2] = zone.coords;
 
-                    // Handle relative coords
                     if (x1 <= 1.0 && y1 <= 1.0 && x2 <= 1.0 && y2 <= 1.0) {
                         x1 *= img.width;
                         y1 *= img.height;
@@ -252,7 +388,7 @@ export class OcrUploadComponent {
                     const w = (x2 - x1) * this.scale;
                     const h = (y2 - y1) * this.scale;
 
-                    this.ctx!.strokeStyle = '#00ff00'; // Vert pour définition
+                    this.ctx!.strokeStyle = '#00ff00';
                     this.ctx!.strokeRect(sx1, sy1, w, h);
                     this.ctx!.fillStyle = 'rgba(0, 255, 0, 0.2)';
                     this.ctx!.fillRect(sx1, sy1, w, h);
@@ -310,6 +446,7 @@ export class OcrUploadComponent {
     }
 
     reset() {
+        // Single mode
         this.selectedFile.set(null);
         this.uploadedFilename.set('');
         this.imageUrl.set('');
@@ -319,5 +456,10 @@ export class OcrUploadComponent {
         if (this.canvasRef && this.ctx) {
             this.ctx.clearRect(0, 0, this.canvasRef.nativeElement.width, this.canvasRef.nativeElement.height);
         }
+        // Batch mode
+        this.selectedFiles.set([]);
+        this.uploadedBatchFilenames.set([]);
+        this.batchResults.set(null);
+        this.expandedFileIndex.set(null);
     }
 }

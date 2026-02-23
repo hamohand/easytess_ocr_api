@@ -18,6 +18,43 @@
   margin: 0;
 }
 
+/* Mode Toggle */
+.mode-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 2rem;
+  background: #e9ecef;
+  border-radius: 8px;
+  padding: 4px;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: #6c757d;
+  transition: all 0.3s;
+}
+
+.toggle-btn.active {
+  background: #007bff;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.toggle-btn:hover:not(.active) {
+  background: #dee2e6;
+}
+
 /* Entity Selector */
 .entity-selector {
   background: #f8f9fa;
@@ -137,6 +174,11 @@ input[type="file"] {
   color: white;
 }
 
+.btn-large {
+  font-size: 1.1rem;
+  padding: 1rem 2rem;
+}
+
 /* Spinner */
 .spinner {
   width: 16px;
@@ -148,7 +190,9 @@ input[type="file"] {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Image Preview */
@@ -180,6 +224,13 @@ input[type="file"] {
   padding: 1rem 2rem;
 }
 
+.upload-success-msg {
+  color: #28a745;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
 /* Error Message */
 .error-message {
   background: #f8d7da;
@@ -197,8 +248,15 @@ input[type="file"] {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .results-header {
@@ -230,6 +288,14 @@ input[type="file"] {
   flex-direction: column;
   gap: 0.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.stat-card-error {
+  background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
 }
 
 .stat-label {
@@ -358,6 +424,130 @@ tbody tr:hover {
   color: #721c24;
 }
 
+/* ==================== BATCH MODE STYLES ==================== */
+
+/* Batch File List */
+.batch-file-list {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.batch-file-list h3 {
+  color: #495057;
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+}
+
+.file-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.file-chip {
+  background: white;
+  border: 1px solid #dee2e6;
+  padding: 0.3rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  color: #495057;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Batch Results List */
+.batch-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.batch-file-card {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: box-shadow 0.3s;
+}
+
+.batch-file-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.batch-file-card.expanded {
+  border-color: #007bff;
+  box-shadow: 0 2px 12px rgba(0, 123, 255, 0.15);
+}
+
+.batch-file-header {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  gap: 0.75rem;
+  transition: background 0.2s;
+}
+
+.batch-file-header:hover {
+  background: #f8f9fa;
+}
+
+.batch-file-status {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.batch-file-name {
+  font-weight: 600;
+  color: #2c3e50;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-file-zones {
+  color: #6c757d;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.batch-file-error-badge {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expand-icon {
+  color: #6c757d;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.batch-file-detail {
+  border-top: 1px solid #dee2e6;
+  padding: 1rem;
+  animation: fadeIn 0.3s;
+}
+
+.batch-file-detail table {
+  font-size: 0.9rem;
+}
+
+.batch-file-detail th,
+.batch-file-detail td {
+  padding: 0.5rem 0.75rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .upload-section {
@@ -382,7 +572,16 @@ tbody tr:hover {
     font-size: 0.875rem;
   }
 
-  th, td {
+  th,
+  td {
     padding: 0.5rem;
+  }
+
+  .mode-toggle {
+    max-width: 100%;
+  }
+
+  .batch-file-header {
+    flex-wrap: wrap;
   }
 }

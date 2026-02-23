@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { UploadResponse } from './models';
+import { UploadResponse, BatchUploadResponse } from './models';
 
 @Injectable({
     providedIn: 'root'
@@ -47,6 +47,24 @@ export class FileService {
             });
         }
         return this.http.get(`${this.apiUrl}/export-json-file`, {
+            responseType: 'blob'
+        });
+    }
+
+    /**
+     * Upload plusieurs images en batch
+     */
+    uploadMultipleImages(files: File[]): Observable<BatchUploadResponse> {
+        const formData = new FormData();
+        files.forEach(file => formData.append('images', file));
+        return this.http.post<BatchUploadResponse>(`${this.apiUrl}/upload-batch`, formData);
+    }
+
+    /**
+     * Télécharge les résultats batch en fichier JSON
+     */
+    downloadBatchJsonFile(resultats_batch: any[]): Observable<Blob> {
+        return this.http.post(`${this.apiUrl}/export-json-batch`, { resultats_batch }, {
             responseType: 'blob'
         });
     }

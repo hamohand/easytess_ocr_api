@@ -110,3 +110,26 @@ export interface ImageEntiteUploadResponse {
         height: number;
     };
 }
+
+// Batch OCR Analysis
+export interface BatchUploadResponse {
+    success: boolean;
+    files: { filename: string; saved_filename: string; error?: string }[];
+}
+
+export interface BatchFileResult {
+    filename: string;
+    success: boolean;
+    resultats?: { [zoneName: string]: ResultatOCR };
+    alertes?: string[];
+    stats_moteurs?: { [moteur: string]: number };
+    error?: string;
+}
+
+export interface BatchAnalyseResponse {
+    success: boolean;
+    total: number;
+    reussis: number;
+    echoues: number;
+    resultats_batch: BatchFileResult[];
+}

@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { AnalyseResponse, ResultatOCR, CadreReference } from './models';
+import { AnalyseResponse, ResultatOCR, CadreReference, BatchAnalyseResponse } from './models';
 
 @Injectable({
     providedIn: 'root'
@@ -43,5 +43,13 @@ export class OcrService {
      */
     getCorrections(): Observable<{ [zoneName: string]: ResultatOCR }> {
         return this.http.get<{ [zoneName: string]: ResultatOCR }>(`${this.apiUrl}/corrections`);
+    }
+
+    /**
+     * Analyse un batch de fichiers avec OCR
+     */
+    analyserBatch(filenames: string[], zones?: any, cadre_reference?: CadreReference): Observable<BatchAnalyseResponse> {
+        const body = { filenames, zones, cadre_reference };
+        return this.http.post<BatchAnalyseResponse>(`${this.apiUrl}/analyser-batch`, body);
     }
 }
