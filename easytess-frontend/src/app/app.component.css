@@ -14,42 +14,42 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Header */
+/* ─── Header ─── */
 .app-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 2rem;
+    padding: 1.5rem 2rem;
     text-align: center;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .logo h1 {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
+    font-size: 2.25rem;
+    margin-bottom: 0.35rem;
     font-weight: 700;
 }
 
 .logo p {
-    font-size: 1rem;
+    font-size: 0.95rem;
     opacity: 0.9;
 }
 
-/* Tabs Navigation */
-.tabs {
+/* ─── Section Navigation (primary) ─── */
+.section-nav {
     background: white;
     display: flex;
     justify-content: center;
     gap: 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     position: sticky;
     top: 0;
     z-index: 100;
 }
 
-.tab-button {
+.section-btn {
     flex: 1;
-    max-width: 300px;
-    padding: 1.25rem 2rem;
+    max-width: 400px;
+    padding: 1rem 2rem;
     border: none;
     background: transparent;
     cursor: pointer;
@@ -64,39 +64,84 @@
     gap: 0.75rem;
 }
 
-.tab-button:hover {
+.section-btn:hover {
     background: #f8f9fa;
-    color: #007bff;
+    color: #5b21b6;
 }
 
-.tab-button.active {
-    color: #007bff;
-    border-bottom-color: #007bff;
-    background: #f8f9fa;
+.section-btn.active {
+    color: #5b21b6;
+    border-bottom-color: #7c3aed;
+    background: linear-gradient(0deg, #f5f3ff 0%, white 100%);
+    font-weight: 700;
 }
 
-.tab-icon {
-    font-size: 1.5rem;
+.section-icon {
+    font-size: 1.4rem;
 }
 
-.tab-label {
+.section-label {
+    font-weight: inherit;
+    font-size: 1rem;
+}
+
+/* ─── Sub Tabs (for OCR section) ─── */
+.sub-tabs {
+    background: #f8fafc;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.sub-tab-btn {
+    padding: 0.55rem 1.25rem;
+    border: 1.5px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #64748b;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sub-tab-btn:hover {
+    background: white;
+    color: #334155;
+    border-color: #e2e8f0;
+}
+
+.sub-tab-btn.active {
+    background: white;
+    color: #1e40af;
+    border-color: #93c5fd;
     font-weight: 600;
+    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.1);
 }
 
-/* Content */
+.sub-tab-icon {
+    font-size: 1.1rem;
+}
+
+/* ─── Content ─── */
 .content {
     flex: 1;
     padding: 2rem;
     max-width: 1400px;
     width: 100%;
     margin: 0 auto;
-    animation: fadeIn 0.4s ease-in;
+    animation: fadeIn 0.35s ease-in;
 }
 
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(15px);
     }
 
     to {
@@ -105,11 +150,11 @@
     }
 }
 
-/* Footer */
+/* ─── Footer ─── */
 .app-footer {
     background: #2c3e50;
     color: white;
-    padding: 1.5rem;
+    padding: 1.25rem;
     text-align: center;
     margin-top: auto;
 }
@@ -129,27 +174,43 @@
     text-decoration: underline;
 }
 
-/* Responsive */
+/* ─── Responsive ─── */
 @media (max-width: 768px) {
     .app-header {
-        padding: 1.5rem 1rem;
+        padding: 1.25rem 1rem;
     }
 
     .logo h1 {
-        font-size: 1.75rem;
+        font-size: 1.6rem;
     }
 
     .logo p {
-        font-size: 0.875rem;
+        font-size: 0.8rem;
     }
 
-    .tabs {
+    .section-nav {
         flex-direction: column;
     }
 
-    .tab-button {
+    .section-btn {
         max-width: 100%;
-        padding: 1rem;
+        padding: 0.85rem 1rem;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+    }
+
+    .section-btn.active {
+        border-left-color: #7c3aed;
+        border-bottom-color: transparent;
+    }
+
+    .sub-tabs {
+        flex-direction: column;
+        padding: 0.5rem;
+    }
+
+    .sub-tab-btn {
+        justify-content: center;
     }
 
     .content {

@@ -21,9 +21,12 @@ easytess_api/
 │   │   │   └── entity_routes.py# CRUD entités
 │   │   ├── services/
 │   │   │   ├── ocr_engine.py   # Moteurs OCR (Tesseract + EasyOCR), analyse hybride, AABB
-│   │   │   └── entity_manager.py
+│   │   │   ├── entity_manager.py
+│   │   │   ├── pdf_extractor.py    # Extraction contenu PDF (texte + tableaux) — pdfplumber
+│   │   │   ├── docx_extractor.py   # Extraction contenu Word (texte + tableaux) — python-docx
+│   │   │   └── pdf_to_docx.py      # Conversion PDF → Word (.docx)
 │   │   └── utils/
-│   │       ├── pdf_utils.py    # Conversion PDF → image
+│   │       ├── pdf_utils.py    # Conversion PDF → image (pour OCR)
 │   │       ├── image_utils.py  # Traitement images
 │   │       └── qrcode_utils.py # Détection QR codes
 │   ├── entities/               # Stockage entités (JSON)
@@ -99,6 +102,10 @@ npx ng build --configuration=development
 | POST | `/api/export-json-batch` | Export JSON batch |
 | GET/POST | `/api/entites` | Lister / créer entités |
 | GET/PUT/DELETE | `/api/entites/<nom>` | CRUD entité |
+| POST | `/api/extract-pdf` | Extraction contenu PDF (texte + tableaux) |
+| POST | `/api/extract-docx` | Extraction contenu Word |
+| POST | `/api/extract-document` | Extraction unifiée (PDF ou DOCX, auto-détection) |
+| POST | `/api/convert-pdf-to-docx` | Conversion PDF → Word (.docx) |
 
 ## Conventions
 

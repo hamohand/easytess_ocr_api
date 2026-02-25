@@ -4,30 +4,52 @@
     <header class="app-header">
         <div class="logo">
             <h1>🔍 {{ title }}</h1>
-            <p>Analyse OCR avec Tesseract & EasyOCR</p>
+            <p>Plateforme OCR & Extraction de Documents</p>
         </div>
     </header>
 
-    <!-- Navigation Tabs -->
-    <nav class="tabs">
-        <button class="tab-button" [class.active]="activeTab() === 'ocr'" (click)="setActiveTab('ocr')">
-            <span class="tab-icon">🔍</span>
-            <span class="tab-label">Analyse OCR</span>
+    <!-- ─── Section Navigation ─── -->
+    <nav class="section-nav">
+        <button class="section-btn" [class.active]="activeSection() === 'ocr'" (click)="setSection('ocr')">
+            <span class="section-icon">🔍</span>
+            <span class="section-label">EasyTess — OCR</span>
         </button>
-        <button class="tab-button" [class.active]="activeTab() === 'entity'" (click)="setActiveTab('entity')">
-            <span class="tab-icon">⚙️</span>
-            <span class="tab-label">Gestion des Entités</span>
+        <button class="section-btn" [class.active]="activeSection() === 'extraction'"
+            (click)="setSection('extraction')">
+            <span class="section-icon">📄</span>
+            <span class="section-label">Extraction de Documents</span>
         </button>
     </nav>
 
-    <!-- Content -->
+    <!-- ─── Section: EasyTess OCR ─── -->
+    @if (activeSection() === 'ocr') {
+    <!-- Sub-tabs -->
+    <nav class="sub-tabs">
+        <button class="sub-tab-btn" [class.active]="activeOcrTab() === 'analyse'" (click)="setOcrTab('analyse')">
+            <span class="sub-tab-icon">🔍</span>
+            Analyse OCR
+        </button>
+        <button class="sub-tab-btn" [class.active]="activeOcrTab() === 'entity'" (click)="setOcrTab('entity')">
+            <span class="sub-tab-icon">⚙️</span>
+            Gestion des Entités
+        </button>
+    </nav>
+
     <main class="content">
-        @if (activeTab() === 'ocr') {
+        @if (activeOcrTab() === 'analyse') {
         <app-ocr-upload />
         } @else {
         <app-entity-creator />
         }
     </main>
+    }
+
+    <!-- ─── Section: Document Extraction ─── -->
+    @if (activeSection() === 'extraction') {
+    <main class="content">
+        <app-document-extractor />
+    </main>
+    }
 
     <!-- Footer -->
     <footer class="app-footer">

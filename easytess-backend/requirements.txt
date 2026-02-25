@@ -7,5 +7,6 @@ Pillow
 numpy
 python-dotenv
 pypdfium2
+pdfplumber
 pyzbar
 python-docx

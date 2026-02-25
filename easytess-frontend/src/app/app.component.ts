@@ -1,29 +1,30 @@
-// app.component.ts - Composant principal avec onglets
-// NOTE: Les chemins d'import dépendent de votre structure de projet
-// Si vous copiez ce fichier dans src/app/, ajustez les chemins selon votre structure
+// app.component.ts - Composant principal avec 2 sections : EasyTess OCR + Extraction
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-// Option 1: Si vous avez copié les composants dans src/app/components/
 import { OcrUploadComponent } from './components/ocr-upload.component';
 import { EntityCreatorComponent } from './components/entity-creator.component';
+import { DocumentExtractorComponent } from './components/document-extractor.component';
 
-// Option 2: Imports relatifs depuis example-app vers le dossier parent (NE PAS UTILISER)
-// import { OcrUploadComponent } from '../components/ocr-upload.component';
-// import { EntityCreatorComponent } from '../components/entity-creator.component';
+type Section = 'ocr' | 'extraction';
+type OcrTab = 'analyse' | 'entity';
 
 @Component({
     selector: 'app-root',
     standalone: true,
-    imports: [CommonModule, OcrUploadComponent, EntityCreatorComponent],
+    imports: [CommonModule, OcrUploadComponent, EntityCreatorComponent, DocumentExtractorComponent],
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-    title = 'EasyTess OCR';
-    activeTab = signal<'ocr' | 'entity'>('ocr');
+    title = 'EasyTess';
+    activeSection = signal<Section>('ocr');
+    activeOcrTab = signal<OcrTab>('analyse');
 
-    setActiveTab(tab: 'ocr' | 'entity') {
-        this.activeTab.set(tab);
+    setSection(section: Section) {
+        this.activeSection.set(section);
+    }
+
+    setOcrTab(tab: OcrTab) {
+        this.activeOcrTab.set(tab);
     }
 }

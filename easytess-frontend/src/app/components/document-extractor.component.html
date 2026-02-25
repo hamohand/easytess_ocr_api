@@ -1,0 +1,245 @@
+<!-- document-extractor.component.html -->
+<div class="extractor-container">
+    <!-- ─── Mode Selector ─── -->
+    <div class="mode-selector">
+        <button class="mode-btn" [class.active]="activeMode() === 'unified'" (click)="setMode('unified')">
+            <span class="mode-icon">📄</span>
+            <span class="mode-info">
+                <span class="mode-title">Extraction Unifiée</span>
+                <span class="mode-desc">PDF ou Word → contenu structuré</span>
+            </span>
+        </button>
+        <button class="mode-btn" [class.active]="activeMode() === 'pdf'" (click)="setMode('pdf')">
+            <span class="mode-icon">📊</span>
+            <span class="mode-info">
+                <span class="mode-title">Extraction PDF</span>
+                <span class="mode-desc">Texte + tableaux depuis un PDF</span>
+            </span>
+        </button>
+        <button class="mode-btn" [class.active]="activeMode() === 'convert'" (click)="setMode('convert')">
+            <span class="mode-icon">🔄</span>
+            <span class="mode-info">
+                <span class="mode-title">PDF → Word</span>
+                <span class="mode-desc">Convertir un PDF en .docx</span>
+            </span>
+        </button>
+    </div>
+
+    <!-- ─── Dropzone ─── -->
+    <div class="dropzone" [class.drag-over]="dragOver()" [class.has-file]="selectedFile()"
+        (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+
+        @if (!selectedFile()) {
+        <div class="dropzone-content">
+            <div class="dropzone-icon">
+                @if (activeMode() === 'convert') { 🔄 }
+                @else if (activeMode() === 'pdf') { 📊 }
+                @else { 📄 }
+            </div>
+            <p class="dropzone-text">Glissez-déposez votre fichier ici</p>
+            <p class="dropzone-hint">ou</p>
+            <label class="browse-btn" for="file-input-doc">
+                Parcourir
+            </label>
+            <input type="file" id="file-input-doc" [accept]="acceptedFormats()" (change)="onFileSelected($event)"
+                hidden />
+            <p class="dropzone-formats">Formats: {{ acceptedFormats() }}</p>
+        </div>
+        } @else {
+        <div class="file-preview">
+            <div class="file-icon-large">
+                @if (fileInfo()?.isPdf) { 📕 }
+                @else { 📘 }
+            </div>
+            <div class="file-details">
+                <span class="file-name">{{ fileInfo()?.name }}</span>
+                <span class="file-meta">
+                    <span class="file-badge" [class.pdf]="fileInfo()?.isPdf" [class.docx]="fileInfo()?.isDocx">
+                        {{ fileInfo()?.ext?.toUpperCase() }}
+                    </span>
+                    {{ fileInfo()?.size }}
+                </span>
+            </div>
+            <button class="remove-btn" (click)="removeFile()" title="Retirer">✕</button>
+        </div>
+        }
+    </div>
+
+    <!-- ─── Options Panel ─── -->
+    @if (selectedFile()) {
+    <div class="options-panel">
+        <h3 class="options-title">⚙️ Options</h3>
+
+        <div class="options-grid">
+            <!-- Strategy (PDF only) -->
+            @if (fileInfo()?.isPdf) {
+            <div class="option-group">
+                <label class="option-label">Stratégie de détection</label>
+                <select class="option-select" [ngModel]="strategy()" (ngModelChange)="strategy.set($event)">
+                    <option value="auto">Auto (recommandé)</option>
+                    <option value="standard">Standard — bordures visibles</option>
+                    <option value="text">Texte — tableaux sans bordures</option>
+                    <option value="lines_strict">Strict — lignes nettes uniquement</option>
+                </select>
+            </div>
+
+            <!-- Pages filter -->
+            <div class="option-group">
+                <label class="option-label">Pages à extraire</label>
+                <input class="option-input" type="text" placeholder="Toutes — ex: 1,3,5 ou 1-5"
+                    [ngModel]="pagesFilter()" (ngModelChange)="pagesFilter.set($event)" />
+            </div>
+            }
+
+            <!-- Columns filter -->
+            <div class="option-group">
+                <label class="option-label">Colonnes (tableaux)</label>
+                <input class="option-input" type="text" placeholder="Toutes — ex: 0,1,3" [ngModel]="columnsFilter()"
+                    (ngModelChange)="columnsFilter.set($event)" />
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="action-buttons">
+            @if (activeMode() !== 'convert') {
+            <button class="btn btn-primary" (click)="extract()" [disabled]="loading()">
+                @if (loading()) {
+                <span class="spinner"></span> Extraction...
+                } @else {
+                📥 Extraire le contenu
+                }
+            </button>
+            }
+
+            @if (activeMode() === 'convert' || (activeMode() === 'unified' && fileInfo()?.isPdf)) {
+            <button class="btn btn-convert" (click)="convertToDocx()" [disabled]="converting()">
+                @if (converting()) {
+                <span class="spinner"></span> Conversion...
+                } @else {
+                🔄 Convertir en Word
+                }
+            </button>
+            }
+        </div>
+
+        @if (convertSuccess()) {
+        <div class="success-toast">
+            ✅ Conversion réussie ! Fichier Word téléchargé.
+        </div>
+        }
+    </div>
+    }
+
+    <!-- ─── Error ─── -->
+    @if (error()) {
+    <div class="error-banner">
+        <span class="error-icon">⚠️</span>
+        <span>{{ error() }}</span>
+        <button class="error-close" (click)="error.set(null)">✕</button>
+    </div>
+    }
+
+    <!-- ─── Results ─── -->
+    @if (hasResults()) {
+    <div class="results-container">
+        <!-- Stats bar -->
+        <div class="results-header">
+            <h3>📋 Résultats — {{ resultFilename() }}</h3>
+            <div class="results-stats">
+                @if (resultFormat()) {
+                <span class="stat-badge format">{{ resultFormat()?.toUpperCase() }}</span>
+                }
+                <span class="stat-badge text">📝 {{ textBlocs().length }} texte(s)</span>
+                <span class="stat-badge table">📊 {{ tableBlocs().length }} tableau(x)</span>
+                @if (stats()) {
+                <span class="stat-badge pages">📄 {{ stats()!.pages_traitees }} page(s)</span>
+                <span class="stat-badge strategy">🎯 {{ stats()!.strategie_utilisee }}</span>
+                }
+            </div>
+            <div class="results-actions">
+                <button class="btn btn-sm btn-json" (click)="exportJson()">
+                    💾 Export JSON
+                </button>
+                <button class="btn btn-sm btn-preview" (click)="toggleJsonPreview()">
+                    {{ showJsonPreview() ? '📋 Masquer JSON' : '👁️ Aperçu JSON' }}
+                </button>
+            </div>
+        </div>
+
+        <!-- JSON Preview -->
+        @if (showJsonPreview()) {
+        <div class="json-preview">
+            <pre>{{ getJsonPreview() }}</pre>
+        </div>
+        }
+
+        <!-- Content blocks -->
+        <div class="blocks-list">
+            @for (bloc of extractedContent(); track $index) {
+            <div class="block-card" [class.text-block]="bloc.type === 'texte'"
+                [class.table-block]="bloc.type === 'tableau'">
+
+                @if (bloc.type === 'texte') {
+                <div class="block-header text-header">
+                    <span class="block-badge text-badge">📝 Texte</span>
+                    @if (bloc.page) {
+                    <span class="page-num">p.{{ bloc.page }}</span>
+                    }
+                </div>
+                <div class="block-body text-body">
+                    <p>{{ bloc.contenu }}</p>
+                </div>
+                }
+
+                @if (bloc.type === 'tableau') {
+                <div class="block-header table-header" (click)="toggleTable($index)">
+                    <div class="table-title-row">
+                        <span class="block-badge table-badge">📊 Tableau #{{ bloc.numero }}</span>
+                        @if (bloc.metadata) {
+                        <span class="table-dims">
+                            {{ bloc.metadata.nb_lignes }} × {{ bloc.metadata.nb_colonnes }}
+                        </span>
+                        @if (bloc.metadata.a_entete) {
+                        <span class="header-badge">En-tête détecté</span>
+                        }
+                        }
+                        @if (bloc.page) {
+                        <span class="page-num">p.{{ bloc.page }}</span>
+                        }
+                    </div>
+                    <span class="expand-icon">{{ isTableExpanded($index) ? '▼' : '▶' }}</span>
+                </div>
+
+                @if (isTableExpanded($index) && bloc.lignes) {
+                <div class="block-body table-body">
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="row-num">#</th>
+                                    @for (key of getTableKeys(bloc); track key) {
+                                    <th>{{ getFormatLabel(key) }}</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (row of bloc.lignes; track $index) {
+                                <tr>
+                                    <td class="row-num">{{ $index + 1 }}</td>
+                                    @for (key of getTableKeys(bloc); track key) {
+                                    <td>{{ row[key] || '' }}</td>
+                                    }
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+                }
+            </div>
+            }
+        </div>
+    </div>
+    }
+</div>
