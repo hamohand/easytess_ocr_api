@@ -5,7 +5,7 @@ class Config:
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     ENTITIES_FOLDER = os.path.join(BASE_DIR, 'entities')
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'tiff', 'pdf'}
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'tiff', 'pdf', 'docx'}
     
     # Tesseract path if needed (windows)
     # TESSERACT_CMD = r'C:\Program Files\Tesseract-OCR\tesseract.exe'

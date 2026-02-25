@@ -8,3 +8,4 @@ numpy
 python-dotenv
 pypdfium2
 pyzbar
+python-docx
