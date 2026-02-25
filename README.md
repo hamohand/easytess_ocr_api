@@ -1,81 +1,72 @@
-# 🚀 EasyTess - Application OCR avec support PDF et QR Code
+# 🚀 EasyTess - Plateforme OCR & Extraction de Documents
 
-Application complète d'analyse OCR avec gestion d'entités, support des fichiers PDF et détection de QR codes.
+Plateforme complète d'analyse OCR et d'extraction de contenu documentaire. Deux sections principales : **EasyTess-OCR** (analyse OCR avec gestion d'entités) et **Extraction de Documents** (extraction structurée PDF/Word, conversion PDF→DOCX).
 
 > **🚀 Nouveau ?** Consultez le [Guide de démarrage rapide](./docs/QUICKSTART.md)  
 > **📚 Documentation complète** → Voir le dossier [`/docs`](./docs/INDEX.md)
 
 ## ✨ Fonctionnalités principales
 
-### 📄 Support multi-formats
-- ✅ Images (JPG, PNG, BMP, TIFF, etc.)
-- ✅ **PDF**
-  - Conversion automatique en image haute qualité (300 DPI)
-  - Support pour l'analyse OCR
-  - Support pour la création d'entités
-
-### 🔍 Analyse OCR hybride
-- **Tesseract** : Moteur principal pour l'arabe et le français
-- **EasyOCR** : Moteur de secours pour les zones difficiles
+### 🔍 Section EasyTess-OCR
+- **Analyse OCR hybride** : Tesseract + EasyOCR avec sélection automatique
+- **Support multi-formats** : Images (JPG, PNG, TIFF…) et PDF (conversion auto 300 DPI)
 - **QR Code/Barcode** : Détection automatique avec OpenCV
-- Détection automatique de la meilleure approche
-- Niveau de confiance pour chaque zone
-
-### 🏗️ Gestion des entités
-- Création de modèles d'extraction personnalisés
-- Définition de zones par dessin ou drag & drop
+- **Gestion des entités** : Modèles d'extraction personnalisés avec zones dessinées
 - **Types de zones** : Texte, QR Code, Code-barres
-- Modification et suppression d'entités
-- Coordonnées relatives (adaptables à différentes tailles d'images)
+- **Analyse par lot** : Fichier unique, multi-fichiers, dossier entier avec SSE temps réel
+- **Système AABB** : Cadre de référence à 3 ancres (Haut, Droite, Gauche)
+- **Export JSON** : Résultats détaillés avec confiance et moteur utilisé
 
-### 📦 Analyse par Lot (Batch)
-- **3 modes** : Fichier unique, multi-fichiers, dossier entier
-- Traitement asynchrone en arrière-plan avec progression SSE temps réel
-- Sélection de dossier via `webkitdirectory`
-- Barre de progression avec % et fichier en cours
-- Résultats dépliables par fichier
-- Export JSON consolidé de tous les résultats
-
-### 📊 Résultats détaillés
-- Texte extrait par zone
-- Contenu des QR codes décodés
-- Niveau de confiance
-- Moteur utilisé (Tesseract, EasyOCR, OpenCV)
-- Alertes pour les zones problématiques
-- Export JSON des résultats
+### 📄 Section Extraction de Documents
+- **Extraction PDF** : Texte + tableaux via `pdfplumber` avec 4 stratégies de détection
+- **Extraction DOCX** : Texte + tableaux (vrais Word + pseudo-tableaux tabulés)
+- **Extraction unifiée** : Un endpoint, auto-détection du format (PDF ou DOCX)
+- **Conversion PDF → Word** : Reconstruction en `.docx` fidèle (texte, tableaux stylés, sauts de page)
+- **Détection d'en-têtes** : Identification automatique des lignes d'en-tête dans les tableaux
+- **4 stratégies tableaux** : `auto`, `standard` (bordures), `text` (sans bordures), `lines_strict`
+- **Export JSON** : Contenu structuré exportable
+- **Drag & drop** : Interface intuitive avec prévisualisation
 
 ## 🏗️ Architecture
 
 ```
 easytess_api/
-├── easytess-backend/          # API Flask
+├── easytess-backend/          # API Flask (port 8082)
 │   ├── app/
-│   │   ├── api/              # Routes API
+│   │   ├── api/
 │   │   │   ├── file_routes.py      # Upload et gestion fichiers
-│   │   │   ├── ocr_routes.py       # Analyse OCR
-│   │   │   └── entity_routes.py    # Gestion entités
-│   │   ├── services/         # Logique métier
-│   │   │   ├── ocr_engine.py       # Moteurs OCR
-│   │   │   └── entity_manager.py   # Gestion entités
-│   │   └── utils/            # Utilitaires
-│   │       ├── pdf_utils.py        # Conversion PDF (nouveau !)
-│   │       └── image_utils.py      # Traitement images
+│   │   │   ├── ocr_routes.py       # Analyse OCR (simple, batch, async, dossier)
+│   │   │   ├── entity_routes.py    # CRUD entités
+│   │   │   ├── docx_routes.py      # Extraction DOCX (legacy)
+│   │   │   └── document_routes.py  # Extraction unifiée + conversion PDF→Word
+│   │   ├── services/
+│   │   │   ├── ocr_engine.py       # Moteurs OCR (Tesseract + EasyOCR)
+│   │   │   ├── entity_manager.py   # Gestion entités JSON
+│   │   │   ├── pdf_extractor.py    # Extraction PDF (pdfplumber)
+│   │   │   ├── docx_extractor.py   # Extraction Word (python-docx)
+│   │   │   └── pdf_to_docx.py      # Conversion PDF → Word
+│   │   └── utils/
+│   │       ├── pdf_utils.py        # Conversion PDF → image (pour OCR)
+│   │       ├── image_utils.py      # Traitement images
+│   │       └── qrcode_utils.py     # QR codes / codes-barres
 │   ├── entities/             # Stockage entités (JSON)
 │   └── uploads/              # Fichiers uploadés
 │
-├── easytess-frontend/         # Application Angular
+├── easytess-frontend/         # Angular 18+ (port 4200)
 │   └── src/app/
+│       ├── app.component.*           # Layout, 2 sections (OCR / Extraction)
 │       ├── components/
-│       │   ├── ocr-upload.component.*     # Analyse OCR
-│       │   └── entity-creator.component.* # Création entités
+│       │   ├── ocr-upload.component.*          # Analyse OCR
+│       │   ├── entity-creator.component.*      # Gestion entités
+│       │   └── document-extractor.component.*  # Extraction de documents
 │       └── services/
-│           ├── file.service.ts
-│           ├── ocr.service.ts
-│           └── entity.service.ts
+│           ├── file.service.ts        # Upload / export
+│           ├── ocr.service.ts         # Analyse OCR
+│           ├── entity.service.ts      # CRUD entités
+│           ├── document.service.ts    # Extraction + conversion
+│           └── models.ts              # Interfaces TypeScript
 │
-└── docs/
-    ├── PDF_SUPPORT.md        # Documentation technique PDF
-    └── GUIDE_PDF.md          # Guide utilisateur PDF
+└── docs/                      # Documentation
 ```
 
 ## 🚀 Installation
@@ -116,25 +107,25 @@ L'application est accessible sur `http://localhost:4200`
 ## 📦 Dépendances principales
 
 ### Backend
-- **Flask** : Framework web
-- **Flask-Cors** : Gestion CORS
-- **pytesseract** : Interface Python pour Tesseract
-- **easyocr** : Moteur OCR alternatif
-- **pypdfium2** : Conversion PDF (nouveau !)
-- **Pillow** : Traitement d'images
-- **opencv-python** : Vision par ordinateur
+- **Flask** + **Flask-Cors** : Framework web avec CORS
+- **pytesseract** + **easyocr** : Moteurs OCR
+- **pypdfium2** : Conversion PDF → image (pour OCR)
+- **pdfplumber** : Extraction contenu PDF (texte + tableaux)
+- **python-docx** : Extraction/génération Word
+- **Pillow** + **opencv-python** : Traitement d'images
+- **pyzbar** : Détection codes-barres (optionnel)
 
 ### Frontend
-- **Angular 17+** : Framework frontend
-- **TypeScript** : Langage
+- **Angular 18+** : Framework frontend
+- **TypeScript** : Typage statique
 - **RxJS** : Programmation réactive
 
 ## 🎯 Utilisation rapide
 
-### 1. Analyser un document
+### 1. Analyser un document (OCR)
 
 ```
-1. Onglet "OCR Analysis"
+1. Section "EasyTess — OCR" → Onglet "Analyse OCR"
 2. Mode "Fichier unique" (par défaut)
 3. Sélectionner une entité (ou "Aucun")
 4. Uploader une image ou un PDF
@@ -143,28 +134,34 @@ L'application est accessible sur `http://localhost:4200`
 7. Exporter en JSON si nécessaire
 ```
 
-### 2. Analyser un dossier entier
+### 2. Extraire le contenu d'un document
 
 ```
-1. Onglet "OCR Analysis"
-2. Mode "Dossier" (clic sur 📁)
-3. Sélectionner une entité
-4. Sélectionner un dossier contenant des images
-5. Uploader → Analyser tout le dossier
-6. Suivre la progression en temps réel
-7. Exporter tous les résultats en JSON
+1. Section "Extraction de Documents"
+2. Choisir le mode : Extraction Unifiée / PDF / Word
+3. Glisser-déposer un fichier PDF ou DOCX
+4. Ajuster les options (stratégie, pages, colonnes)
+5. Cliquer sur "Extraire le contenu"
+6. Consulter les textes et tableaux détectés
+7. Exporter en JSON ou convertir en Word
 ```
 
-### 3. Créer une entité
+### 3. Convertir un PDF en Word
 
 ```
-1. Onglet "Entity Management"
+1. Section "Extraction de Documents" → Mode "PDF → Word"
+2. Déposer un fichier PDF
+3. Cliquer sur "Convertir en Word"
+4. Le fichier .docx est téléchargé automatiquement
+```
+
+### 4. Créer une entité (OCR)
+
+```
+1. Section "EasyTess — OCR" → Onglet "Gestion des Entités"
 2. Cliquer sur "Créer une nouvelle entité"
-3. Nommer l'entité
-4. Uploader une image ou un PDF de référence
-5. Dessiner les zones d'extraction
-6. Nommer chaque zone
-7. Sauvegarder
+3. Nommer, uploader l'image de référence
+4. Dessiner les zones, nommer, sauvegarder
 ```
 
 ## 🔧 Configuration
@@ -256,12 +253,14 @@ Le système utilise automatiquement :
 
 ## 📈 Améliorations futures
 
-- [ ] Support multi-pages pour les PDF
-- [ ] Choix de la page à convertir
-- [ ] Détection de codes-barres avec zbar (actuellement QR codes uniquement)
+- [x] ~~Batch processing (traitement par lot)~~ ✅ v2.4.0
+- [x] ~~Extraction de contenu PDF/DOCX~~ ✅ v2.5.0
+- [x] ~~Conversion PDF → Word~~ ✅ v2.5.0
+- [x] ~~Détection avancée des tableaux~~ ✅ v2.5.0
+- [ ] Support multi-pages complet pour l'OCR (actuellement 1ère page uniquement)
+- [ ] Détection de codes-barres avec zbar
 - [ ] Support de plus de langues OCR
 - [ ] API REST complète avec documentation Swagger
-- [x] ~~Batch processing (traitement par lot)~~ ✅ Ajouté en v2.4.0
 - [ ] Interface de correction manuelle des résultats
 - [ ] Historique des analyses
 - [ ] Authentification et gestion des utilisateurs
@@ -276,8 +275,5 @@ Pour toute question ou suggestion, contactez l'équipe de développement.
 
 ---
 
-**Version** : 2.4.0 (avec batch processing, SSE et sélection de dossier)  
+**Version** : 2.5.0 (extraction de documents, conversion PDF→Word, détection avancée des tableaux)  
 **Dernière mise à jour** : Février 2026
-#   e a s y t e s s _ o c r _ a p i 
- 
- 

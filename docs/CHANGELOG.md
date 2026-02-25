@@ -2,6 +2,73 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [2.5.0] - 2026-02-25
+
+### 🎉 Ajouts majeurs
+
+#### Extraction de contenu documentaire (PDF + Word)
+- **Extraction PDF** : Extraction texte + tableaux depuis un PDF via `pdfplumber`
+- **Extraction DOCX** : Extraction texte + tableaux (vrais tableaux Word + pseudo-tableaux tabulés)
+- **Extraction unifiée** : Un seul endpoint acceptant PDF et DOCX, auto-détection du format
+- **Conversion PDF → Word** : Reconstruction du contenu PDF en document `.docx` fidèle (texte, tableaux, en-têtes, sauts de page)
+- **Export JSON** : Export client-side du contenu structuré extrait
+
+#### Détection avancée des tableaux
+- **4 stratégies de détection** :
+  - `standard` : Lignes visibles (bordures)
+  - `text` : Alignement texte (tableaux sans bordures)
+  - `lines_strict` : Lignes nettes uniquement
+  - `auto` : `standard` en premier, fallback `text` si aucun résultat
+- **Détection d'en-têtes** : Heuristique pour identifier les lignes d'en-tête
+- **Métadonnées enrichies** : Dimensions, bounding box, en-têtes, statistiques par page
+
+#### Frontend — Nouvelle section "Extraction de Documents"
+- **2 sections dans la navigation principale** : "EasyTess — OCR" et "Extraction de Documents"
+- **3 modes d'extraction** : Extraction Unifiée, Extraction PDF, Conversion PDF→Word
+- **Drag & drop** avec validation de format et prévisualisation
+- **Panneau d'options** : Stratégie, filtre de pages, filtre de colonnes
+- **Tableaux expandables** avec en-têtes détectés et numérotation
+- **Aperçu JSON intégré** (toggle)
+- **Conversion PDF→DOCX** avec téléchargement direct du fichier Word
+- **Export JSON** : Téléchargement client-side du contenu extrait
+
+### 🔧 Modifications techniques
+
+#### Backend — Nouveaux services
+- **`app/services/pdf_extractor.py`** : Refondu — multi-stratégie, métadonnées, retourne `(content, stats)`
+- **`app/services/docx_extractor.py`** : Extraction Word (vrais tableaux + pseudo-tableaux tabulés)
+- **`app/services/pdf_to_docx.py`** : Nouveau — conversion contenu structuré → .docx avec styles
+
+#### Backend — Nouvelles routes
+- **`app/api/document_routes.py`** : 3 endpoints :
+  - `POST /api/extract-pdf` : Extraction PDF uniquement
+  - `POST /api/extract-document` : Extraction unifiée PDF ou DOCX
+  - `POST /api/convert-pdf-to-docx` : Conversion PDF → Word avec download
+- **`app/__init__.py`** : Enregistrement du blueprint `document_bp`
+
+#### Backend — Dépendances
+- Ajout de `pdfplumber` dans `requirements.txt`
+
+#### Frontend — Nouveaux fichiers
+- **`services/document.service.ts`** : Service Angular pour les appels API extraction + conversion
+- **`services/models.ts`** : Interfaces `DocumentBloc`, `ExtractDocumentResponse`, `ConvertPdfResponse`, etc.
+- **`components/document-extractor.component.*`** : Composant complet (TS + HTML + CSS)
+
+#### Frontend — Fichiers modifiés
+- **`app.component.ts`** : 2 sections (`ocr` | `extraction`) + sous-onglets OCR (`analyse` | `entity`)
+- **`app.component.html`** : Navigation principale + sous-navigation
+- **`app.component.css`** : Layout section-nav + sub-tabs
+
+### 📚 Documentation
+- **CLAUDE.md** : Refondu — architecture complète, 2 sections, paramètres API
+- **CHANGELOG.md** : Entrée v2.5.0
+- **README.md** : Mise à jour fonctionnalités et architecture
+
+### 🧪 Tests
+- **`test_document_extraction.py`** : Script de test complet (extraction PDF/DOCX, conversion, comparaison stratégies)
+
+---
+
 ## [2.4.0] - 2026-02-23
 
 ### 🎉 Ajouts majeurs
@@ -275,19 +342,12 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 ## Versions futures prévues
 
-### [2.2.0] - À venir
+### [2.6.0] - À venir
 - [ ] Support complet de zbar pour tous les types de codes-barres
-- [ ] Support multi-pages pour PDF
-- [ ] Sélection de la page à convertir
+- [ ] Support multi-pages complet pour l'OCR (toutes les pages d'un PDF)
 - [ ] Paramétrage de la résolution dans l'interface
-- [ ] Support PNG pour la conversion (en plus de JPEG)
-
-### [2.5.0] - À venir
-- [x] ~~Batch processing (traitement par lot)~~ ✅ v2.4.0
-- [ ] Interface de correction manuelle des résultats
-- [ ] Historique des analyses
-- [ ] Comparaison de résultats
 - [ ] Export en CSV et Excel
+- [ ] Interface de correction manuelle des résultats
 
 ### [3.0.0] - À venir
 - [ ] API REST complète et documentée (Swagger)
