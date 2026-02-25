@@ -342,12 +342,19 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 ## Versions futures prévues
 
-### [2.6.0] - À venir
+### [2.2.0] - À venir
 - [ ] Support complet de zbar pour tous les types de codes-barres
-- [ ] Support multi-pages complet pour l'OCR (toutes les pages d'un PDF)
+- [ ] Support multi-pages pour PDF
+- [ ] Sélection de la page à convertir
 - [ ] Paramétrage de la résolution dans l'interface
-- [ ] Export en CSV et Excel
+- [ ] Support PNG pour la conversion (en plus de JPEG)
+
+### [2.5.0] - À venir
+- [x] ~~Batch processing (traitement par lot)~~ ✅ v2.4.0
 - [ ] Interface de correction manuelle des résultats
+- [ ] Historique des analyses
+- [ ] Comparaison de résultats
+- [ ] Export en CSV et Excel
 
 ### [3.0.0] - À venir
 - [ ] API REST complète et documentée (Swagger)
