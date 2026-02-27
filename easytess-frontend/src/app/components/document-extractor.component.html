@@ -147,7 +147,7 @@
             <h3>📋 Résultats — {{ resultFilename() }}</h3>
             <div class="results-stats">
                 @if (resultFormat()) {
-                <span class="stat-badge format">{{ resultFormat()?.toUpperCase() }}</span>
+                <span class="stat-badge format">{{ resultFormat().toUpperCase() }}</span>
                 }
                 <span class="stat-badge text">📝 {{ textBlocs().length }} texte(s)</span>
                 <span class="stat-badge table">📊 {{ tableBlocs().length }} tableau(x)</span>

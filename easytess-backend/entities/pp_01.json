@@ -1,7 +1,7 @@
 {
   "nom": "pp_01",
   "description": "Passeport DZ",
-  "date_creation": "2026-02-27T09:12:37.953227",
+  "date_creation": "2026-02-27T09:54:47.919729",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\easytess-backend\\uploads\\temp_entite_66903162-0c1e-491c-9a96-d7d3bc82a863_pp_Moh_moit.png",
   "zones": [
     {
@@ -55,6 +55,32 @@
       "nom": "numeroPiece",
       "preprocess": "auto",
       "type": "text"
+    },
+    {
+      "id": 1772182363736,
+      "nom": "latines",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "latin_simple",
+      "coords": [
+        0.27293625914315567,
+        0.16589112903225806,
+        0.5340647857889238,
+        0.22515322580645158
+      ]
+    },
+    {
+      "id": 1772182452182,
+      "nom": "prenom_latines",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "latin_simple",
+      "coords": [
+        0.27293625914315567,
+        0.32163306451612905,
+        0.5340647857889238,
+        0.39091532258064515
+      ]
     }
   ],
   "cadre_reference": {
@@ -111,7 +137,7 @@
     }
   },
   "metadata": {
-    "nombre_zones": 4,
+    "nombre_zones": 6,
     "image_dimensions": {
       "width": 980,
       "height": 710
