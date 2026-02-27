@@ -1,0 +1,31 @@
+
+> easytess-frontend@0.0.0 build
+> ng build
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[33mÔØ»[39m Building...
+[32mÔ£ö[39m Building...
+[1mInitial chunk files[22m  [2m | [22m[1mNames[22m        [2m | [22m [1mRaw size[22m[2m | [22m[1mEstimated transfer size[22m
+[32mmain-A5TBLTVR.js[39m     [2m | [22m[2mmain[22m         [2m | [22m[36m324.11 kB[39m[2m | [22m               [36m79.13 kB[39m
+[32mpolyfills-B6TNHZQ6.js[39m[2m | [22m[2mpolyfills[22m    [2m | [22m [36m34.58 kB[39m[2m | [22m               [36m11.32 kB[39m
+[32mstyles-OY5CCL4Y.css[39m  [2m | [22m[2mstyles[22m       [2m | [22m  [36m9.87 kB[39m[2m | [22m                [36m1.07 kB[39m
+
+[1m [22m                    [2m | [22m[1mInitial total[22m[2m | [22m[1m368.56 kB[22m[2m | [22m               [1m91.52 kB[22m
+
+Application bundle generation complete. [2.980 seconds]
+
+Ôû▓ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
+
+    src/app/components/document-extractor.component.html:150:67:
+      150 Ôöé ...ss="stat-badge format">{{ resultFormat()?.toUpperCase() }}</span>
+          ÔòÁ                                              ~~~~~~~~~~~
+
+  Error occurs in the template of component DocumentExtractorComponent.
+
+    src/app/components/document-extractor.component.ts:15:17:
+      15 Ôöé     templateUrl: './document-extractor.component.html',
+         ÔòÁ                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Output location: C:\Users\hamoh\Documents\projets\frida\frida-micros\easytess_ocr_api\easytess-frontend\dist\easytess-frontend
+

@@ -1,0 +1,6 @@
+
+> easytess-frontend@0.0.0 start
+> ng serve
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ [1mPort 4200 is already in use.

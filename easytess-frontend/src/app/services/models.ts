@@ -15,6 +15,8 @@ export interface EtiquetteReference {
     labels: string[];                        // Textes à chercher (ex: ["PASSPORT", "PASSEPORT"])
     position_base: [number, number];         // Position (x, y) sur l'image de base (0-1)
     template_coords?: [number, number, number, number]; // NEW: Image template region [x1, y1, x2, y2] relative (0-1)
+    offset_x?: number;                       // Décalage X en pixels (optionnel)
+    offset_y?: number;                       // Décalage Y en pixels (optionnel)
 }
 
 // Cadre de référence pour définir le système de coordonnées

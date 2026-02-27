@@ -154,13 +154,26 @@ def detecter_etiquettes():
 
         if isinstance(config, list):
             labels = config
+            offset_x = 0
+            offset_y = 0
         elif isinstance(config, dict):
             labels = config.get('labels', [])
             template_coords = config.get('template_coords')
+            try:
+                offset_x = float(config.get('offset_x', 0))
+            except (ValueError, TypeError):
+                offset_x = 0.0
+                
+            try:
+                offset_y = float(config.get('offset_y', 0))
+            except (ValueError, TypeError):
+                offset_y = 0.0
         
         anchor_conf = {
             'id': etiquette_id,
-            'labels': labels
+            'labels': labels,
+            'offset_x': offset_x,
+            'offset_y': offset_y
         }
         
         # Gestion des templates image temporaires pour la détection

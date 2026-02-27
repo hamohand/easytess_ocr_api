@@ -17,6 +17,8 @@ interface EtiquetteDrawing {
     template_coords?: [number, number, number, number]; // Image template region
     template_preview?: string; // Base64 preview of the template
     detected_bbox?: [number, number, number, number]; // Bounding box detected by OCR/Image matching
+    offset_x: number; // Décalage X en pixels
+    offset_y: number; // Décalage Y en pixels
 }
 
 @Component({
@@ -46,13 +48,13 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
 
     // NOUVEAU: Signaux pour Cadre de Référence (4 étiquettes)
     // HAUT : pour déterminer le point le plus haut (Y min)
-    cadreHaut = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0.5, 0] });
+    cadreHaut = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0.5, 0], offset_x: 0, offset_y: 0 });
     // DROITE : pour déterminer le point le plus à droite (X max)
-    cadreDroite = signal<EtiquetteDrawing>({ labels_str: '', position_base: [1, 0.5] });
+    cadreDroite = signal<EtiquetteDrawing>({ labels_str: '', position_base: [1, 0.5], offset_x: 0, offset_y: 0 });
     // GAUCHE : pour déterminer le point le plus à gauche (X min)
-    cadreGauche = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0, 0.5] });
+    cadreGauche = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0, 0.5], offset_x: 0, offset_y: 0 });
     // BAS : pour déterminer le point le plus bas (Y max)
-    cadreBas = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0.5, 1] });
+    cadreBas = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0.5, 1], offset_x: 0, offset_y: 0 });
 
     // Paramètres calculés du cadre de référence
     cadreParams = signal<{
@@ -603,25 +605,37 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         const addAnchorConfig = (type: 'haut' | 'droite' | 'gauche' | 'bas') => {
             let labels: string[] = [];
             let template_coords: [number, number, number, number] | undefined = undefined;
+            let offset_x = 0;
+            let offset_y = 0;
 
             if (type === 'haut') {
                 labels = this.cadreHaut().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreHaut().template_coords;
+                offset_x = this.cadreHaut().offset_x;
+                offset_y = this.cadreHaut().offset_y;
             } else if (type === 'droite') {
                 labels = this.cadreDroite().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreDroite().template_coords;
+                offset_x = this.cadreDroite().offset_x;
+                offset_y = this.cadreDroite().offset_y;
             } else if (type === 'gauche') {
                 labels = this.cadreGauche().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreGauche().template_coords;
+                offset_x = this.cadreGauche().offset_x;
+                offset_y = this.cadreGauche().offset_y;
             } else if (type === 'bas') {
                 labels = this.cadreBas().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreBas().template_coords;
+                offset_x = this.cadreBas().offset_x;
+                offset_y = this.cadreBas().offset_y;
             }
 
             if (labels.length > 0 || template_coords) {
                 etiquettes[type] = {
                     labels: labels,
-                    template_coords: template_coords
+                    template_coords: template_coords,
+                    offset_x: offset_x,
+                    offset_y: offset_y
                 };
             }
         };
@@ -867,22 +881,30 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                 haut: {
                     labels: parseLabels(this.cadreHaut().labels_str),
                     position_base: this.cadreHaut().position_base,
-                    ...(this.cadreHaut().template_coords && { template_coords: this.cadreHaut().template_coords })
+                    ...(this.cadreHaut().template_coords && { template_coords: this.cadreHaut().template_coords }),
+                    offset_x: this.cadreHaut().offset_x,
+                    offset_y: this.cadreHaut().offset_y
                 },
                 droite: {
                     labels: parseLabels(this.cadreDroite().labels_str),
                     position_base: this.cadreDroite().position_base,
-                    ...(this.cadreDroite().template_coords && { template_coords: this.cadreDroite().template_coords })
+                    ...(this.cadreDroite().template_coords && { template_coords: this.cadreDroite().template_coords }),
+                    offset_x: this.cadreDroite().offset_x,
+                    offset_y: this.cadreDroite().offset_y
                 },
                 gauche: {
                     labels: parseLabels(this.cadreGauche().labels_str),
                     position_base: this.cadreGauche().position_base,
-                    ...(this.cadreGauche().template_coords && { template_coords: this.cadreGauche().template_coords })
+                    ...(this.cadreGauche().template_coords && { template_coords: this.cadreGauche().template_coords }),
+                    offset_x: this.cadreGauche().offset_x,
+                    offset_y: this.cadreGauche().offset_y
                 },
                 bas: {
                     labels: parseLabels(this.cadreBas().labels_str),
                     position_base: this.cadreBas().position_base,
-                    ...(this.cadreBas().template_coords && { template_coords: this.cadreBas().template_coords })
+                    ...(this.cadreBas().template_coords && { template_coords: this.cadreBas().template_coords }),
+                    offset_x: this.cadreBas().offset_x,
+                    offset_y: this.cadreBas().offset_y
                 },
                 image_base_dimensions: {
                     width: this.imgWidth,
@@ -927,10 +949,10 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         this.imageUrl.set('');
         this.zones.set([]);
         // Réinitialiser les étiquettes du cadre de référence (4 anchors)
-        this.cadreHaut.set({ labels_str: '', position_base: [0.5, 0] });
-        this.cadreDroite.set({ labels_str: '', position_base: [1, 0.5] });
-        this.cadreGauche.set({ labels_str: '', position_base: [0, 0.5] });
-        this.cadreBas.set({ labels_str: '', position_base: [0.5, 1] });
+        this.cadreHaut.set({ labels_str: '', position_base: [0.5, 0], offset_x: 0, offset_y: 0 });
+        this.cadreDroite.set({ labels_str: '', position_base: [1, 0.5], offset_x: 0, offset_y: 0 });
+        this.cadreGauche.set({ labels_str: '', position_base: [0, 0.5], offset_x: 0, offset_y: 0 });
+        this.cadreBas.set({ labels_str: '', position_base: [0.5, 1], offset_x: 0, offset_y: 0 });
         this.cadreParams.set(null);
         this.currentZoneName.set('');
         this.successMessage.set('');
@@ -985,11 +1007,15 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                         // Charger HAUT et DROITE (toujours présents)
                         this.cadreHaut.set({
                             labels_str: cadre.haut.labels.join(', '),
-                            position_base: cadre.haut.position_base
+                            position_base: cadre.haut.position_base,
+                            offset_x: cadre.haut.offset_x || 0,
+                            offset_y: cadre.haut.offset_y || 0
                         });
                         this.cadreDroite.set({
                             labels_str: cadre.droite.labels.join(', '),
-                            position_base: cadre.droite.position_base
+                            position_base: cadre.droite.position_base,
+                            offset_x: cadre.droite.offset_x || 0,
+                            offset_y: cadre.droite.offset_y || 0
                         });
 
                         // Migration automatique: ancien format 3-étiquettes (GAUCHE-BAS) → nouveau 4-étiquettes (GAUCHE + BAS)
@@ -997,11 +1023,15 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                             // Nouveau format 4 anchors: charger directement
                             this.cadreGauche.set({
                                 labels_str: cadre.gauche.labels.join(', '),
-                                position_base: cadre.gauche.position_base
+                                position_base: cadre.gauche.position_base,
+                                offset_x: cadre.gauche.offset_x || 0,
+                                offset_y: cadre.gauche.offset_y || 0
                             });
                             this.cadreBas.set({
                                 labels_str: cadre.bas.labels.join(', '),
-                                position_base: cadre.bas.position_base
+                                position_base: cadre.bas.position_base,
+                                offset_x: cadre.bas.offset_x || 0,
+                                offset_y: cadre.bas.offset_y || 0
                             });
                             console.log('✅ Cadre 4-anchors chargé');
                         } else if (cadre.gauche_bas) {
@@ -1009,12 +1039,16 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                             // GAUCHE récupère la position X, Y du GAUCHE-BAS
                             this.cadreGauche.set({
                                 labels_str: cadre.gauche_bas.labels.join(', '),
-                                position_base: [cadre.gauche_bas.position_base[0], 0.5]  // X de gauche_bas, Y au milieu
+                                position_base: [cadre.gauche_bas.position_base[0], 0.5],  // X de gauche_bas, Y au milieu
+                                offset_x: cadre.gauche_bas.offset_x || 0,
+                                offset_y: cadre.gauche_bas.offset_y || 0
                             });
                             // BAS récupère la position Y du GAUCHE-BAS
                             this.cadreBas.set({
                                 labels_str: cadre.gauche_bas.labels.join(', '),
-                                position_base: [0.5, cadre.gauche_bas.position_base[1]]  // X au milieu, Y de gauche_bas
+                                position_base: [0.5, cadre.gauche_bas.position_base[1]],  // X au milieu, Y de gauche_bas
+                                offset_x: cadre.gauche_bas.offset_x || 0,
+                                offset_y: cadre.gauche_bas.offset_y || 0
                             });
                             console.log('⚠️ Migration automatique 3-anchors → 4-anchors effectuée');
                             this.errorMessage.set('⚠️ Ancien format 3-étiquettes détecté et migré automatiquement vers 4-étiquettes.');
@@ -1023,23 +1057,31 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                         // Legacy format fallback (migration approximative depuis l'ancien ancien système)
                         this.cadreHaut.set({
                             labels_str: cadre.origine.labels.join(', '),
-                            position_base: cadre.origine.position_base
+                            position_base: cadre.origine.position_base,
+                            offset_x: cadre.origine.offset_x || 0,
+                            offset_y: cadre.origine.offset_y || 0
                         });
                         if (cadre.largeur) {
                             this.cadreDroite.set({
                                 labels_str: cadre.largeur.labels.join(', '),
-                                position_base: cadre.largeur.position_base
+                                position_base: cadre.largeur.position_base,
+                                offset_x: cadre.largeur.offset_x || 0,
+                                offset_y: cadre.largeur.offset_y || 0
                             });
                         }
                         if (cadre.hauteur) {
                             // Migrer hauteur vers GAUCHE + BAS
                             this.cadreGauche.set({
                                 labels_str: cadre.hauteur.labels.join(', '),
-                                position_base: [0, 0.5]
+                                position_base: [0, 0.5],
+                                offset_x: cadre.hauteur.offset_x || 0,
+                                offset_y: cadre.hauteur.offset_y || 0
                             });
                             this.cadreBas.set({
                                 labels_str: cadre.hauteur.labels.join(', '),
-                                position_base: cadre.hauteur.position_base
+                                position_base: cadre.hauteur.position_base,
+                                offset_x: cadre.hauteur.offset_x || 0,
+                                offset_y: cadre.hauteur.offset_y || 0
                             });
                         }
                         this.errorMessage.set('⚠️ Format de cadre très obsolète converti. Veuillez vérifier les positions.');
@@ -1050,10 +1092,10 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                     console.log('📐 Cadre de référence chargé:', this.cadreParams());
                 } else {
                     // Réinitialiser les signaux du cadre (4 anchors)
-                    this.cadreHaut.set({ labels_str: '', position_base: [0.5, 0] });
-                    this.cadreDroite.set({ labels_str: '', position_base: [1, 0.5] });
-                    this.cadreGauche.set({ labels_str: '', position_base: [0, 0.5] });
-                    this.cadreBas.set({ labels_str: '', position_base: [0.5, 1] });
+                    this.cadreHaut.set({ labels_str: '', position_base: [0.5, 0], offset_x: 0, offset_y: 0 });
+                    this.cadreDroite.set({ labels_str: '', position_base: [1, 0.5], offset_x: 0, offset_y: 0 });
+                    this.cadreGauche.set({ labels_str: '', position_base: [0, 0.5], offset_x: 0, offset_y: 0 });
+                    this.cadreBas.set({ labels_str: '', position_base: [0.5, 1], offset_x: 0, offset_y: 0 });
                     this.cadreParams.set(null);
                 }
 
