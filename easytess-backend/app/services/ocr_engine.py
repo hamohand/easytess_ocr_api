@@ -367,9 +367,6 @@ def detecter_ancres(mots_ocr, ancres_config, img_dims, seuil_similarite=0.7, ima
         meilleur_match = None
         meilleure_similarite = 0
         
-        offset_x = ancre.get('offset_x', 0)
-        offset_y = ancre.get('offset_y', 0)
-        
         # 1. Recherche Textuelle (OCR)
         if labels and len(labels) > 0 and mots_ocr:
             for mot in mots_ocr:
@@ -412,15 +409,15 @@ def detecter_ancres(mots_ocr, ancres_config, img_dims, seuil_similarite=0.7, ima
                     if similarite > meilleure_similarite and similarite >= seuil_similarite:
                         meilleure_similarite = similarite
                         
-                        abs_center_x = mot['x'] + mot['width'] / 2 + offset_x
-                        abs_center_y = mot['y'] + mot['height'] / 2 + offset_y
+                        abs_center_x = mot['x'] + mot['width'] / 2
+                        abs_center_y = mot['y'] + mot['height'] / 2
                         
-                        abs_min_x = mot['x'] + offset_x
-                        abs_min_y = mot['y'] + offset_y
-                        abs_max_x = mot['x'] + mot['width'] + offset_x
-                        abs_max_y = mot['y'] + mot['height'] + offset_y
+                        abs_min_x = mot['x']
+                        abs_min_y = mot['y']
+                        abs_max_x = mot['x'] + mot['width']
+                        abs_max_y = mot['y'] + mot['height']
                         
-                        # Centre du mot en pourcentage (avec offset appliqué)
+                        # Centre du mot en pourcentage
                         meilleur_match = {
                             'text': texte_mot,
                             'x': abs_center_x / img_w,
@@ -465,26 +462,19 @@ def detecter_ancres(mots_ocr, ancres_config, img_dims, seuil_similarite=0.7, ima
                  result = find_template_orb(image_path, template_path)
                  
                  if result.get('found'):
-                     abs_x = result['x'] * img_w + offset_x
-                     abs_y = result['y'] * img_h + offset_y
-                     abs_x_min = result['x_min'] * img_w + offset_x
-                     abs_y_min = result['y_min'] * img_h + offset_y
-                     abs_x_max = result['x_max'] * img_w + offset_x
-                     abs_y_max = result['y_max'] * img_h + offset_y
-                     
                      resultats[ancre_id] = {
                         'found': True,
                         'text': f'[Image: {ancre_id}]',
-                        'x': abs_x / img_w,
-                        'y': abs_y / img_h,
-                        'x_min': abs_x_min / img_w,
-                        'y_min': abs_y_min / img_h,
-                        'x_max': abs_x_max / img_w,
-                        'y_max': abs_y_max / img_h,
+                        'x': result['x'],
+                        'y': result['y'],
+                        'x_min': result['x_min'],
+                        'y_min': result['y_min'],
+                        'x_max': result['x_max'],
+                        'y_max': result['y_max'],
                         'source': 'image_template',
                         'confidence': result.get('confidence', 0)
                     }
-                     logger.info(f"  ✅ Template {ancre_id} trouvé à ({resultats[ancre_id]['x']:.3f}, {resultats[ancre_id]['y']:.3f}) après offset")
+                     logger.info(f"  ✅ Template {ancre_id} trouvé à ({resultats[ancre_id]['x']:.3f}, {resultats[ancre_id]['y']:.3f})")
                      orb_match_found = True
                  else:
                      logger.warning(f"  ⚠️ Template {ancre_id} non trouvé via ORB: {result.get('error')}")
@@ -779,9 +769,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                     'id': anchor_id, 
                     'labels': labels, 
                     'position_base': ref_data.get('position_base', default_pos),
-                    'template_path': template_path,
-                    'offset_x': ref_data.get('offset_x', 0),
-                    'offset_y': ref_data.get('offset_y', 0)
+                    'template_path': template_path
                 }
                 ancres_config.append(conf)
                 
