@@ -1,0 +1,144 @@
+{
+  "nom": "cni_01",
+  "description": "CNI DZ",
+  "date_creation": "2026-03-02T04:38:13.843962",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\easytess-backend\\uploads\\entities\\cni_01\\reference.jpeg",
+  "zones": [
+    {
+      "coords": [
+        0.4754285714285715,
+        0.4845238095238095,
+        0.8805142857142858,
+        0.5876190476190477
+      ],
+      "id": 1772213579118,
+      "lang": "ara",
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.4691628571428572,
+        0.6288571428571429,
+        0.8805142857142858,
+        0.729375
+      ],
+      "id": 1772213715915,
+      "lang": "ara",
+      "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.0018571428571428667,
+        -0.011622023809523822,
+        0.25685714285714284,
+        0.09791666666666665
+      ],
+      "id": 1772213923566,
+      "lang": "fra",
+      "nom": "numeroPiece",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.5351714285714286,
+        0.7615922619047618,
+        0.7945428571428571,
+        0.8389136904761905
+      ],
+      "id": 1772327207422,
+      "lang": "fra",
+      "nom": "dateNaissance",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.4171428571428571,
+        0.8376250000000002,
+        0.7967285714285715,
+        0.9226785714285713
+      ],
+      "id": 1772327343338,
+      "lang": "ara",
+      "nom": "lieuNaissance",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.2714285714285714,
+        0.7551488095238096,
+        0.3734285714285714,
+        0.845357142857143
+      ],
+      "id": 1772327815404,
+      "lang": "ara+fra",
+      "nom": "sexe",
+      "preprocess": "auto",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "regex:\\d{9}"
+      ],
+      "position_base": [
+        0.39441930618401205,
+        0.22401847575057737
+      ],
+      "offset_x": 0,
+      "offset_y": 0
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ],
+      "offset_x": 0,
+      "offset_y": 0
+    },
+    "gauche": {
+      "labels": [
+        "regex:\\d{9}"
+      ],
+      "position_base": [
+        0.3137254901960784,
+        0.24364896073903003
+      ],
+      "offset_x": 0,
+      "offset_y": 0
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ],
+      "offset_x": 0,
+      "offset_y": 0
+    },
+    "image_base_dimensions": {
+      "width": 663,
+      "height": 433
+    },
+    "dimensions_absolues": {
+      "largeur": 455,
+      "hauteur": 336,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 6,
+    "image_dimensions": {
+      "width": 663,
+      "height": 433
+    }
+  }
+}

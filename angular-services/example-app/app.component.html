@@ -1,0 +1,37 @@
+<!-- app.component.html -->
+<div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+        <div class="logo">
+            <h1>🔍 {{ title }}</h1>
+            <p>Analyse OCR avec Tesseract & EasyOCR</p>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs">
+        <button class="tab-button" [class.active]="activeTab() === 'ocr'" (click)="setActiveTab('ocr')">
+            <span class="tab-icon">🔍</span>
+            <span class="tab-label">Analyse OCR</span>
+        </button>
+        <button class="tab-button" [class.active]="activeTab() === 'entity'" (click)="setActiveTab('entity')">
+            <span class="tab-icon">🎨</span>
+            <span class="tab-label">Créer une entité</span>
+        </button>
+    </nav>
+
+    <!-- Content -->
+    <main class="content">
+        @if (activeTab() === 'ocr') {
+        <app-ocr-upload />
+        } @else {
+        <app-entity-creator />
+        }
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <p>Powered by Flask + Angular 18 | Backend: <a href="http://localhost:8082" target="_blank">localhost:8082</a>
+        </p>
+    </footer>
+</div>

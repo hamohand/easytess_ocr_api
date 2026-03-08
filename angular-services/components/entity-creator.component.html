@@ -1,0 +1,125 @@
+<!-- entity-creator.component.html -->
+<div class="entity-creator">
+    <div class="header">
+        <h1>🎨 Créateur d'Entités OCR</h1>
+        <p>Dessinez des zones sur votre image de référence</p>
+    </div>
+
+    <!-- Entity Info Form -->
+    <div class="entity-form">
+        <div class="form-group">
+            <label for="entityName">Nom de l'entité *</label>
+            <input type="text" id="entityName" [(ngModel)]="entityName"
+                placeholder="Ex: Facture EDF, Carte d'identité..." [value]="entityName()">
+        </div>
+
+        <div class="form-group">
+            <label for="entityDesc">Description</label>
+            <textarea id="entityDesc" [(ngModel)]="entityDescription" [value]="entityDescription()"
+                placeholder="Description optionnelle de l'entité..." rows="2"></textarea>
+        </div>
+    </div>
+
+    <!-- Image Upload -->
+    <div class="upload-section">
+        <input type="file" #imageInput accept="image/*" (change)="onImageSelected($event)" style="display: none">
+        <button class="btn btn-primary" (click)="imageInput.click()">
+            📁 Choisir une image de référence
+        </button>
+        @if (uploadedImageFilename()) {
+        <span class="filename">{{ uploadedImageFilename() }}</span>
+        }
+    </div>
+
+    <!-- Canvas Drawing Area -->
+    @if (imageUrl()) {
+    <div class="canvas-section">
+        <div class="canvas-controls">
+            <div class="zone-name-input">
+                <label for="zoneName">Nom de la prochaine zone :</label>
+                <input type="text" id="zoneName" [(ngModel)]="currentZoneName" [value]="currentZoneName()"
+                    placeholder="Ex: Date, Montant, Nom...">
+            </div>
+            <div class="instructions">
+                💡 Cliquez et glissez sur l'image pour dessiner une zone
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas #canvas (mousedown)="onMouseDown($event)" (mousemove)="onMouseMove($event)"
+                (mouseup)="onMouseUp($event)" [class.drawing]="isDrawing()">
+            </canvas>
+        </div>
+    </div>
+
+    <!-- Zones List -->
+    @if (zones().length > 0) {
+    <div class="zones-list">
+        <h3>📋 Zones définies ({{ zones().length }})</h3>
+        <div class="zones-grid">
+            @for (zone of zones(); track zone.id) {
+            <div class="zone-card">
+                <div class="zone-header">
+                    <span class="zone-number">{{ $index + 1 }}</span>
+                    <span class="zone-name">{{ zone.nom }}</span>
+                </div>
+                <div class="zone-coords">
+                    <!-- Config Zone -->
+                    <div class="zone-config">
+                        <div class="config-row">
+                            <label>Type:</label>
+                            <select [(ngModel)]="zone.type" class="sm-input">
+                                <option value="text">Texte OCR</option>
+                                <option value="qrcode">QR Code</option>
+                                <option value="barcode">Code Barre</option>
+                            </select>
+                        </div>
+
+                        @if (zone.type === 'text') {
+                        <div class="config-row">
+                            <label title="Valeurs possibles séparées par des virgules">Valeurs attendues:</label>
+                            <input type="text" [(ngModel)]="zone.valeurs_str"
+                                placeholder="Ex: M, F (optionnel)"
+                                class="sm-input full-width">
+                        </div>
+                        }
+                    </div>
+                </div>
+                <button class="btn-delete" (click)="deleteZone(zone.id)" title="Supprimer">
+                    🗑️
+                </button>
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    <!-- Save Button -->
+    <div class="save-section">
+        <button class="btn btn-success" (click)="saveEntity()"
+            [disabled]="isSaving() || zones().length === 0 || !entityName()">
+            @if (isSaving()) {
+            <span class="spinner"></span> Sauvegarde...
+            } @else {
+            💾 Sauvegarder l'entité
+            }
+        </button>
+        <button class="btn btn-outline" (click)="reset()">
+            🔄 Réinitialiser
+        </button>
+    </div>
+    }
+
+    <!-- Messages -->
+    @if (errorMessage()) {
+    <div class="error-message">
+        ⚠️ {{ errorMessage() }}
+    </div>
+    }
+
+    @if (successMessage()) {
+    <div class="success-message">
+        {{ successMessage() }}
+    </div>
+    }
+</div>

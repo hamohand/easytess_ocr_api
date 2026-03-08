@@ -1,0 +1,163 @@
+{
+  "nom": "pp_01",
+  "description": "Passeport DZ",
+  "date_creation": "2026-03-02T20:13:04.383230",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\easytess-backend\\uploads\\entities\\pp_01\\reference.png",
+  "zones": [
+    {
+      "coords": [
+        0.27293625914315567,
+        0.10977822580645162,
+        0.5378537095088819,
+        0.18135080645161286
+      ],
+      "id": 1772157920862,
+      "lang": "ara",
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.27293625914315567,
+        0.2722479838709677,
+        0.5340647857889238,
+        0.3359475806451612
+      ],
+      "id": 1772158017084,
+      "lang": "ara",
+      "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.27293625914315567,
+        0.5606854838709677,
+        0.5378537095088819,
+        0.6322580645161289
+      ],
+      "id": 1772158139285,
+      "lang": "ara",
+      "nom": "lieuNaissance",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.6415882967607106,
+        0.010721774193548386,
+        0.8463949843260188,
+        0.06941129032258066
+      ],
+      "id": 1772158326359,
+      "lang": "fra",
+      "nom": "numeroPiece",
+      "preprocess": "auto",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.27293625914315567,
+        0.16589112903225808,
+        0.5340647857889238,
+        0.22515322580645158
+      ],
+      "id": 1772182363736,
+      "lang": "fra",
+      "nom": "latines",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.27293625914315567,
+        0.32163306451612905,
+        0.5340647857889238,
+        0.39091532258064515
+      ],
+      "id": 1772182452182,
+      "lang": "fra",
+      "nom": "prenom_latines",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.6006269592476489,
+        0.3889112903225806,
+        0.636980146290491,
+        0.47479838709677413
+      ],
+      "id": 1772330900369,
+      "lang": "ara",
+      "nom": "sexe",
+      "preprocess": "arabic_textured",
+      "type": "text",
+      "valeurs_attendues": [
+        "ذ",
+        "ا"
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "regex:DZA"
+      ],
+      "position_base": [
+        0.503061224489796,
+        0.11830985915492957
+      ],
+      "offset_x": 0,
+      "offset_y": -10
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ],
+      "offset_x": 0,
+      "offset_y": 0
+    },
+    "gauche": {
+      "labels": [
+        "regex:P<DZA"
+      ],
+      "position_base": [
+        0.02346938775510204,
+        0.8007042253521127
+      ],
+      "offset_x": 0,
+      "offset_y": 0
+    },
+    "bas": {
+      "labels": [
+        "regex:P<DZA"
+      ],
+      "position_base": [
+        0.4683673469387755,
+        0.8169014084507042
+      ],
+      "offset_x": 0,
+      "offset_y": 0
+    },
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710
+    },
+    "dimensions_absolues": {
+      "largeur": 957,
+      "hauteur": 496,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 7,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  }
+}

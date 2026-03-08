@@ -1,0 +1,88 @@
+{
+  "nom": "pp_new_01",
+  "description": "Entité qui marchait le 03/03",
+  "date_creation": "2026-03-06T15:49:04.660409",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api_v0303_0946\\easytess-backend\\uploads\\entities\\pp_new_01\\reference.png",
+  "zones": [
+    {
+      "coords": [
+        0.3028867436817766,
+        0.08357201646090535,
+        0.5493036084618806,
+        0.16436008230452678
+      ],
+      "id": 1772807725753,
+      "lang": "ara",
+      "nom": "Zone 1",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "regex:DZA"
+      ],
+      "position_base": [
+        0.503061224489796,
+        0.1323943661971831
+      ],
+      "offset_x": 0,
+      "offset_y": 0
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        0.8806122541427612,
+        0.6943850517272949
+      ],
+      "template_coords": [
+        0.8489,
+        0.2966,
+        0.9427,
+        0.4209
+      ],
+      "offset_x": 0,
+      "offset_y": 0,
+      "template_path": "templates/pp_new_01/droite_template.png"
+    },
+    "gauche": {
+      "labels": [
+        "regex:\\d{18}"
+      ],
+      "position_base": [
+        0.0336734693877551,
+        0.7077464788732394
+      ],
+      "offset_x": 0,
+      "offset_y": 0
+    },
+    "bas": {
+      "labels": [
+        "regex:P<DZA"
+      ],
+      "position_base": [
+        0.4683673469387755,
+        0.8169014084507042
+      ],
+      "offset_x": 0,
+      "offset_y": 0
+    },
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710
+    },
+    "dimensions_absolues": {
+      "largeur": 830,
+      "hauteur": 486,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 1,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "nom": "tarif_bloclignes_03",
+  "description": "Bloc de lignes",
+  "date_creation": "2026-02-23T15:39:04.362251",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\easytess_api\\easytess-backend\\uploads\\temp_entite_a71c10e9-b0ca-4e78-acdd-80e8e849becb_tarif_1page.jpg",
+  "zones": [
+    {
+      "id": 1771857496645,
+      "nom": "bloc_lignes",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "latin_simple",
+      "coords": [
+        0.0881,
+        0.1224,
+        0.6956,
+        0.2577
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ]
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 2481,
+      "height": 3508
+    },
+    "dimensions_absolues": {
+      "largeur": 0,
+      "hauteur": 0,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 1,
+    "image_dimensions": {
+      "width": 2481,
+      "height": 3508
+    }
+  }
+}
