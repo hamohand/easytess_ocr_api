@@ -322,11 +322,30 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
             if (templateType) {
                 console.log(`📷 Template capturé pour ancre ${templateType}:`, finalCoords);
 
-                // Calculer le centre du template pour mettre à jour position_base également
-                // finalCoords = [x1, y1, x2, y2]
-                const centerX = parseFloat(((finalCoords[0] + finalCoords[2]) / 2).toFixed(4));
-                const centerY = parseFloat(((finalCoords[1] + finalCoords[3]) / 2).toFixed(4));
-                const centerPos: [number, number] = [centerX, centerY];
+                // finalCoords = [x1, y1, x2, y2] en coordonnées relatives (0-1)
+                const [x1, y1, x2, y2] = finalCoords;
+                const centerX = parseFloat(((x1 + x2) / 2).toFixed(4));
+                const centerY = parseFloat(((y1 + y2) / 2).toFixed(4));
+
+                // Calculer la position_base en utilisant le BORD correct selon le rôle de l'ancre
+                // HAUT  → bord supérieur (y_min=y1), x centre
+                // BAS   → bord inférieur (y_max=y2), x centre
+                // GAUCHE → bord gauche (x_min=x1), y centre
+                // DROITE → bord droit  (x_max=x2), y centre
+                let edgePos: [number, number];
+                if (templateType === 'haut') {
+                    edgePos = [centerX, parseFloat(y1.toFixed(4))];
+                } else if (templateType === 'bas') {
+                    edgePos = [centerX, parseFloat(y2.toFixed(4))];
+                } else if (templateType === 'gauche') {
+                    edgePos = [parseFloat(x1.toFixed(4)), centerY];
+                } else if (templateType === 'droite') {
+                    edgePos = [parseFloat(x2.toFixed(4)), centerY];
+                } else {
+                    edgePos = [centerX, centerY]; // Fallback (ne devrait jamais arriver)
+                }
+
+                console.log(`📍 Position bord ${templateType}: [${edgePos[0]}, ${edgePos[1]}] (centre serait [${centerX}, ${centerY}])`);
 
                 // Générer la preview image (Base64)
                 let previewUrl = '';
@@ -350,15 +369,15 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                     }
                 }
 
-                // Mettre à jour l'étiquette correspondante avec les coordonnées du template ET la position de base ET la preview
+                // Mettre à jour l'étiquette avec le BORD correct comme position_base
                 if (templateType === 'haut') {
-                    this.cadreHaut.update(c => ({ ...c, template_coords: finalCoords, position_base: centerPos, template_preview: previewUrl }));
+                    this.cadreHaut.update(c => ({ ...c, template_coords: finalCoords, position_base: edgePos, template_preview: previewUrl }));
                 } else if (templateType === 'droite') {
-                    this.cadreDroite.update(c => ({ ...c, template_coords: finalCoords, position_base: centerPos, template_preview: previewUrl }));
+                    this.cadreDroite.update(c => ({ ...c, template_coords: finalCoords, position_base: edgePos, template_preview: previewUrl }));
                 } else if (templateType === 'gauche') {
-                    this.cadreGauche.update(c => ({ ...c, template_coords: finalCoords, position_base: centerPos, template_preview: previewUrl }));
+                    this.cadreGauche.update(c => ({ ...c, template_coords: finalCoords, position_base: edgePos, template_preview: previewUrl }));
                 } else if (templateType === 'bas') {
-                    this.cadreBas.update(c => ({ ...c, template_coords: finalCoords, position_base: centerPos, template_preview: previewUrl }));
+                    this.cadreBas.update(c => ({ ...c, template_coords: finalCoords, position_base: edgePos, template_preview: previewUrl }));
                 }
 
                 // Désactiver le mode de sélection template
@@ -658,58 +677,49 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
 
                 if (result.success && result.positions) {
                     // Mettre à jour les positions détectées
-                    // Mettre à jour les positions détectées ou réinitialiser par défaut
-                    if (result.positions['haut']?.found) {
-                        console.log('  ✅ Updating HAUT:', result.positions['haut']);
-                        this.cadreHaut.update(c => ({
-                            ...c,
-                            position_base: [result.positions['haut'].x, result.positions['haut'].y],
-                            detected_bbox: result.positions['haut'].bbox
-                        }));
-                    } else {
-                        // Reset default (Edge)
-                        console.log('  defaults HAUT');
-                        this.cadreHaut.update(c => ({ ...c, position_base: [0.5, 0], detected_bbox: undefined }));
-                    }
+                    // IMPORTANT: Pour les ancres avec template image, on garde la position dessinée
+                    // par l'utilisateur (plus précise). Seules les ancres texte sont mises à jour.
 
-                    if (result.positions['droite']?.found) {
-                        console.log('  ✅ Updating DROITE:', result.positions['droite']);
-                        this.cadreDroite.update(c => ({
-                            ...c,
-                            position_base: [result.positions['droite'].x, result.positions['droite'].y],
-                            detected_bbox: result.positions['droite'].bbox
-                        }));
-                    } else {
-                        // Reset default (Edge)
-                        console.log('  defaults DROITE');
-                        this.cadreDroite.update(c => ({ ...c, position_base: [1, 0.5], detected_bbox: undefined }));
-                    }
+                    const updateAnchor = (
+                        type: 'haut' | 'droite' | 'gauche' | 'bas',
+                        signal: any,
+                        defaultPos: [number, number]
+                    ) => {
+                        const pos = result.positions[type];
+                        const hasTemplate = signal().template_coords;
 
-                    if (result.positions['gauche']?.found) {
-                        console.log('  ✅ Updating GAUCHE:', result.positions['gauche']);
-                        this.cadreGauche.update(c => ({
-                            ...c,
-                            position_base: [result.positions['gauche'].x, result.positions['gauche'].y],
-                            detected_bbox: result.positions['gauche'].bbox
-                        }));
-                    } else {
-                        // Reset default (Edge)
-                        console.log('  defaults GAUCHE');
-                        this.cadreGauche.update(c => ({ ...c, position_base: [0, 0.5], detected_bbox: undefined }));
-                    }
+                        if (pos?.found) {
+                            if (hasTemplate) {
+                                // Ancre IMAGE: garder la position dessinée, mettre à jour uniquement la bbox détectée
+                                console.log(`  🔒 ${type.toUpperCase()}: Position PRÉSERVÉE (template image) — bbox détectée mise à jour`);
+                                signal.update((c: any) => ({
+                                    ...c,
+                                    detected_bbox: pos.bbox
+                                }));
+                            } else {
+                                // Ancre TEXTE: mettre à jour la position depuis la détection
+                                console.log(`  ✅ ${type.toUpperCase()}: Position mise à jour depuis détection OCR`);
+                                signal.update((c: any) => ({
+                                    ...c,
+                                    position_base: [pos.x, pos.y],
+                                    detected_bbox: pos.bbox
+                                }));
+                            }
+                        } else {
+                            // Non trouvée: reset par défaut seulement si pas de template
+                            if (!hasTemplate) {
+                                console.log(`  ⚠️ ${type.toUpperCase()}: Non trouvée, reset par défaut`);
+                                signal.update((c: any) => ({ ...c, position_base: defaultPos, detected_bbox: undefined }));
+                            } else {
+                                console.log(`  🔒 ${type.toUpperCase()}: Non trouvée mais position PRÉSERVÉE (template image)`);
+                            }
+                        }
+                    };
 
-                    if (result.positions['bas']?.found) {
-                        console.log('  ✅ Updating BAS:', result.positions['bas']);
-                        this.cadreBas.update(c => ({
-                            ...c,
-                            position_base: [result.positions['bas'].x, result.positions['bas'].y],
-                            detected_bbox: result.positions['bas'].bbox
-                        }));
-                    } else {
-                        // Reset default (Edge)
-                        console.log('  defaults BAS');
-                        this.cadreBas.update(c => ({ ...c, position_base: [0.5, 1], detected_bbox: undefined }));
-                    }
+                    updateAnchor('haut', this.cadreHaut, [0.5, 0]);
+                    updateAnchor('droite', this.cadreDroite, [1, 0.5]);
+                    updateAnchor('gauche', this.cadreGauche, [0, 0.5]);
+                    updateAnchor('bas', this.cadreBas, [0.5, 1]);
 
                     // Recalculer les paramètres
                     this.calculerParametresCadre();

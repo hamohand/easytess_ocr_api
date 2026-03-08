@@ -1,0 +1,111 @@
+{
+  "nom": "pp_new2_02",
+  "description": "",
+  "date_creation": "2026-03-08T19:41:33.696675",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\asytess_ocr_api\\easytess-backend\\uploads\\entities\\pp_new2_02\\reference.png",
+  "zones": [
+    {
+      "coords": [
+        0.29709677419354835,
+        0.08897736625514405,
+        0.46774193548387094,
+        0.16216872427983542
+      ],
+      "id": 1772994726083,
+      "lang": "ara",
+      "nom": "Zone 1",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.29709677419354835,
+        0.2580041152263375,
+        0.4690322580645161,
+        0.32622839506172846
+      ],
+      "id": 1772995168675,
+      "lang": "ara",
+      "nom": "Zone 2",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.6424731182795699,
+        0.7121995884773663,
+        0.739247311827957,
+        0.7979547325102881
+      ],
+      "id": 1772995177699,
+      "lang": "ara",
+      "nom": "Zone 3",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "regex:DZA"
+      ],
+      "position_base": [
+        0.503061224489796,
+        0.1323943661971831
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        0.9475,
+        0.3633
+      ],
+      "template_coords": [
+        0.845,
+        0.3115,
+        0.9475,
+        0.4151
+      ],
+      "template_path": "templates/pp_new2_02/droite_template.png"
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0.0175,
+        0.4151
+      ],
+      "template_coords": [
+        0.0175,
+        0.2148,
+        0.2475,
+        0.6154
+      ],
+      "template_path": "templates/pp_new2_02/gauche_template.png"
+    },
+    "bas": {
+      "labels": [
+        "regex:P<DZA"
+      ],
+      "position_base": [
+        0.4683673469387755,
+        0.8169014084507042
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710
+    },
+    "dimensions_absolues": {
+      "largeur": 0,
+      "hauteur": 0,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 3,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  }
+}

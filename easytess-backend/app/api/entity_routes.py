@@ -238,38 +238,55 @@ def detecter_etiquettes():
         for etiquette_id in etiquettes.keys():
             if etiquette_id in etiquettes_detectees:
                 det = etiquettes_detectees[etiquette_id]
-                x = det.get('x', 0)
-                y = det.get('y', 0)
                 
-                # NOUVEAU: Utiliser les bords si disponibles pour plus de précision (AABB)
-                if det.get('found') and 'x_min' in det:
+                # Toujours utiliser le bord correct de la bbox pour le côté du cadre
+                # Règle: HAUT→y_min, BAS→y_max, GAUCHE→x_min, DROITE→x_max
+                has_bbox = det.get('found') and all(k in det for k in ('x_min', 'y_min', 'x_max', 'y_max'))
+                
+                if has_bbox:
+                    # Utiliser les bords de la bbox selon le rôle de l'ancre
                     if etiquette_id == 'haut':
-                        # Pour HAUT, utiliser y_min (bord haut) et x centre
-                        y = det.get('y_min', y)
+                        x = det['x']       # Centre X (pas pertinent pour le cadre)
+                        y = det['y_min']    # Bord HAUT de la bbox
                     elif etiquette_id == 'droite':
-                        # Pour DROITE, utiliser x_max (bord droit) et y centre
-                        x = det.get('x_max', x)
+                        x = det['x_max']   # Bord DROIT de la bbox
+                        y = det['y']       # Centre Y (pas pertinent pour le cadre)
                     elif etiquette_id == 'gauche':
-                        # NEW: Pour GAUCHE (4-anchor system), utiliser x_min (bord gauche) et y centre
-                        x = det.get('x_min', x)
+                        x = det['x_min']   # Bord GAUCHE de la bbox
+                        y = det['y']       # Centre Y (pas pertinent pour le cadre)
                     elif etiquette_id == 'bas':
-                        # NEW: Pour BAS (4-anchor system), utiliser y_max (bord bas) et x centre
-                        y = det.get('y_max', y)
+                        x = det['x']       # Centre X (pas pertinent pour le cadre)
+                        y = det['y_max']   # Bord BAS de la bbox
                     elif etiquette_id == 'gauche_bas':
-                        # Pour GAUCHE-BAS (legacy 3-anchor system), utiliser x_min (bord gauche) et y_max (bord bas)
-                        x = det.get('x_min', x)
-                        y = det.get('y_max', y)
+                        x = det['x_min']   # Bord GAUCHE
+                        y = det['y_max']   # Bord BAS
                     elif etiquette_id == 'origine':
-                        # Pour ORIGINE (Legacy), utiliser coin haut-gauche
-                        x = det.get('x_min', x)
-                        y = det.get('y_min', y)
+                        x = det['x_min']   # Coin haut-gauche X
+                        y = det['y_min']   # Coin haut-gauche Y
+                    else:
+                        x = det['x']
+                        y = det['y']
+                else:
+                    # Pas de bbox disponible → utiliser le centre (dernier recours)
+                    x = det.get('x', 0)
+                    y = det.get('y', 0)
+                    if det.get('found'):
+                        current_app.logger.warning(
+                            f"⚠️ Ancre '{etiquette_id}' trouvée SANS bbox → utilisation du centre ({x:.3f}, {y:.3f}). "
+                            f"La précision du cadre sera réduite."
+                        )
+
+                current_app.logger.info(
+                    f"📍 Ancre '{etiquette_id}': x={x:.4f}, y={y:.4f} "
+                    f"(bbox={'oui' if has_bbox else 'NON'}, source={det.get('source', 'ocr')})"
+                )
 
                 positions[etiquette_id] = {
                     'x': x,
                     'y': y,
                     'found': det.get('found', False),
                     'text': det.get('text', ''),
-                    'bbox': [det.get('x_min'), det.get('y_min'), det.get('x_max'), det.get('y_max')] if det.get('found') and 'x_min' in det else None
+                    'bbox': [det.get('x_min'), det.get('y_min'), det.get('x_max'), det.get('y_max')] if has_bbox else None
                 }
             else:
                 positions[etiquette_id] = {'x': 0, 'y': 0, 'found': False}

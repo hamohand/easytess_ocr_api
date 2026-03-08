@@ -837,38 +837,63 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 return None, str(e)
 
         # Calculer la transformation de coordonnées (Unified Logic)
-        # On consruit les 4 bornes (Top, Bottom, Left, Right)
-        # Priority: Detected Anchor > Legacy Anchor > Image Edge
+        # On construit les 4 bornes (Top, Bottom, Left, Right)
+        # IMPORTANT: Les zones dans l'entité sont relatives au cadre défini par position_base.
+        # Donc on DOIT utiliser position_base pour reconstruire le même cadre qu'à la sauvegarde.
+        # ORB/OCR est un fallback si position_base n'existe pas.
         
         img_w, img_h = img_dims
         
-        # 1. TOP (Y Min)
-        if 'haut' in etiquettes_detectees and etiquettes_detectees['haut']['found']:
-            y_ref_min = etiquettes_detectees['haut']['y_min'] * img_h
-        else:
-            y_ref_min = 0 # Default to Image Top
+        def get_anchor_edge(anchor_id, axis, edge_side, default_val):
+            """
+            Retourne la coordonnée de bord correcte pour une ancre.
+            Priorité: position_base (cohérent avec sauvegarde) > détection > défaut
+            """
+            ref_data = cadre_reference.get(anchor_id) if cadre_reference else None
+            det = etiquettes_detectees.get(anchor_id, {})
             
-        # 2. BOTTOM (Y Max)
-        if 'bas' in etiquettes_detectees and etiquettes_detectees['bas']['found']:
-            y_ref_max = etiquettes_detectees['bas']['y_max'] * img_h
+            # 1. Priorité: position_base de l'entité (même cadre qu'à la sauvegarde)
+            if ref_data and ref_data.get('position_base'):
+                idx = 0 if axis == 'x' else 1
+                val = ref_data['position_base'][idx] * (img_w if axis == 'x' else img_h)
+                # Log de comparaison avec la détection si disponible
+                if det.get('found') and edge_side in det:
+                    det_val = det[edge_side] * (img_w if axis == 'x' else img_h)
+                    diff = abs(val - det_val)
+                    logger.info(f"  📌 {anchor_id.upper()}: position_base → {val:.0f}px (détection: {det_val:.0f}px, Δ={diff:.0f}px)")
+                else:
+                    logger.info(f"  📌 {anchor_id.upper()}: position_base → {val:.0f}px")
+                return val
+            # 2. Fallback: résultat de détection
+            elif det.get('found') and edge_side in det:
+                val = det[edge_side] * (img_w if axis == 'x' else img_h)
+                logger.info(f"  🔍 {anchor_id.upper()}: {edge_side} = {det[edge_side]:.4f} → {val:.0f}px (détection, pas de position_base)")
+                return val
+            else:
+                logger.info(f"  ⚠️ {anchor_id.upper()}: non trouvée → défaut {default_val:.0f}px")
+                return default_val
+        
+        # 1. TOP (Y Min) — HAUT
+        y_ref_min = get_anchor_edge('haut', 'y', 'y_min', 0)
+            
+        # 2. BOTTOM (Y Max) — BAS (avec fallback gauche_bas legacy)
+        if cadre_reference and cadre_reference.get('bas'):
+            y_ref_max = get_anchor_edge('bas', 'y', 'y_max', img_h)
         elif 'gauche_bas' in etiquettes_detectees and etiquettes_detectees['gauche_bas']['found']:
-             y_ref_max = etiquettes_detectees['gauche_bas']['y_max'] * img_h
+            y_ref_max = etiquettes_detectees['gauche_bas']['y_max'] * img_h
         else:
-            y_ref_max = img_h # Default to Image Bottom
+            y_ref_max = img_h
             
-        # 3. LEFT (X Min)
-        if 'gauche' in etiquettes_detectees and etiquettes_detectees['gauche']['found']:
-            x_ref_min = etiquettes_detectees['gauche']['x_min'] * img_w
+        # 3. LEFT (X Min) — GAUCHE (avec fallback gauche_bas legacy)
+        if cadre_reference and cadre_reference.get('gauche'):
+            x_ref_min = get_anchor_edge('gauche', 'x', 'x_min', 0)
         elif 'gauche_bas' in etiquettes_detectees and etiquettes_detectees['gauche_bas']['found']:
-             x_ref_min = etiquettes_detectees['gauche_bas']['x_min'] * img_w
+            x_ref_min = etiquettes_detectees['gauche_bas']['x_min'] * img_w
         else:
-            x_ref_min = 0 # Default to Image Left
+            x_ref_min = 0
             
-        # 4. RIGHT (X Max)
-        if 'droite' in etiquettes_detectees and etiquettes_detectees['droite']['found']:
-            x_ref_max = etiquettes_detectees['droite']['x_max'] * img_w
-        else:
-            x_ref_max = img_w # Default to Image Right
+        # 4. RIGHT (X Max) — DROITE
+        x_ref_max = get_anchor_edge('droite', 'x', 'x_max', img_w)
             
         
         # Validation des dimensions calculées
