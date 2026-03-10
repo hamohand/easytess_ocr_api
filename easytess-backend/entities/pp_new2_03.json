@@ -1,0 +1,101 @@
+{
+  "nom": "pp_new2_03",
+  "description": "",
+  "date_creation": "2026-03-10T15:34:17.779512",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\asytess_ocr_api\\easytess-backend\\uploads\\entities\\pp_new2_03\\reference.png",
+  "zones": [
+    {
+      "id": 1773153206673,
+      "nom": "Zone 1",
+      "type": "text",
+      "lang": "ara",
+      "preprocess": "arabic_textured",
+      "coords": [
+        0.22789165446559295,
+        0.10345215311004785,
+        0.4520146412884333,
+        0.18855023923444975
+      ]
+    },
+    {
+      "id": 1773153217755,
+      "nom": "Zone 2",
+      "type": "text",
+      "lang": "ara",
+      "preprocess": "arabic_textured",
+      "coords": [
+        0.1848462664714495,
+        0.29708851674641146,
+        0.48444216691068814,
+        0.38218660287081335
+      ]
+    },
+    {
+      "id": 1773153223271,
+      "nom": "Zone 3",
+      "type": "text",
+      "lang": "ara",
+      "preprocess": "arabic_textured",
+      "coords": [
+        0.6780029282576866,
+        0.8222846889952152,
+        0.8663982430453882,
+        0.9219904306220094
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "regex:DZA"
+      ],
+      "position_base": [
+        0.503061224489796,
+        0.1323943661971831
+      ]
+    },
+    "droite": {
+      "labels": [
+        "ALGERIENNE"
+      ],
+      "position_base": [
+        0.8306122448979592,
+        0.3345070422535211
+      ]
+    },
+    "gauche": {
+      "labels": [
+        "PASSEPORT"
+      ],
+      "position_base": [
+        0.1336734693877551,
+        0.15211267605633802
+      ]
+    },
+    "bas": {
+      "labels": [
+        "regex:\\d{18}"
+      ],
+      "position_base": [
+        0.14846938775510204,
+        0.7211267605633803
+      ]
+    },
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710
+    },
+    "dimensions_absolues": {
+      "largeur": 683,
+      "hauteur": 418,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 3,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  }
+}

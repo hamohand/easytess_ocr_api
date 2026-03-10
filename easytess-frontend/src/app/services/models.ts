@@ -90,6 +90,12 @@ export interface AnalyseResponse {
     success: boolean;
     resultats: { [zoneName: string]: ResultatOCR };
     alertes: string[];
+    cadre_detecte?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
     stats_moteurs: { [moteur: string]: number };
 }
 

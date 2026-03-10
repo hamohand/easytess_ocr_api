@@ -847,27 +847,29 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
         def get_anchor_edge(anchor_id, axis, edge_side, default_val):
             """
             Retourne la coordonnée de bord correcte pour une ancre.
-            Priorité: position_base (cohérent avec sauvegarde) > détection > défaut
+            ALGORITHME UTILISATEUR:
+            Priorité: DÉTECTION (position réelle dans l'image courante) > position_base > défaut
             """
             ref_data = cadre_reference.get(anchor_id) if cadre_reference else None
             det = etiquettes_detectees.get(anchor_id, {})
             
-            # 1. Priorité: position_base de l'entité (même cadre qu'à la sauvegarde)
-            if ref_data and ref_data.get('position_base'):
+            # 1. PRIORITÉ: résultat de DÉTECTION (position réelle dans l'image courante)
+            if det.get('found') and edge_side in det:
+                val = det[edge_side] * (img_w if axis == 'x' else img_h)
+                # Log de comparaison avec position_base si disponible
+                if ref_data and ref_data.get('position_base'):
+                    idx = 0 if axis == 'x' else 1
+                    pb_val = ref_data['position_base'][idx] * (img_w if axis == 'x' else img_h)
+                    diff = abs(val - pb_val)
+                    logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION → {val:.0f}px (position_base: {pb_val:.0f}px, Δ={diff:.0f}px)")
+                else:
+                    logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION → {val:.0f}px")
+                return val
+            # 2. Fallback: position_base de l'entité
+            elif ref_data and ref_data.get('position_base'):
                 idx = 0 if axis == 'x' else 1
                 val = ref_data['position_base'][idx] * (img_w if axis == 'x' else img_h)
-                # Log de comparaison avec la détection si disponible
-                if det.get('found') and edge_side in det:
-                    det_val = det[edge_side] * (img_w if axis == 'x' else img_h)
-                    diff = abs(val - det_val)
-                    logger.info(f"  📌 {anchor_id.upper()}: position_base → {val:.0f}px (détection: {det_val:.0f}px, Δ={diff:.0f}px)")
-                else:
-                    logger.info(f"  📌 {anchor_id.upper()}: position_base → {val:.0f}px")
-                return val
-            # 2. Fallback: résultat de détection
-            elif det.get('found') and edge_side in det:
-                val = det[edge_side] * (img_w if axis == 'x' else img_h)
-                logger.info(f"  🔍 {anchor_id.upper()}: {edge_side} = {det[edge_side]:.4f} → {val:.0f}px (détection, pas de position_base)")
+                logger.info(f"  📌 {anchor_id.upper()}: position_base → {val:.0f}px (détection échouée)")
                 return val
             else:
                 logger.info(f"  ⚠️ {anchor_id.upper()}: non trouvée → défaut {default_val:.0f}px")
@@ -904,23 +906,41 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
         if detected_w_px <= 10: detected_w_px = max(10, img_w - x_ref_min)
         if detected_h_px <= 10: detected_h_px = max(10, img_h - y_ref_min)
         
-        # Set Global Variables for Crop Logic
-        # Note: largeur_cadre_rel et hauteur_cadre_rel ne sont plus utilisés pour le calcul final pixel
-        # mais peuvent être utiles pour le remapping si on devait recalculer.
-        # Ici on a direct les pixels.
-        
         x_ref_px = x_ref_min
         y_ref_px = y_ref_min
-        
-        # Pseudo-relative (juste pour info/log, pas critique car on a les pixels)
-        largeur_cadre_rel = detected_w_px / img_w if img_w else 1
-        hauteur_cadre_rel = detected_h_px / img_h if img_h else 1
 
-        logger.info(f"📐 AABB Unifiée: H={y_ref_min:.0f}({'Ancre' if 'haut' in etiquettes_detectees else 'Edge'}), B={y_ref_max:.0f}, G={x_ref_min:.0f}, D={x_ref_max:.0f}")
-        logger.info(f"📐 Cadre Final: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
+        logger.info(f"📐 CADRE DÉTECTÉ (brut): Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
+
+        # ─── TRANSLATION RIGIDE (algorithme utilisateur) ───
+        # Utiliser la DÉTECTION pour la POSITION du cadre (l'origine),
+        # mais FORCER les DIMENSIONS du cadre de référence.
+        # Ainsi les zones gardent un mapping identique à l'image de référence
+        # tout en se positionnant correctement sur le document réel.
+        ref_dims = cadre_reference.get('dimensions_absolues') if cadre_reference else None
+        if ref_dims:
+            ref_w = ref_dims.get('largeur')
+            ref_h = ref_dims.get('hauteur')
+            if ref_w and ref_h and ref_w > 0 and ref_h > 0:
+                logger.info(f"📐 Dimensions RÉFÉRENCE: {ref_w:.0f}x{ref_h:.0f}px → FORCÉES sur le cadre (translation rigide)")
+                detected_w_px = ref_w
+                detected_h_px = ref_h
+            else:
+                logger.info(f"📐 Dimensions référence invalides → on garde les dimensions détectées")
+        else:
+            logger.info(f"📐 Pas de dimensions_absolues → on garde les dimensions détectées ({detected_w_px:.0f}x{detected_h_px:.0f}px)")
+
+        # Clamp pour ne pas dépasser l'image
+        if x_ref_px + detected_w_px > img_w:
+            detected_w_px = img_w - x_ref_px
+            logger.warning(f"⚠️ Cadre tronqué en largeur: {detected_w_px:.0f}px")
+        if y_ref_px + detected_h_px > img_h:
+            detected_h_px = img_h - y_ref_px
+            logger.warning(f"⚠️ Cadre tronqué en hauteur: {detected_h_px:.0f}px")
+
+        logger.info(f"📐 CADRE FINAL: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
 
         # Flag pour déclencher le rognage
-        has_4_anchors = True # On a toujours 4 bornes (réelles ou virtuelles)
+        has_4_anchors = True
 
 
     # --- Code Commun : Rognage physique ---
@@ -942,6 +962,10 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 
                 if right > left and bottom > top:
                     img_crop = img_pil.crop((left, top, right, bottom))
+                    
+                    # Convertir RGBA → RGB si nécessaire (JPEG ne supporte pas la transparence)
+                    if img_crop.mode in ('RGBA', 'P', 'LA'):
+                        img_crop = img_crop.convert('RGB')
                     
                     temp_filename = f"crop_{uuid.uuid4().hex[:8]}.jpg"
                     temp_path = os.path.join(os.path.dirname(image_path), temp_filename)
@@ -1059,54 +1083,43 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 'texte_final': ''
             }
             
-    # RE-MAPPING DES COORDONNEES VERS L'IMAGE ORIGINALE
-    # Si on a rogné, 'resultats' contient des coords relatives (0-1) au CROP.
-    # Il faut les convertir en coords relatives (0-1) par rapport à l'IMAGE ORIGINALE.
-    
+    # NORMALISATION FINALE DES COORDONNÉES: Relatives au CADRE DÉTECTÉ!
+    # L'utilisateur souhaite que les zones soient toujours calculées et retournées
+    # par rapport au cadre courant (origine 0,0 en haut à gauche du cadre, dimensions de 0 à 1).
     if temp_crop_path and x_ref_px is not None and y_ref_px is not None:
-        logger.info(f"🔄 RE-MAPPING des coordonnées de {len(resultats)} zone(s) vers l'image originale...")
-        
-        orig_w, orig_h = img_dims  # Dimensions originales
-        
-        # Calculer les dimensions du cadre en pixels
-        cadre_w_px = largeur_cadre_rel * orig_w
-        cadre_h_px = hauteur_cadre_rel * orig_h
-        
-        for k, v in resultats.items():
-            if 'coords' in v:
-                c = v['coords']
-                
-                # Coords relatives au crop (0-1) -> Pixels dans le Crop
-                # ATTENTION: Tesseract/EasyOCR renvoient des PIXELS absolus (valeurs > 1) relativement au crop.
-                # Si les valeurs sont <= 1.0, on considère que c'est du relatif.
-                
-                if all(val <= 1.0 for val in c):
-                    x1_c = c[0] * cadre_w_px
-                    y1_c = c[1] * cadre_h_px
-                    x2_c = c[2] * cadre_w_px
-                    y2_c = c[3] * cadre_h_px
-                else:
-                    # Déjà en pixels (relatif au crop)
-                    x1_c = c[0]
-                    y1_c = c[1]
-                    x2_c = c[2]
-                    y2_c = c[3]
-                
-                # Pixels dans le Crop -> Pixels dans l'image Originale
-                # (Simple translation psq pas de rotation)
-                x1_orig = x1_c + x_ref_px
-                y1_orig = y1_c + y_ref_px
-                x2_orig = x2_c + x_ref_px
-                y2_orig = y2_c + y_ref_px
-                
-                # Pixels Orig -> Relatif Orig
+        logger.info(f"🔄 NORMALISATION des coordonnées de {len(resultats)} zone(s) par rapport au CADRE DÉTECTÉ...")
+        crop_w = detected_w_px
+        crop_h = detected_h_px
+    else:
+        # Si on n'a pas rogné, on utilise l'image d'origine
+        if not img_dims:
+            try:
+                with Image.open(image_path) as img:
+                    img_dims = img.size
+            except:
+                img_dims = (1, 1)
+        crop_w, crop_h = img_dims
+
+    for k, v in resultats.items():
+        if 'coords' in v and v['coords']:
+            c = v['coords']
+            # Tesseract/EasyOCR renvoient parfois des valeurs relatives (0-1) sur le crop,
+            # parfois des pixels absolus sur le crop.
+            if all(val <= 1.0 for val in c):
+                # Vraisemblablement déjà relatives au crop, on les laisse telles quelles
+                pass
+            else:
+                # Pixels absolus -> conversion en relatif par rapport au crop/cadre courant
                 v['coords'] = [
-                    x1_orig / orig_w if orig_w else 0,
-                    y1_orig / orig_h if orig_h else 0,
-                    x2_orig / orig_w if orig_w else 0,
-                    y2_orig / orig_h if orig_h else 0
+                    c[0] / crop_w if crop_w else 0,
+                    c[1] / crop_h if crop_h else 0,
+                    c[2] / crop_w if crop_w else 0,
+                    c[3] / crop_h if crop_h else 0
                 ]
-    
+                # Clamp au cas où Tesseract déborde très légèrement
+                v['coords'] = [max(0, min(1, val)) for val in v['coords']]
+                logger.debug(f"📏 Normalisation coords zone '{k}' par rapport au cadre: {c} -> {v['coords']}")
+
     # NETTOYAGE DU CROP TEMPORAIRE
     if temp_crop_path and os.path.exists(temp_crop_path):
         try:
@@ -1115,32 +1128,21 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
         except Exception as e:
             logger.warning(f"⚠️ Nettoyage impossible: {e}")
 
-    # NORMALISATION FINALE DES COORDONNÉES
-    # Assurer que toutes les coordonnées renvoyées sont en relatif (0-1) par rapport à l'image originale
-    if not img_dims: # Si non défini plus tôt
-        try:
-            with Image.open(image_path) as img:
-                img_dims = img.size
-        except:
-            img_dims = (1, 1) # Fallback pour éviter division par zero
-            
-    img_w, img_h = img_dims
-    
-    for k, v in resultats.items():
-        if 'coords' in v and v['coords']:
-            c = v['coords']
-            # Détection heuristique: si valeurs > 1, ce sont des pixels -> convertir en relatif
-            if any(val > 1.5 for val in c):
-                v['coords'] = [
-                    c[0] / img_w,
-                    c[1] / img_h,
-                    c[2] / img_w,
-                    c[3] / img_h
-                ]
-                logger.debug(f"📏 Normalisation coords zone '{k}': {c} -> {v['coords']}")
+    # Pour que le frontend puisse dessiner les résultats en surimpression sur l'image Oiginale,
+    # on doit lui retourner la position du cadre sur l'image originale.
+    cadre_detecte = None
+    if x_ref_px is not None and y_ref_px is not None and img_dims:
+        orig_w, orig_h = img_dims
+        if orig_w and orig_h:
+            cadre_detecte = {
+                'x': x_ref_px / orig_w,
+                'y': y_ref_px / orig_h,
+                'width': detected_w_px / orig_w,
+                'height': detected_h_px / orig_h
+            }
 
     alertes = [k for k, v in resultats.items() if v['statut'] != 'ok']
-    return resultats, alertes
+    return resultats, alertes, cadre_detecte
 
 def get_absolute_coords(coords, img_w, img_h):
     """

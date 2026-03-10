@@ -2,6 +2,55 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [2.6.0] - 2026-03-10
+
+### 🎉 Refonte du système de repérage des zones OCR
+
+#### Détection du cadre basée sur les ancres réelles
+- **Priorité à la DÉTECTION** : `get_anchor_edge()` utilise désormais la position détectée des ancres dans l'image courante (et non plus `position_base` qui ne convient qu'à l'image de référence)
+- **Translation rigide** : la position du cadre vient de la détection, mais les dimensions sont FORCÉES depuis `dimensions_absolues` du cadre de référence → préserve la qualité OCR
+- **Fallback intelligent** : si la détection échoue pour une ancre, `position_base` est utilisé en repli
+
+#### Coordonnées relatives au cadre (et non à l'image)
+- Les coordonnées retournées par `analyser_hybride()` sont désormais relatives au cadre détecté (0-1), pas à l'image entière
+- Nouvel élément `cadre_detecte` retourné par l'API : `{x, y, width, height}` en relatif (0-1) par rapport à l'image originale
+- Le frontend reconvertit les coords cadre-relatives en image-relatives uniquement pour l'affichage
+
+#### Visualisation du cadre détecté
+- **Rectangle vert en pointillés** tracé autour du cadre de l'entité sur le canvas après analyse
+- **Label avec dimensions** en pixels (ex: `CADRE (896×486px)`)
+- Les zones OCR continuent d'être affichées en bleu plein à l'intérieur du cadre vert
+
+### 🐛 Corrections critiques
+
+- **Fix crop RGBA** : les images PNG avec canal alpha (RGBA) sont désormais converties en RGB avant sauvegarde en JPEG. Sans ce fix, le crop échouait silencieusement et Tesseract analysait l'image originale entière → résultats OCR complètement faux
+- **Fix normalisation des coordonnées** : suppression de la double normalisation qui pouvait fausser les coords retournées
+
+### 🔧 Modifications techniques
+
+#### Backend (`ocr_engine.py`)
+- `get_anchor_edge()` : inversion des priorités (détection > position_base)
+- `analyser_hybride()` : retourne maintenant un tuple `(resultats, alertes, cadre_detecte)` au lieu de `(resultats, alertes)`
+- Suppression de la logique de re-mapping des coordonnées vers l'image originale
+- Ajout de la conversion RGBA → RGB dans le bloc de rognage physique
+
+#### Backend (`ocr_routes.py`)
+- `_analyser_un_fichier()` et `api_analyser()` : gestion du 3ème retour `cadre_detecte`
+- `cadre_detecte` inclus dans les réponses JSON
+
+#### Frontend (`ocr-upload.component.ts`)
+- `drawCanvas()` : tracé du cadre vert (pointillés) + reconversion cadre-relative → image-relative pour les zones bleues
+- Utilisation de `cadre_detecte` pour le positionnement correct des rectangles
+
+#### Frontend (`models.ts`)
+- Interface `AnalyseResponse` : ajout du champ optionnel `cadre_detecte`
+
+### ⚠️ Principes établis
+- **Repérage ↔ OCR** : ne jamais modifier l'un sans vérifier l'autre. Ces deux aspects sont étroitement couplés.
+- **Tester sur plusieurs images** : valider avec l'image de référence ET des images différentes (dimensions, formats PNG/JPEG)
+
+---
+
 ## [2.5.0] - 2026-02-25
 
 ### 🎉 Ajouts majeurs

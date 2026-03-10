@@ -31,7 +31,7 @@ def _resolve_image_path(filename, app=None):
 def _analyser_un_fichier(image_path, filename, zones_config, cadre_reference):
     """Analyse un seul fichier — utilisé par le ThreadPoolExecutor."""
     try:
-        resultats, alertes = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference)
+        resultats, alertes, cadre_detecte = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference)
         
         if resultats is None:
             return {
@@ -49,6 +49,7 @@ def _analyser_un_fichier(image_path, filename, zones_config, cadre_reference):
                 'success': True,
                 'resultats': resultats,
                 'alertes': alertes,
+                'cadre_detecte': cadre_detecte,
                 'stats_moteurs': stats
             }
     except Exception as e:
@@ -88,7 +89,7 @@ def api_analyser():
     cadre_reference = data.get('cadre_reference')
     
     try:
-        resultats, alertes = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference)
+        resultats, alertes, cadre_detecte = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference)
         
         if resultats is None:
             return jsonify({
@@ -109,6 +110,7 @@ def api_analyser():
             'success': True, 
             'resultats': resultats, 
             'alertes': alertes, 
+            'cadre_detecte': cadre_detecte,
             'stats_moteurs': stats
         })
     except Exception as e:

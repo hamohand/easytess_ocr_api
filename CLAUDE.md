@@ -83,10 +83,17 @@ python test_document_extraction.py [fichier.pdf ou fichier.docx]
 - **Ne PAS utiliser `ThreadPoolExecutor`** car les sous-threads perdent le contexte Flask
 - Utiliser un seul thread + traitement séquentiel dans `app.app_context()`
 
-### Backend — Coordonnées (OCR)
-- Les coordonnées des zones sont **relatives** (0.0 à 1.0), pas en pixels
-- Le système AABB utilise 3 ancres (Haut, Droite, Gauche) pour aligner les zones
-- `analyser_hybride()` rogne physiquement l'image selon le cadre détecté
+### Backend — Coordonnées et Cadre de Référence (OCR)
+- Les coordonnées des zones sont **relatives au cadre** (0.0 à 1.0), pas en pixels et pas relatives à l'image
+- Le système AABB utilise 4 ancres (Haut, Droite, Gauche, Bas) pour aligner les zones
+- **Algorithme de détection du cadre** :
+  1. Détection des ancres dans l'image courante (PRIORITÉ à la détection réelle > position_base)
+  2. Le sommet haut-gauche du cadre devient l'origine (0,0) du repère
+  3. **Translation rigide** : les dimensions du cadre sont FORCÉES depuis `dimensions_absolues` (référence), seule la position vient de la détection
+  4. Les zones restent identiques à celles de l'image de référence (pas de mise à l'échelle)
+- `analyser_hybride()` rogne physiquement l'image selon le cadre détecté et retourne un 3ème élément `cadre_detecte`
+- **`cadre_detecte`** : `{x, y, width, height}` en relatif (0-1) par rapport à l'image originale, utilisé par le frontend pour dessiner le cadre vert
+- **Crop RGBA** : les images PNG avec canal alpha sont converties en RGB avant sauvegarde JPEG du crop
 
 ### Backend — Extraction de documents
 - `pdf_extractor.py` retourne un tuple `(content, stats)` — l'ancien code ne retournait que `content`
@@ -99,6 +106,7 @@ python test_document_extraction.py [fichier.pdf ou fichier.docx]
 - **Section "EasyTess — OCR"** : analyse OCR + gestion des entités (sous-onglets)
 - **Section "Extraction de Documents"** : 3 modes (Unifiée / PDF / Conversion PDF→Word)
 - Navigation via `activeSection` signal (`'ocr' | 'extraction'`)
+- **Visualisation post-analyse** : cadre de l'entité tracé en **vert pointillé** + zones OCR en **bleu plein** sur le canvas
 - Le composant `document-extractor` utilise des **signals Angular** et `FormsModule` pour les options
 
 ### Frontend — Signaux Angular
@@ -153,3 +161,11 @@ python test_document_extraction.py [fichier.pdf ou fichier.docx]
 - **Pas de tests automatisés** : Tester manuellement via le navigateur ou `test_document_extraction.py`.
 - **Stockage** : Entités en JSON dans `entities/`, uploads dans `uploads/`.
 - **Pas d'auth** : L'API est ouverte (usage interne).
+
+## ⚠️ Principe fondamental : Repérage ↔ OCR
+
+**Ne jamais modifier le repérage des zones sans vérifier la qualité OCR, et inversement.**
+Ces deux aspects sont étroitement couplés :
+- Modifier le calcul du cadre peut décaler les zones → dégradation OCR
+- Modifier le prétraitement OCR peut compenser/masquer un mauvais repérage
+- Toujours tester les deux ensemble avant de valider un changement

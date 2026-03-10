@@ -446,11 +446,49 @@ export class OcrUploadComponent implements OnDestroy {
 
         const results = this.analyseResults();
         if (results && results.resultats) {
+            const cadreDetecte = results.cadre_detecte; // {x, y, width, height} -> Image relative (0-1)
+
+            // ─── TRACER LE CADRE DE L'ENTITÉ (vert, bien visible) ───
+            if (cadreDetecte) {
+                const cx = cadreDetecte.x * img.width * this.scale;
+                const cy = cadreDetecte.y * img.height * this.scale;
+                const cw = cadreDetecte.width * img.width * this.scale;
+                const ch = cadreDetecte.height * img.height * this.scale;
+
+                this.ctx!.save();
+                this.ctx!.lineWidth = 3;
+                this.ctx!.strokeStyle = '#00cc44';
+                this.ctx!.setLineDash([10, 5]);
+                this.ctx!.strokeRect(cx, cy, cw, ch);
+                this.ctx!.setLineDash([]);
+
+                // Label du cadre
+                const label = `CADRE (${Math.round(cadreDetecte.width * img.width)}×${Math.round(cadreDetecte.height * img.height)}px)`;
+                this.ctx!.font = 'bold 14px Arial';
+                const labelW = this.ctx!.measureText(label).width;
+                this.ctx!.fillStyle = 'rgba(0, 204, 68, 0.85)';
+                this.ctx!.fillRect(cx, cy - 22, labelW + 12, 22);
+                this.ctx!.fillStyle = 'white';
+                this.ctx!.fillText(label, cx + 6, cy - 6);
+                this.ctx!.restore();
+            }
+
+            // ─── TRACER LES ZONES (bleu) ───
             Object.entries(results.resultats).forEach(([nom, data]: [string, any]) => {
                 if (data.coords) {
                     let [x1, y1, x2, y2] = data.coords;
                     x1 = Number(x1); y1 = Number(y1);
                     x2 = Number(x2); y2 = Number(y2);
+
+                    // Si le backend a fourni le cadre détecté (qui sert d'origine 0,0),
+                    // on reconvertit les coordonnées "cadre-relatives" en "image-relatives"
+                    // juste pour dessiner correctement les carrés bleus sur l'image entière.
+                    if (cadreDetecte) {
+                        x1 = cadreDetecte.x + x1 * cadreDetecte.width;
+                        y1 = cadreDetecte.y + y1 * cadreDetecte.height;
+                        x2 = cadreDetecte.x + x2 * cadreDetecte.width;
+                        y2 = cadreDetecte.y + y2 * cadreDetecte.height;
+                    }
 
                     const sx1 = x1 * img.width * this.scale;
                     const sy1 = y1 * img.height * this.scale;
@@ -480,7 +518,38 @@ export class OcrUploadComponent implements OnDestroy {
                 this.ctx.font = '14px Arial';
 
                 entite.zones.forEach(zone => {
-                    let [x1, y1, x2, y2] = zone.coords;
+                    let [nx1, ny1, nx2, ny2] = zone.coords;
+
+                    // Convert frame-relative coordinates back to image-relative coordinates using cadre_reference
+                    if (entite.cadre_reference) {
+                        const cadre = entite.cadre_reference;
+                        let cx = 0, cy = 0, cw = 1, ch = 1;
+
+                        if (cadre.gauche && cadre.droite && cadre.haut && cadre.bas) {
+                            cx = cadre.gauche.position_base[0];
+                            cy = cadre.haut.position_base[1];
+                            cw = Math.abs(cadre.droite.position_base[0] - cadre.gauche.position_base[0]);
+                            ch = Math.abs(cadre.bas.position_base[1] - cadre.haut.position_base[1]);
+                        } else if (cadre.origine && cadre.largeur && cadre.hauteur) {
+                            cx = cadre.origine.position_base[0];
+                            cy = cadre.origine.position_base[1];
+                            cw = Math.abs(cadre.largeur.position_base[0] - cx);
+                            ch = Math.abs(cadre.hauteur.position_base[1] - cy);
+                        }
+
+                        if (cw < 0.001) cw = 1;
+                        if (ch < 0.001) ch = 1;
+
+                        nx1 = nx1 * cw + cx;
+                        ny1 = ny1 * ch + cy;
+                        nx2 = nx2 * cw + cx;
+                        ny2 = ny2 * ch + cy;
+                    }
+
+                    let x1 = nx1;
+                    let y1 = ny1;
+                    let x2 = nx2;
+                    let y2 = ny2;
 
                     if (x1 <= 1.0 && y1 <= 1.0 && x2 <= 1.0 && y2 <= 1.0) {
                         x1 *= img.width;
