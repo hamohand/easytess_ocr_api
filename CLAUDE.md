@@ -88,6 +88,14 @@ python test_document_extraction.py [fichier.pdf ou fichier.docx]
 - Le système AABB utilise 4 ancres (Haut, Droite, Gauche, Bas) pour aligner les zones
 - **Algorithme de détection du cadre** :
   1. Détection des ancres dans l'image courante (PRIORITÉ à la détection réelle > position_base)
+     - **3 méthodes par ancre**, en priorité :
+       1. **Mot-Clé / Regex OCR** : Texte trouvé sur le document
+       2. **Template Image** : Pattern Matching OpenCV (ORB)
+       3. **Formule Algorithmique** : Déduite des autres ancres via `ast.parse` (ex: `H + 0.40 * RH`)
+     - Variables formules : `H` (haut.y), `B` (bas.y), `G` (gauche.x), `D` (droite.x)
+     - Variables d'échelle : `RH` (ref_height/img_height), `RW` (ref_width/img_width)
+     - Utiliser `RH`/`RW` pour des formules invariantes à la taille d'image
+     - Résolution multi-passes pour dépendances croisées
   2. Le sommet haut-gauche du cadre devient l'origine (0,0) du repère
   3. **Translation rigide** : les dimensions du cadre sont FORCÉES depuis `dimensions_absolues` (référence), seule la position vient de la détection
   4. Les zones restent identiques à celles de l'image de référence (pas de mise à l'échelle)

@@ -4,7 +4,7 @@ import os
 import uuid
 from PIL import Image
 from app.utils.pdf_utils import convert_pdf_to_image
-from app.services.ocr_engine import ocr_global_avec_positions, detecter_ancres
+from app.services.ocr_engine import ocr_global_avec_positions, detecter_ancres, resoudre_formules_ancres
 from app.services.image_matcher import extract_and_save_template
 
 entity_bp = Blueprint('entity', __name__)
@@ -203,11 +203,12 @@ def detecter_etiquettes():
         mots_ocr, img_dims = ocr_global_avec_positions(image_path, lang='fra+eng')
 
         # NOTE: Si l'OCR échoue (pas de texte), mots_ocr peut être vide. 
-        # Mais on doit quand même continuer si on a des templates images.
-        if not mots_ocr and not any('template_path' in a for a in ancres_config):
+        # Mais on doit quand même continuer si on a des templates images OU des formules.
+        has_formulas = any(isinstance(c, dict) and c.get('fallback_formula') for c in etiquettes.values())
+        if not mots_ocr and not any('template_path' in a for a in ancres_config) and not has_formulas:
              return jsonify({
                 'success': False,
-                'error': 'OCR n\'a détecté aucun texte dans l\'image et aucun template image défini'
+                'error': 'OCR n\'a détecté aucun texte dans l\'image et aucun template image ni formule défini'
             }), 400
         
         if not mots_ocr:
@@ -232,6 +233,21 @@ def detecter_etiquettes():
                     os.remove(f)
                 except:
                     pass
+        
+        # 🆕 Résoudre les ancres par formule algorithmique
+        # Construire un cadre_reference temporaire pour la résolution de formules
+        cadre_ref_for_formulas = {}
+        for etiquette_id, config in etiquettes.items():
+            if isinstance(config, dict) and config.get('fallback_formula'):
+                cadre_ref_for_formulas[etiquette_id] = {
+                    'fallback_formula': config['fallback_formula'],
+                    'position_base': [0.5, 0.5]  # Position par défaut
+                }
+        
+        if cadre_ref_for_formulas:
+            nb_resolues = resoudre_formules_ancres(cadre_ref_for_formulas, etiquettes_detectees, img_dims)
+            if nb_resolues > 0:
+                current_app.logger.info(f"🧮 {nb_resolues} ancre(s) résolue(s) par formule dans detecter-etiquettes")
         
         # Formater la réponse
         positions = {}

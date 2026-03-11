@@ -17,6 +17,7 @@ interface EtiquetteDrawing {
     template_coords?: [number, number, number, number]; // Image template region
     template_preview?: string; // Base64 preview of the template
     detected_bbox?: [number, number, number, number]; // Bounding box detected by OCR/Image matching
+    fallback_formula?: string; // Formule de secours (ex: "H + 0.40")
 }
 
 @Component({
@@ -622,25 +623,32 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         const addAnchorConfig = (type: 'haut' | 'droite' | 'gauche' | 'bas') => {
             let labels: string[] = [];
             let template_coords: [number, number, number, number] | undefined = undefined;
+            let fallback_formula: string | undefined = undefined;
 
             if (type === 'haut') {
                 labels = this.cadreHaut().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreHaut().template_coords;
+                fallback_formula = this.cadreHaut().fallback_formula;
             } else if (type === 'droite') {
                 labels = this.cadreDroite().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreDroite().template_coords;
+                fallback_formula = this.cadreDroite().fallback_formula;
             } else if (type === 'gauche') {
                 labels = this.cadreGauche().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreGauche().template_coords;
+                fallback_formula = this.cadreGauche().fallback_formula;
             } else if (type === 'bas') {
                 labels = this.cadreBas().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreBas().template_coords;
+                fallback_formula = this.cadreBas().fallback_formula;
             }
 
-            if (labels.length > 0 || template_coords) {
+            // Inclure si labels, template OU formule de secours
+            if (labels.length > 0 || template_coords || fallback_formula) {
                 etiquettes[type] = {
                     labels: labels,
-                    template_coords: template_coords
+                    template_coords: template_coords,
+                    ...(fallback_formula && { fallback_formula: fallback_formula })
                 };
             }
         };
@@ -877,22 +885,26 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                 haut: {
                     labels: parseLabels(this.cadreHaut().labels_str),
                     position_base: this.cadreHaut().position_base,
-                    ...(this.cadreHaut().template_coords && { template_coords: this.cadreHaut().template_coords })
+                    ...(this.cadreHaut().template_coords && { template_coords: this.cadreHaut().template_coords }),
+                    ...(this.cadreHaut().fallback_formula && { fallback_formula: this.cadreHaut().fallback_formula })
                 },
                 droite: {
                     labels: parseLabels(this.cadreDroite().labels_str),
                     position_base: this.cadreDroite().position_base,
-                    ...(this.cadreDroite().template_coords && { template_coords: this.cadreDroite().template_coords })
+                    ...(this.cadreDroite().template_coords && { template_coords: this.cadreDroite().template_coords }),
+                    ...(this.cadreDroite().fallback_formula && { fallback_formula: this.cadreDroite().fallback_formula })
                 },
                 gauche: {
                     labels: parseLabels(this.cadreGauche().labels_str),
                     position_base: this.cadreGauche().position_base,
-                    ...(this.cadreGauche().template_coords && { template_coords: this.cadreGauche().template_coords })
+                    ...(this.cadreGauche().template_coords && { template_coords: this.cadreGauche().template_coords }),
+                    ...(this.cadreGauche().fallback_formula && { fallback_formula: this.cadreGauche().fallback_formula })
                 },
                 bas: {
                     labels: parseLabels(this.cadreBas().labels_str),
                     position_base: this.cadreBas().position_base,
-                    ...(this.cadreBas().template_coords && { template_coords: this.cadreBas().template_coords })
+                    ...(this.cadreBas().template_coords && { template_coords: this.cadreBas().template_coords }),
+                    ...(this.cadreBas().fallback_formula && { fallback_formula: this.cadreBas().fallback_formula })
                 },
                 image_base_dimensions: {
                     width: this.imgWidth,
@@ -996,12 +1008,14 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                         this.cadreHaut.set({
                             labels_str: cadre.haut.labels.join(', '),
                             position_base: cadre.haut.position_base,
-                            template_coords: cadre.haut.template_coords
+                            template_coords: cadre.haut.template_coords,
+                            fallback_formula: cadre.haut.fallback_formula || ''
                         });
                         this.cadreDroite.set({
                             labels_str: cadre.droite.labels.join(', '),
                             position_base: cadre.droite.position_base,
-                            template_coords: cadre.droite.template_coords
+                            template_coords: cadre.droite.template_coords,
+                            fallback_formula: cadre.droite.fallback_formula || ''
                         });
 
                         // Migration automatique: ancien format 3-étiquettes (GAUCHE-BAS) → nouveau 4-étiquettes (GAUCHE + BAS)
@@ -1010,12 +1024,14 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                             this.cadreGauche.set({
                                 labels_str: cadre.gauche.labels.join(', '),
                                 position_base: cadre.gauche.position_base,
-                                template_coords: cadre.gauche.template_coords
+                                template_coords: cadre.gauche.template_coords,
+                                fallback_formula: cadre.gauche.fallback_formula || ''
                             });
                             this.cadreBas.set({
                                 labels_str: cadre.bas.labels.join(', '),
                                 position_base: cadre.bas.position_base,
-                                template_coords: cadre.bas.template_coords
+                                template_coords: cadre.bas.template_coords,
+                                fallback_formula: cadre.bas.fallback_formula || ''
                             });
                             console.log('✅ Cadre 4-anchors chargé');
                         } else if (cadre.gauche_bas) {

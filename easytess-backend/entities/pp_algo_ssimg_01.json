@@ -1,0 +1,86 @@
+{
+  "nom": "pp_algo_ssimg_01",
+  "description": "",
+  "date_creation": "2026-03-11T18:31:25.785026",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\asytess_ocr_api\\easytess-backend\\uploads\\entities\\pp_algo_ssimg_01\\reference.png",
+  "zones": [
+    {
+      "coords": [
+        -0.0015675779009751009,
+        0.09325806451612906,
+        0.19795450200726436,
+        0.18421658986175113
+      ],
+      "id": 1773249887200,
+      "lang": "ara",
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.5983100745555342,
+        0.7976958525345621,
+        0.7390059262091379,
+        0.8906175115207372
+      ],
+      "id": 1773249964465,
+      "lang": "ara",
+      "nom": "Zone 2",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "regex:DZA"
+      ],
+      "position_base": [
+        0.503061224489796,
+        0.1323943661971831
+      ]
+    },
+    "droite": {
+      "labels": [
+        "regex:ALGERIENNE"
+      ],
+      "position_base": [
+        0.8306122448979592,
+        0.3345070422535211
+      ]
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0.2968367346938776,
+        0.5
+      ],
+      "fallback_formula": "D - 0.47*RW"
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0.7436619718309859
+      ],
+      "fallback_formula": "H + 0.60*RH"
+    },
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710
+    },
+    "dimensions_absolues": {
+      "largeur": 523,
+      "hauteur": 434,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  }
+}

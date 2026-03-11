@@ -1,4 +1,5 @@
 import os
+import ast
 import shutil
 import logging
 import numpy as np
@@ -719,6 +720,237 @@ def corriger_avec_valeurs_connues(texte_ocr, valeurs_possibles, seuil=0.6):
 
 
 
+# =============================================================================
+# ANCRES ALGORITHMIQUES — Formules de secours
+# =============================================================================
+
+def evaluer_formule_securisee(formule, variables):
+    """
+    Évalue une formule mathématique de manière sécurisée via ast.parse.
+    
+    Seuls les opérations arithmétiques de base sont autorisées:
+    +, -, *, /, et les noms de variables (H, B, G, D).
+    
+    Args:
+        formule: Expression mathématique (ex: "H + 0.40", "D - G")
+        variables: Dict des variables disponibles (ex: {'H': 0.12, 'B': 0.85, ...})
+    
+    Returns:
+        float ou None si évaluation impossible
+    """
+    try:
+        tree = ast.parse(formule.strip(), mode='eval')
+    except SyntaxError as e:
+        logger.warning(f"🧮 Formule invalide (syntaxe): '{formule}' — {e}")
+        return None
+    
+    # Vérifier que seuls des nœuds sûrs sont utilisés
+    ALLOWED_NODES = (
+        ast.Expression, ast.BinOp, ast.UnaryOp,
+        ast.Add, ast.Sub, ast.Mult, ast.Div,
+        ast.USub, ast.UAdd,
+        ast.Constant, ast.Name, ast.Load
+    )
+    
+    for node in ast.walk(tree):
+        if not isinstance(node, ALLOWED_NODES):
+            logger.warning(f"🧮 Formule rejetée (nœud interdit {type(node).__name__}): '{formule}'")
+            return None
+    
+    # Vérifier que toutes les variables référencées sont disponibles
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            if node.id not in variables:
+                logger.debug(f"🧮 Variable '{node.id}' non encore disponible pour formule '{formule}'")
+                return None  # Variable manquante, sera peut-être résolue à une passe suivante
+    
+    # Évaluer de manière sécurisée
+    try:
+        code = compile(tree, '<formula>', 'eval')
+        result = eval(code, {"__builtins__": {}}, variables)
+        if isinstance(result, (int, float)) and not (result != result):  # Pas NaN
+            return float(result)
+        else:
+            logger.warning(f"🧮 Résultat invalide pour '{formule}': {result}")
+            return None
+    except Exception as e:
+        logger.warning(f"🧮 Erreur évaluation formule '{formule}': {e}")
+        return None
+
+
+def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
+    """
+    Résout les formules de fallback pour les ancres non détectées.
+    Effectue jusqu'à 4 passes pour gérer les dépendances croisées.
+    
+    Variables disponibles:
+        H = position Y (relative 0-1) de l'ancre HAUT
+        B = position Y (relative 0-1) de l'ancre BAS  
+        G = position X (relative 0-1) de l'ancre GAUCHE
+        D = position X (relative 0-1) de l'ancre DROITE
+        RH = ratio hauteur (ref_height / current_height) — pour l'invariance dimensionnelle
+        RW = ratio largeur (ref_width / current_width) — pour l'invariance dimensionnelle
+    
+    Exemples de formules invariantes:
+        BAS = H + 0.40 * RH   (40% de la hauteur de l'image de RÉFÉRENCE)
+        DROITE = G + 0.60 * RW (60% de la largeur de l'image de RÉFÉRENCE)
+    
+    Args:
+        cadre_reference: Configuration du cadre avec les formules
+        etiquettes_detectees: Résultats de détection OCR/template
+        img_dims: (width, height) de l'image courante
+    
+    Returns:
+        int: Nombre d'ancres résolues par formule
+    """
+    if not cadre_reference:
+        return 0
+    
+    img_w, img_h = img_dims
+    MAX_PASSES = 4
+    total_resolues = 0
+    
+    # Calculer les ratios de mise à l'échelle (référence / courant)
+    # Si les dimensions de référence sont disponibles, RH et RW permettent
+    # d'écrire des formules indépendantes de la taille de l'image.
+    ref_base_dims = cadre_reference.get('image_base_dimensions', {})
+    ref_w = ref_base_dims.get('width', img_w)
+    ref_h = ref_base_dims.get('height', img_h)
+    
+    # Ratios: sur l'image de référence, RH=RW=1
+    ratio_h = ref_h / img_h if img_h > 0 else 1.0
+    ratio_w = ref_w / img_w if img_w > 0 else 1.0
+    
+    if abs(ratio_h - 1.0) > 0.01 or abs(ratio_w - 1.0) > 0.01:
+        logger.info(f"🧮 Ratios de mise à l'échelle: RH={ratio_h:.3f} (ref={ref_h}px, cur={img_h}px), RW={ratio_w:.3f} (ref={ref_w}px, cur={img_w}px)")
+    
+    # Mapping: ancre_id -> (axe de la variable, variable_name, edge_key_for_position)
+    # H et B sont des coordonnées Y, G et D sont des coordonnées X
+    ANCRE_MAP = {
+        'haut':   {'var': 'H', 'axis': 'y', 'edge_min': 'y_min', 'edge_max': 'y_max', 'pos_idx': 1},
+        'bas':    {'var': 'B', 'axis': 'y', 'edge_min': 'y_min', 'edge_max': 'y_max', 'pos_idx': 1},
+        'gauche': {'var': 'G', 'axis': 'x', 'edge_min': 'x_min', 'edge_max': 'x_max', 'pos_idx': 0},
+        'droite': {'var': 'D', 'axis': 'x', 'edge_min': 'x_min', 'edge_max': 'x_max', 'pos_idx': 0},
+    }
+    # Seuil de tolérance: si la position détectée dévie de plus de TOLERANCE
+    # par rapport à position_base, c'est probablement un faux positif.
+    # Appliqué uniquement aux détections par template image (OCR est plus fiable).
+    TOLERANCE = 0.25  # 25% de l'image
+    
+    for passe in range(MAX_PASSES):
+        # 1. Construire les variables à partir des ancres DÉJÀ détectées
+        variables = {
+            'RH': ratio_h,  # Ratio hauteur (ref/current)
+            'RW': ratio_w,  # Ratio largeur (ref/current)
+        }
+        for ancre_id, info in ANCRE_MAP.items():
+            det = etiquettes_detectees.get(ancre_id, {})
+            ref_data = cadre_reference.get(ancre_id, {})
+            pos_base = ref_data.get('position_base')
+            
+            if det.get('found'):
+                detected_val = det.get(info['axis'], 0)
+                source = det.get('source', 'ocr')
+                
+                # Validation de cohérence pour les détections par template image
+                # Les templates sont sujets aux faux positifs → vérifier contre position_base
+                if source == 'image_template' and pos_base and len(pos_base) > info['pos_idx']:
+                    expected_val = pos_base[info['pos_idx']]
+                    ecart = abs(detected_val - expected_val)
+                    
+                    if ecart > TOLERANCE:
+                        # Faux positif probable → utiliser position_base
+                        logger.warning(
+                            f"🧮⚠️ Ancre '{ancre_id}' détectée par template à {info['var']}={detected_val:.4f} "
+                            f"mais position_base={expected_val:.4f} (écart={ecart:.4f} > seuil={TOLERANCE}). "
+                            f"Faux positif probable → utilisation de position_base pour les formules."
+                        )
+                        variables[info['var']] = expected_val
+                        continue
+                
+                # Position détectée fiable
+                variables[info['var']] = detected_val
+            else:
+                # Ancre non détectée → fallback vers position_base
+                # Permet aux formules de fonctionner même si l'ancre parente
+                # n'est pas visuellement détectée sur l'image d'analyse.
+                if pos_base and len(pos_base) > info['pos_idx']:
+                    variables[info['var']] = pos_base[info['pos_idx']]
+                    logger.debug(f"🧮 Variable {info['var']} = {pos_base[info['pos_idx']]:.4f} (depuis position_base, ancre '{ancre_id}' non détectée)")
+        
+        logger.debug(f"🧮 Passe {passe + 1}/{MAX_PASSES}: Variables disponibles = {variables}")
+        
+        # 2. Essayer de résoudre les ancres manquantes
+        resolues_cette_passe = 0
+        
+        for ancre_id, info in ANCRE_MAP.items():
+            det = etiquettes_detectees.get(ancre_id, {})
+            if det.get('found'):
+                continue  # Déjà détectée, pas besoin de formule
+            
+            # Récupérer la formule depuis cadre_reference
+            ref_data = cadre_reference.get(ancre_id, {})
+            formule = ref_data.get('fallback_formula', '').strip()
+            if not formule:
+                continue  # Pas de formule configurée
+            
+            # Évaluer la formule
+            result = evaluer_formule_securisee(formule, variables)
+            if result is None:
+                continue  # Pas assez de variables pour résoudre, on réessaiera
+            
+            # Clamp le résultat entre 0 et 1
+            result = max(0.0, min(1.0, result))
+            
+            # Injecter le résultat comme ancre détectée
+            pos_base = ref_data.get('position_base', [0.5, 0.5])
+            
+            if info['axis'] == 'x':
+                # Ancre horizontale (GAUCHE, DROITE)
+                etiquettes_detectees[ancre_id] = {
+                    'found': True,
+                    'text': f'[Formule: {formule} = {result:.4f}]',
+                    'x': result,
+                    'y': pos_base[1] if len(pos_base) > 1 else 0.5,
+                    'x_min': result,
+                    'y_min': pos_base[1] if len(pos_base) > 1 else 0.5,
+                    'x_max': result,
+                    'y_max': pos_base[1] if len(pos_base) > 1 else 0.5,
+                    'source': 'formula',
+                    'formula': formule,
+                    'formula_result': result
+                }
+            else:
+                # Ancre verticale (HAUT, BAS)
+                etiquettes_detectees[ancre_id] = {
+                    'found': True,
+                    'text': f'[Formule: {formule} = {result:.4f}]',
+                    'x': pos_base[0] if len(pos_base) > 0 else 0.5,
+                    'y': result,
+                    'x_min': pos_base[0] if len(pos_base) > 0 else 0.5,
+                    'y_min': result,
+                    'x_max': pos_base[0] if len(pos_base) > 0 else 0.5,
+                    'y_max': result,
+                    'source': 'formula',
+                    'formula': formule,
+                    'formula_result': result
+                }
+            
+            resolues_cette_passe += 1
+            total_resolues += 1
+            logger.info(f"🧮 Ancre '{ancre_id.upper()}' résolue par formule: {formule} = {result:.4f} (passe {passe + 1})")
+        
+        if resolues_cette_passe == 0:
+            if passe > 0:
+                logger.debug(f"🧮 Plus rien à résoudre après {passe + 1} passes")
+            break  # Plus rien à résoudre
+    
+    if total_resolues > 0:
+        logger.info(f"🧮 Total ancres résolues par formule: {total_resolues}")
+    
+    return total_resolues
+
+
 def analyser_hybride(image_path, zones_config, cadre_reference=None):
     """
     Analyse hybride avec support pour le cadre de référence à 3 étiquettes.
@@ -825,7 +1057,14 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
             
             if not toutes_trouvees:
                 etiquettes_manquantes = [k for k, v in etiquettes_detectees.items() if not v.get('found')]
-                logger.warning(f"⚠️ Certaines étiquettes non trouvées: {', '.join(etiquettes_manquantes)} -> Utilisation des bords de l'image par défaut")
+                logger.warning(f"⚠️ Certaines étiquettes non trouvées: {', '.join(etiquettes_manquantes)}")
+            
+            # 🆕 TOUJOURS tenter la résolution par formule algorithmique
+            # (même si toutes les ancres visuelles sont trouvées, car certaines ancres
+            # peuvent être définies UNIQUEMENT par formule, sans labels ni template)
+            nb_resolues = resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims)
+            if nb_resolues > 0:
+                logger.info(f"🧮 {nb_resolues} ancre(s) résolue(s) par formule algorithmique")
         else:
             # Pas d'ancres configurées
             try:
@@ -849,21 +1088,45 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
             Retourne la coordonnée de bord correcte pour une ancre.
             ALGORITHME UTILISATEUR:
             Priorité: DÉTECTION (position réelle dans l'image courante) > position_base > défaut
+            
+            Validation: Les détections par template image sont vérifiées contre position_base.
+            Si l'écart dépasse 25%, c'est un faux positif probable → fallback vers position_base.
             """
             ref_data = cadre_reference.get(anchor_id) if cadre_reference else None
             det = etiquettes_detectees.get(anchor_id, {})
+            TOLERANCE_PX = 0.25  # 25% de l'image
             
             # 1. PRIORITÉ: résultat de DÉTECTION (position réelle dans l'image courante)
             if det.get('found') and edge_side in det:
                 val = det[edge_side] * (img_w if axis == 'x' else img_h)
-                # Log de comparaison avec position_base si disponible
+                source = det.get('source', 'ocr')
+                
+                # Validation de cohérence pour les détections par template image
+                if source == 'image_template' and ref_data and ref_data.get('position_base'):
+                    idx = 0 if axis == 'x' else 1
+                    dim = img_w if axis == 'x' else img_h
+                    pb_val = ref_data['position_base'][idx] * dim
+                    ecart_rel = abs(det[edge_side] - ref_data['position_base'][idx])
+                    
+                    if ecart_rel > TOLERANCE_PX:
+                        # Faux positif probable → fallback vers position_base
+                        logger.warning(
+                            f"  🚫 {anchor_id.upper()}: Template détecté à {val:.0f}px mais position_base={pb_val:.0f}px "
+                            f"(écart={ecart_rel:.2%} > seuil={TOLERANCE_PX:.0%}). Faux positif → position_base utilisée."
+                        )
+                        return pb_val
+                    else:
+                        logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION (template) → {val:.0f}px (position_base: {pb_val:.0f}px, Δ={abs(val-pb_val):.0f}px ✓)")
+                        return val
+                
+                # Log de comparaison avec position_base si disponible (OCR ou formule)
                 if ref_data and ref_data.get('position_base'):
                     idx = 0 if axis == 'x' else 1
                     pb_val = ref_data['position_base'][idx] * (img_w if axis == 'x' else img_h)
                     diff = abs(val - pb_val)
-                    logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION → {val:.0f}px (position_base: {pb_val:.0f}px, Δ={diff:.0f}px)")
+                    logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION ({source}) → {val:.0f}px (position_base: {pb_val:.0f}px, Δ={diff:.0f}px)")
                 else:
-                    logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION → {val:.0f}px")
+                    logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION ({source}) → {val:.0f}px")
                 return val
             # 2. Fallback: position_base de l'entité
             elif ref_data and ref_data.get('position_base'):

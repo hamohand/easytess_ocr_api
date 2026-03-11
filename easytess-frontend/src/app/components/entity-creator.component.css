@@ -975,3 +975,48 @@ canvas.drawing {
     border-color: #00acc1;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
+
+/* ==================== FORMULA FALLBACK (Algorithmic Anchor) ==================== */
+
+.formula-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    padding: 4px 6px;
+    background: linear-gradient(135deg, rgba(156, 39, 176, 0.04), rgba(156, 39, 176, 0.08));
+    border-radius: 6px;
+    border: 1px dashed rgba(156, 39, 176, 0.2);
+}
+
+.formula-label {
+    font-size: 0.75rem;
+    color: #7b1fa2;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: help;
+}
+
+.formula-input {
+    flex: 1;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+    border: 1px solid rgba(156, 39, 176, 0.25);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.8);
+    color: #4a148c;
+    transition: all 0.2s ease;
+}
+
+.formula-input:focus {
+    outline: none;
+    border-color: #9c27b0;
+    box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.15);
+    background: white;
+}
+
+.formula-input::placeholder {
+    color: #ce93d8;
+    font-style: italic;
+}

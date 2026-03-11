@@ -120,7 +120,14 @@
             <p class="section-help">
                 Définissez 4 étiquettes pour créer un système de coordonnées stable (HAUT, DROITE, GAUCHE, BAS).<br>
                 <strong>Texte:</strong> PASSPORT, PASSEPORT (séparés par virgule)<br>
-                <strong>Regex:</strong> <code>regex:\d&#123;9&#125;</code> (9 chiffres consécutifs)
+                <strong>Regex:</strong>
+                <code>regex:\d&#123;9&#125;</code> (9 chiffres consécutifs)<br>
+                <code>regex:[A-Z]&#123;2&#125;\d&#123;6&#125;</code> → Code type "AB123456"<br>
+                <code>regex:\d&#123;2&#125;/\d&#123;2&#125;/\d&#123;4&#125;</code> → Date format JJ/MM/AAAA<br>
+                <code>regex:P&lt;[A-Z]&#123;3&#125;</code> → Début de ligne MRZ (P&lt;DZA, P&lt;FRA)<br>
+                <strong>🧮 Formule:</strong> Si l'ancre est invisible, calculez-la ! Variables: <code>H</code>,
+                <code>B</code>, <code>G</code>, <code>D</code>, <code>RH</code>, <code>RW</code><br>
+                <em>RH/RW = ratios de mise à l'échelle (référence/courant). Ex: <code>H + 0.40 * RH</code></em>
             </p>
 
             <div class="cadre-labels">
@@ -163,6 +170,14 @@
                         }
 
                     </div>
+                    <div class="formula-row">
+                        <label class="formula-label"
+                            title="Formule de secours si OCR et Image échouent. Variables: H, B, G, D">🧮
+                            Formule:</label>
+                        <input type="text" [ngModel]="cadreHaut().fallback_formula || ''"
+                            (ngModelChange)="cadreHaut.set({labels_str: cadreHaut().labels_str, position_base: cadreHaut().position_base, template_coords: cadreHaut().template_coords, fallback_formula: $event})"
+                            placeholder="Ex: B - 0.40 * RH" class="formula-input">
+                    </div>
                 </div>
 
                 <!-- Étiquette DROITE (X max) -->
@@ -204,6 +219,14 @@
                         }
                         }
 
+                    </div>
+                    <div class="formula-row">
+                        <label class="formula-label"
+                            title="Formule de secours si OCR et Image échouent. Variables: H, B, G, D">🧮
+                            Formule:</label>
+                        <input type="text" [ngModel]="cadreDroite().fallback_formula || ''"
+                            (ngModelChange)="cadreDroite.set({labels_str: cadreDroite().labels_str, position_base: cadreDroite().position_base, template_coords: cadreDroite().template_coords, fallback_formula: $event})"
+                            placeholder="Ex: G + 0.60 * RW" class="formula-input">
                     </div>
                 </div>
 
@@ -248,6 +271,14 @@
                         }
 
                     </div>
+                    <div class="formula-row">
+                        <label class="formula-label"
+                            title="Formule de secours si OCR et Image échouent. Variables: H, B, G, D">🧮
+                            Formule:</label>
+                        <input type="text" [ngModel]="cadreGauche().fallback_formula || ''"
+                            (ngModelChange)="cadreGauche.set({labels_str: cadreGauche().labels_str, position_base: cadreGauche().position_base, template_coords: cadreGauche().template_coords, fallback_formula: $event})"
+                            placeholder="Ex: D - 0.60 * RW" class="formula-input">
+                    </div>
                 </div>
 
                 <!-- Étiquette BAS (Y max) -->
@@ -288,6 +319,14 @@
                         }
                         }
 
+                    </div>
+                    <div class="formula-row">
+                        <label class="formula-label"
+                            title="Formule de secours si OCR et Image échouent. Variables: H, B, G, D">🧮
+                            Formule:</label>
+                        <input type="text" [ngModel]="cadreBas().fallback_formula || ''"
+                            (ngModelChange)="cadreBas.set({labels_str: cadreBas().labels_str, position_base: cadreBas().position_base, template_coords: cadreBas().template_coords, fallback_formula: $event})"
+                            placeholder="Ex: H + 0.40 * RH" class="formula-input">
                     </div>
                 </div>
             </div>
