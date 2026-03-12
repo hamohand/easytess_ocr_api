@@ -8,7 +8,7 @@ en document Word, en préservant la structure:
 """
 from docx import Document
 from docx.shared import Pt, Inches, Cm, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn, nsdecls
 from docx.oxml import parse_xml
@@ -60,10 +60,7 @@ def _add_page_break(doc):
     """Ajoute un saut de page."""
     paragraph = doc.add_paragraph()
     run = paragraph.add_run()
-    run.add_break(docx_break_type=None)
-    # Saut de page via XML
-    br = parse_xml('<w:br %s w:type="page"/>' % nsdecls('w'))
-    run._r.append(br)
+    run.add_break(WD_BREAK.PAGE)
 
 
 def convert_content_to_docx(content, output_path, source_filename=None):

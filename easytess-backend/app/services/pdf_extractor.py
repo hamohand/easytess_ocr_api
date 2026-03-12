@@ -290,3 +290,58 @@ def extract_pdf(pdf_path, table_columns=None, pages=None,
         "strategie_utilisee": strategy,
         "detail_pages": pages_info,
     }
+
+
+def filter_columns(content, column_names):
+    """
+    Filtre le contenu extrait pour ne garder que les colonnes spécifiées
+    dans les tableaux.
+
+    Args:
+        content: Liste de blocs extraits par extract_pdf()
+        column_names: Liste de noms de colonnes à conserver.
+                      La recherche est insensible à la casse et partielle
+                      (ex: "Position" matche "Position & Sous Position").
+
+    Returns:
+        Liste de lignes filtrées (dicts avec uniquement les colonnes demandées)
+    """
+    filtered_rows = []
+
+    for block in content:
+        if block.get('type') != 'tableau':
+            continue
+
+        lignes = block.get('lignes', [])
+        if not lignes:
+            continue
+
+        # Trouver les clés réelles correspondant aux noms demandés
+        sample_keys = list(lignes[0].keys())
+        matched_keys = {}
+        for target_name in column_names:
+            target_lower = target_name.lower()
+            for key in sample_keys:
+                if target_lower in key.lower():
+                    matched_keys[target_name] = key
+                    break
+
+        # Si aucune colonne ne matche dans ce tableau, passer
+        if not matched_keys:
+            continue
+
+        # Extraire les lignes filtrées
+        for ligne in lignes:
+            filtered_row = {}
+            for label, real_key in matched_keys.items():
+                value = ligne.get(real_key, '')
+                if value:  # Ne garder que les valeurs non-vides
+                    filtered_row[label] = value
+
+            if filtered_row:
+                filtered_row['_page'] = block.get('page')
+                filtered_row['_tableau'] = block.get('numero')
+                filtered_rows.append(filtered_row)
+
+    return filtered_rows
+
