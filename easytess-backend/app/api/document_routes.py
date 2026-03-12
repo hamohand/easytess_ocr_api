@@ -13,7 +13,7 @@ import os
 import uuid
 import json
 
-from app.services.pdf_extractor import extract_pdf
+from app.services.pdf_extractor import extract_pdf, filter_columns, extract_rows_with_single_tariff_code
 from app.services.docx_extractor import extract_document
 from app.services.pdf_to_docx import convert_pdf_to_docx, convert_content_to_docx
 
@@ -325,3 +325,137 @@ def api_convert_pdf_to_docx():
         if not (request.form.get('download', 'true').lower() == 'true'):
             _cleanup(filepath)
             _cleanup(output_path)
+
+
+# ═════════════════════════════════════════════════════════════
+# 4. POST /api/extract-pdf-columns — Extraction filtrée par colonnes
+# ═════════════════════════════════════════════════════════════
+@document_bp.route('/api/extract-pdf-columns', methods=['POST'])
+def api_extract_pdf_columns():
+    """
+    Extrait un PDF et retourne uniquement les colonnes demandées
+    des tableaux trouvés.
+
+    Form data:
+        file: fichier .pdf (obligatoire)
+        columns: JSON array de noms de colonnes (optionnel)
+                 Défaut: ["Position & Sous", "Désignation des Produits"]
+                 La recherche est partielle et insensible à la casse.
+        pages: JSON array de pages 1-based (optionnel)
+        strategy: Stratégie de détection tableaux (optionnel)
+
+    Returns:
+        JSON avec les lignes filtrées contenant uniquement les colonnes demandées
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'Aucun fichier fourni (champ "file" requis)'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Aucun fichier sélectionné'}), 400
+
+    filepath = None
+    try:
+        filepath, filename, ext = _save_temp_file(file, prefix="cols")
+
+        if ext not in PDF_EXTENSIONS:
+            return jsonify({
+                'error': f'Format non supporté: {ext}. Seuls les fichiers .pdf sont acceptés.'
+            }), 400
+
+        # Colonnes à extraire (défaut: Position & Désignation)
+        columns_raw = request.form.get('columns')
+        if columns_raw:
+            try:
+                column_names = json.loads(columns_raw)
+                if not isinstance(column_names, list):
+                    raise ValueError("Doit être un tableau JSON")
+            except (json.JSONDecodeError, ValueError) as e:
+                return jsonify({'error': f'columns invalide: {e}'}), 400
+        else:
+            column_names = ["Position & Sous", "Désignation des Produits"]
+
+        pages = _parse_pages(request.form)
+        strategy = request.form.get('strategy', 'auto')
+
+        # 1. Extraction complète du PDF
+        content, stats = extract_pdf(
+            filepath,
+            pages=pages,
+            strategy=strategy,
+            include_metadata=True
+        )
+
+        # 2. Filtrage par colonnes
+        filtered = filter_columns(content, column_names)
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'colonnes_demandees': column_names,
+            'nb_lignes': len(filtered),
+            'lignes': filtered,
+            'statistiques': stats,
+        })
+
+    except Exception as e:
+        return jsonify({
+            'error': f"Erreur lors de l'extraction: {str(e)}"
+        }), 500
+    finally:
+        _cleanup(filepath)
+
+
+# ═════════════════════════════════════════════════════════════
+# 5. POST /api/extract-tariff-codes — Extraction dynamique des codes
+# ═════════════════════════════════════════════════════════════
+@document_bp.route('/api/extract-tariff-codes', methods=['POST'])
+def api_extract_tariff_codes():
+    """
+    Extrait un PDF et cherche dynamiquement tous les codes tarifaires
+    (format XXXX.XX.XX.XX) quelle que soit la colonne où ils se trouvent.
+    Associe chaque code avec la colonne Désignation correspondante.
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'Aucun fichier fourni (champ "file" requis)'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Aucun fichier sélectionné'}), 400
+
+    filepath = None
+    try:
+        filepath, filename, ext = _save_temp_file(file, prefix="codes")
+
+        if ext not in PDF_EXTENSIONS:
+            return jsonify({
+                'error': f'Format non supporté: {ext}. Seuls les fichiers .pdf sont acceptés.'
+            }), 400
+
+        pages = _parse_pages(request.form)
+        strategy = request.form.get('strategy', 'auto')
+
+        # 1. Extraction complète
+        content, stats = extract_pdf(
+            filepath,
+            pages=pages,
+            strategy=strategy,
+            include_metadata=False
+        )
+
+        # 2. Recherche dynamique : lignes contenant exactement UN code tarifaire
+        results = extract_rows_with_single_tariff_code(content)
+
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'nb_lignes_trouvees': len(results),
+            'donnees': results
+        })
+
+    except Exception as e:
+        return jsonify({
+            'error': f"Erreur lors de l'extraction: {str(e)}"
+        }), 500
+    finally:
+        _cleanup(filepath)

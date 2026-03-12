@@ -345,3 +345,41 @@ def filter_columns(content, column_names):
 
     return filtered_rows
 
+
+def extract_rows_with_single_tariff_code(content):
+    """
+    Parcourt le contenu extrait pour trouver tous les objets JSON (lignes de tableaux)
+    dont UNE ET UNE SEULE valeur contient un code tarifaire au format XXXX.XX.XX.XX.
+    Retourne la ligne complète (l'objet JSON d'origine).
+    """
+    results = []
+    code_pattern = re.compile(r'\d{4}\.\d{2}\.\d{2}\.\d{2}')
+    
+    for block in content:
+        if block.get('type') != 'tableau':
+            continue
+            
+        lignes = block.get('lignes', [])
+        for ligne in lignes:
+            codes_found_in_row = 0
+            
+            # Compter combien de fois un code apparaît dans cette ligne (toutes colonnes confondues)
+            for val in ligne.values():
+                val_str = str(val) if val else ""
+                # Trouver toutes les occurrences du pattern dans la valeur
+                matches = code_pattern.findall(val_str)
+                codes_found_in_row += len(matches)
+            
+            # La condition stricte : il doit y avoir exactement UN et UN SEUL code
+            if codes_found_in_row == 1:
+                # On clone la ligne pour y ajouter les métadonnées (page, tab)
+                row_copy = dict(ligne)
+                if '_page' not in row_copy:
+                    row_copy['_page'] = block.get('page')
+                if '_tableau' not in row_copy:
+                    row_copy['_tableau'] = block.get('numero')
+                
+                results.append(row_copy)
+                
+    return results
+

@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { DocumentService } from '../services/document.service';
 import { DocumentBloc, ExtractDocumentResponse, ExtractionStats } from '../services/models';
 
-type ExtractionMode = 'unified' | 'pdf' | 'convert';
+type ExtractionMode = 'unified' | 'pdf' | 'convert' | 'position';
 type Strategy = 'auto' | 'standard' | 'text' | 'lines_strict';
 
 @Component({
@@ -18,6 +18,7 @@ type Strategy = 'auto' | 'standard' | 'text' | 'lines_strict';
 export class DocumentExtractorComponent {
 
     // ─── State ───
+    activeTab = signal<'extraction' | 'code'>('extraction');
     activeMode = signal<ExtractionMode>('unified');
     selectedFile = signal<File | null>(null);
     dragOver = signal(false);
@@ -59,12 +60,23 @@ export class DocumentExtractorComponent {
     acceptedFormats = computed(() => {
         switch (this.activeMode()) {
             case 'pdf': return '.pdf';
+            case 'position': return '.pdf';
             case 'convert': return '.pdf';
             case 'unified': return '.pdf,.docx';
         }
     });
 
     constructor(private documentService: DocumentService) { }
+
+    // ─── Tab switching ───
+    setTab(tab: 'extraction' | 'code') {
+        this.activeTab.set(tab);
+        if (tab === 'extraction') {
+            this.setMode('unified');
+        } else {
+            this.setMode('position');
+        }
+    }
 
     // ─── Mode switching ───
     setMode(mode: ExtractionMode) {
@@ -74,8 +86,9 @@ export class DocumentExtractorComponent {
         const file = this.selectedFile();
         if (file) {
             const ext = file.name.split('.').pop()?.toLowerCase();
-            if (mode === 'pdf' && ext !== 'pdf') this.selectedFile.set(null);
-            if (mode === 'convert' && ext !== 'pdf') this.selectedFile.set(null);
+            if ((mode === 'pdf' || mode === 'convert' || mode === 'position') && ext !== 'pdf') {
+                this.selectedFile.set(null);
+            }
         }
     }
 
@@ -176,8 +189,36 @@ export class DocumentExtractorComponent {
         };
 
         const mode = this.activeMode();
-        let obs;
+        
+        if (mode === 'position') {
+            this.documentService.extractTariffCodes(file, options).subscribe({
+                next: (res: any) => {
+                    const bloc: DocumentBloc = {
+                        type: 'tableau',
+                        numero: 1,
+                        lignes: res.donnees,
+                        metadata: {
+                            nb_lignes: res.nb_lignes_trouvees,
+                            nb_colonnes: res.donnees.length > 0 ? Object.keys(res.donnees[0]).length : 0,
+                            a_entete: true
+                        }
+                    };
+                    this.extractedContent.set([bloc]);
+                    this.stats.set(null);
+                    this.resultFilename.set(res.filename || file.name);
+                    this.resultFormat.set('JSON');
+                    this.loading.set(false);
+                    this.expandedTables.set(new Set([0])); // Auto expand result
+                },
+                error: (err: any) => {
+                    this.error.set(err.error?.error || 'Erreur lors de l\'extraction');
+                    this.loading.set(false);
+                }
+            });
+            return;
+        }
 
+        let obs;
         if (mode === 'pdf') {
             obs = this.documentService.extractPdf(file, options);
         } else {
@@ -192,7 +233,7 @@ export class DocumentExtractorComponent {
                 this.resultFormat.set(res.format || '');
                 this.loading.set(false);
             },
-            error: (err) => {
+            error: (err: any) => {
                 this.error.set(err.error?.error || 'Erreur lors de l\'extraction');
                 this.loading.set(false);
             }

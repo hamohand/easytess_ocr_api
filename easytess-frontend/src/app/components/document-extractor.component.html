@@ -1,6 +1,17 @@
 <!-- document-extractor.component.html -->
 <div class="extractor-container">
+    <!-- ─── Main Tabs ─── -->
+    <div class="main-tabs">
+        <button class="main-tab" [class.active]="activeTab() === 'extraction'" (click)="setTab('extraction')">
+            Extraction
+        </button>
+        <button class="main-tab" [class.active]="activeTab() === 'code'" (click)="setTab('code')">
+            Code
+        </button>
+    </div>
+
     <!-- ─── Mode Selector ─── -->
+    @if (activeTab() === 'extraction') {
     <div class="mode-selector">
         <button class="mode-btn" [class.active]="activeMode() === 'unified'" (click)="setMode('unified')">
             <span class="mode-icon">📄</span>
@@ -24,6 +35,17 @@
             </span>
         </button>
     </div>
+    } @else {
+    <div class="mode-selector">
+        <button class="mode-btn" [class.active]="activeMode() === 'position'" (click)="setMode('position')">
+            <span class="mode-icon">📍</span>
+            <span class="mode-info">
+                <span class="mode-title">Position</span>
+                <span class="mode-desc">Extraire les lignes ayant un unique code tarifaire (XXXX.XX.XX.XX)</span>
+            </span>
+        </button>
+    </div>
+    }
 
     <!-- ─── Dropzone ─── -->
     <div class="dropzone" [class.drag-over]="dragOver()" [class.has-file]="selectedFile()"
@@ -92,11 +114,13 @@
             }
 
             <!-- Columns filter -->
+            @if (activeMode() !== 'position') {
             <div class="option-group">
                 <label class="option-label">Colonnes (tableaux)</label>
                 <input class="option-input" type="text" placeholder="Toutes — ex: 0,1,3" [ngModel]="columnsFilter()"
                     (ngModelChange)="columnsFilter.set($event)" />
             </div>
+            }
         </div>
 
         <!-- Action buttons -->

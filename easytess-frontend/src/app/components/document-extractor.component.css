@@ -9,6 +9,46 @@
     gap: 1.5rem;
 }
 
+/* ─── Main Tabs ─── */
+.main-tabs {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 0.5rem;
+}
+
+.main-tab {
+    background: none;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+}
+
+.main-tab:hover {
+    color: #475569;
+}
+
+.main-tab.active {
+    color: #7c3aed;
+}
+
+.main-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: #7c3aed;
+    border-radius: 3px 3px 0 0;
+}
+
+
 /* ─── Mode Selector ─── */
 .mode-selector {
     display: grid;

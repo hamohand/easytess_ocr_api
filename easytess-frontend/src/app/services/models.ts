@@ -193,3 +193,10 @@ export interface ConvertPdfResponse {
     statistiques: ExtractionStats;
     message: string;
 }
+
+export interface ExtractTariffCodesResponse {
+    success: boolean;
+    filename: string;
+    nb_lignes_trouvees: number;
+    donnees: { [key: string]: any }[]; // Lignes JSON complètes
+}

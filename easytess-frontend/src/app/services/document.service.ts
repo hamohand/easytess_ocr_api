@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ExtractDocumentResponse, ConvertPdfResponse } from './models';
+import { ExtractDocumentResponse, ConvertPdfResponse, ExtractTariffCodesResponse } from './models';
 
 @Injectable({
     providedIn: 'root'
@@ -133,6 +133,28 @@ export class DocumentService {
 
         return this.http.post<ConvertPdfResponse>(
             `${this.apiUrl}/convert-pdf-to-docx`, formData
+        );
+    }
+
+    /**
+     * Extraction dynamique des codes tarifaires (format XXXX.XX.XX.XX)
+     */
+    extractTariffCodes(file: File, options?: {
+        pages?: number[];
+        strategy?: string;
+    }): Observable<ExtractTariffCodesResponse> {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        if (options?.pages) {
+            formData.append('pages', JSON.stringify(options.pages));
+        }
+        if (options?.strategy) {
+            formData.append('strategy', options.strategy);
+        }
+
+        return this.http.post<ExtractTariffCodesResponse>(
+            `${this.apiUrl}/extract-tariff-codes`, formData
         );
     }
 }
