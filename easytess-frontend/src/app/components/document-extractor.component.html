@@ -41,7 +41,14 @@
             <span class="mode-icon">📍</span>
             <span class="mode-info">
                 <span class="mode-title">Position</span>
-                <span class="mode-desc">Extraire les lignes ayant un unique code tarifaire (XXXX.XX.XX.XX)</span>
+                <span class="mode-desc">Extraire les lignes ayant un unique code tarifaire</span>
+            </span>
+        </button>
+        <button class="mode-btn" [class.active]="activeMode() === 'etiquettes'" (click)="setMode('etiquettes')">
+            <span class="mode-icon">🏷️</span>
+            <span class="mode-info">
+                <span class="mode-title">Étiquettes</span>
+                <span class="mode-desc">Renommer et normaliser les colonnes des résultats</span>
             </span>
         </button>
     </div>
@@ -125,12 +132,22 @@
 
         <!-- Action buttons -->
         <div class="action-buttons">
-            @if (activeMode() !== 'convert') {
+            @if (activeMode() !== 'convert' && activeMode() !== 'etiquettes') {
             <button class="btn btn-primary" (click)="extract()" [disabled]="loading()">
                 @if (loading()) {
                 <span class="spinner"></span> Extraction...
                 } @else {
                 📥 Extraire le contenu
+                }
+            </button>
+            }
+
+            @if (activeMode() === 'etiquettes') {
+            <button class="btn btn-primary" (click)="normalizeLabels()" [disabled]="loading() || !hasResults()">
+                @if (loading()) {
+                <span class="spinner"></span> Normalisation...
+                } @else {
+                ✨ Normaliser les étiquettes existantes
                 }
             </button>
             }

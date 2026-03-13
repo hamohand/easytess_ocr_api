@@ -200,3 +200,9 @@ export interface ExtractTariffCodesResponse {
     nb_lignes_trouvees: number;
     donnees: { [key: string]: any }[]; // Lignes JSON complètes
 }
+
+export interface NormalizeLabelsResponse {
+    success: boolean;
+    nb_lignes_normalisees: number;
+    donnees: { [key: string]: any }[];
+}

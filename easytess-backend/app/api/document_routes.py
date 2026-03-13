@@ -13,7 +13,7 @@ import os
 import uuid
 import json
 
-from app.services.pdf_extractor import extract_pdf, filter_columns, extract_rows_with_single_tariff_code
+from app.services.pdf_extractor import extract_pdf, filter_columns, extract_rows_with_single_tariff_code, normalize_labels
 from app.services.docx_extractor import extract_document
 from app.services.pdf_to_docx import convert_pdf_to_docx, convert_content_to_docx
 
@@ -459,3 +459,29 @@ def api_extract_tariff_codes():
         }), 500
     finally:
         _cleanup(filepath)
+
+
+# ═════════════════════════════════════════════════════════════
+# 6. POST /api/normalize-labels — Normalisation des étiquettes
+# ═════════════════════════════════════════════════════════════
+@document_bp.route('/api/normalize-labels', methods=['POST'])
+def api_normalize_labels():
+    """
+    Prend en entrée un tableau JSON d'objets (lignes extraites) et
+    retourne ce même tableau avec les clés renommées selon le mapping.
+    """
+    try:
+        data = request.get_json()
+        if not data or not isinstance(data, list):
+            return jsonify({'error': 'Le corps de la requête doit être un tableau JSON valide (liste de lignes).'}), 400
+
+        normalized = normalize_labels(data)
+
+        return jsonify({
+            'success': True,
+            'nb_lignes_normalisees': len(normalized),
+            'donnees': normalized
+        })
+    except Exception as e:
+        return jsonify({'error': f"Erreur de normalisation: {str(e)}"}), 500
+

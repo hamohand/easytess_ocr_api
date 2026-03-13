@@ -383,3 +383,70 @@ def extract_rows_with_single_tariff_code(content):
                 
     return results
 
+
+def normalize_labels(lignes):
+    """
+    Renomme les étiquettes (clés) d'une liste de dictionnaires selon un dictionnaire préétabli.
+    
+    Args:
+        lignes: Liste de dictionnaires (lignes de tableaux extraites et filtrées)
+        
+    Returns:
+        Nouvelle liste de dictionnaires avec les clés renommées.
+    """
+    mapping_etiquettes = {
+        "SECTION XVII CHAPITRE 87 DOUANES ALGERIENNES - 2024 -": "Position",
+        "Position & Sous": "Position",
+        "Chapitre 87": "Position",  # Sécurité
+        "col_02": "GU",
+        "Statistiques": "GU",
+        "col_03": "UQN",
+        "col_04": "Désignation",
+        "col_05": "DD",
+        "Droits et Taxes Autres": "DD",
+        "col_06": "TVA",
+        "F.A.P": "FAP",
+        "col_07": "Autres",
+        "col_08": "FAP"
+    }
+
+    resultats_normalises = []
+
+    for ligne in lignes:
+        nouvelle_ligne = {}
+        for cle_originale, valeur in ligne.items():
+            # Si la clé est dans le dictionnaire, on utilise la nouvelle clé
+            # sinon on garde la clé originale
+            nouvelle_cle = mapping_etiquettes.get(cle_originale, cle_originale)
+            
+            # Suppression de sous-chaînes spécifiques pour certaines étiquettes
+            if isinstance(valeur, str):
+                if nouvelle_cle == "DD":
+                    valeur = valeur.replace("D.D ", "").replace("D.D", "").strip()
+                elif nouvelle_cle == "GU":
+                    valeur = valeur.replace("G.U ", "").replace("G.U", "").strip()
+                elif nouvelle_cle == "Position":
+                    valeur = valeur.replace("Position ", "").strip()
+                elif nouvelle_cle == "TVA":
+                    valeur = valeur.replace("T.V.A ", "").replace("T.V.A", "").strip()
+                elif nouvelle_cle == "UQN":
+                    valeur = valeur.replace("U.Q.N ", "").replace("U.Q.N", "").strip()
+                elif nouvelle_cle == "Autres":
+                    valeur = valeur.replace("Droits et Taxes ", "").strip()
+            
+            # Gestion des collisions si deux colonnes différentes se retrouvent avec le même nom (ex: col_08 -> FAP et F.A.P -> FAP)
+            if nouvelle_cle in nouvelle_ligne:
+                # Si la clé existe déjà, on concatène s'il y a des valeurs, 
+                # ou on privilégie celle qui n'est pas vide
+                if valeur and str(valeur).strip():
+                    if not nouvelle_ligne[nouvelle_cle]:
+                        nouvelle_ligne[nouvelle_cle] = valeur
+                    else:
+                        nouvelle_ligne[nouvelle_cle] = f"{nouvelle_ligne[nouvelle_cle]} | {valeur}"
+            else:
+                nouvelle_ligne[nouvelle_cle] = valeur
+                
+        resultats_normalises.append(nouvelle_ligne)
+
+    return resultats_normalises
+

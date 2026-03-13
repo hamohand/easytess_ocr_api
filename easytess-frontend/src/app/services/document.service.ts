@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ExtractDocumentResponse, ConvertPdfResponse, ExtractTariffCodesResponse } from './models';
+import { ExtractDocumentResponse, ConvertPdfResponse, ExtractTariffCodesResponse, NormalizeLabelsResponse } from './models';
 
 @Injectable({
     providedIn: 'root'
@@ -155,6 +155,15 @@ export class DocumentService {
 
         return this.http.post<ExtractTariffCodesResponse>(
             `${this.apiUrl}/extract-tariff-codes`, formData
+        );
+    }
+
+    /**
+     * Normalisation des étiquettes d'un tableau JSON d'objets
+     */
+    normalizeLabels(data: { [key: string]: any }[]): Observable<NormalizeLabelsResponse> {
+        return this.http.post<NormalizeLabelsResponse>(
+            `${this.apiUrl}/normalize-labels`, data
         );
     }
 }

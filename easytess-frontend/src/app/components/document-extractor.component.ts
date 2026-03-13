@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { DocumentService } from '../services/document.service';
 import { DocumentBloc, ExtractDocumentResponse, ExtractionStats } from '../services/models';
 
-type ExtractionMode = 'unified' | 'pdf' | 'convert' | 'position';
+type ExtractionMode = 'unified' | 'pdf' | 'convert' | 'position' | 'etiquettes';
 type Strategy = 'auto' | 'standard' | 'text' | 'lines_strict';
 
 @Component({
@@ -61,8 +61,10 @@ export class DocumentExtractorComponent {
         switch (this.activeMode()) {
             case 'pdf': return '.pdf';
             case 'position': return '.pdf';
+            case 'etiquettes': return '.pdf';
             case 'convert': return '.pdf';
             case 'unified': return '.pdf,.docx';
+            default: return '.pdf';
         }
     });
 
@@ -70,23 +72,34 @@ export class DocumentExtractorComponent {
 
     // ─── Tab switching ───
     setTab(tab: 'extraction' | 'code') {
+        const previousTab = this.activeTab();
         this.activeTab.set(tab);
+        
         if (tab === 'extraction') {
-            this.setMode('unified');
+            this.setMode('unified', previousTab !== tab);
         } else {
-            this.setMode('position');
+            this.setMode('position', previousTab !== tab);
         }
     }
 
     // ─── Mode switching ───
-    setMode(mode: ExtractionMode) {
+    setMode(mode: ExtractionMode, forceReset: boolean = true) {
+        // If we are just switching between position and etiquettes, we might want to keep the results
+        // so that we can normalize the existing data.
+        const isCodeTabSwitch = 
+            (this.activeMode() === 'position' && mode === 'etiquettes') ||
+            (this.activeMode() === 'etiquettes' && mode === 'position');
+            
         this.activeMode.set(mode);
-        this.resetResults();
+        
+        if (forceReset && !isCodeTabSwitch) {
+            this.resetResults();
+        }
         // Reset file if format doesn't match
         const file = this.selectedFile();
         if (file) {
             const ext = file.name.split('.').pop()?.toLowerCase();
-            if ((mode === 'pdf' || mode === 'convert' || mode === 'position') && ext !== 'pdf') {
+            if ((mode === 'pdf' || mode === 'convert' || mode === 'position' || mode === 'etiquettes') && ext !== 'pdf') {
                 this.selectedFile.set(null);
             }
         }
@@ -235,6 +248,53 @@ export class DocumentExtractorComponent {
             },
             error: (err: any) => {
                 this.error.set(err.error?.error || 'Erreur lors de l\'extraction');
+                this.loading.set(false);
+            }
+        });
+    }
+
+    // ─── Normalize Labels ───
+    normalizeLabels() {
+        if (this.activeMode() !== 'etiquettes' || !this.hasResults()) return;
+
+        this.loading.set(true);
+        this.error.set(null);
+
+        // Récupérer toutes les lignes actuelles des tableaux
+        const currentData: any[] = [];
+        const contentBlocks = this.extractedContent();
+        
+        contentBlocks.forEach(block => {
+            if (block.type === 'tableau' && block.lignes) {
+                currentData.push(...block.lignes);
+            }
+        });
+
+        if (currentData.length === 0) {
+            this.error.set('Aucune ligne de tableau à normaliser.');
+            this.loading.set(false);
+            return;
+        }
+
+        this.documentService.normalizeLabels(currentData).subscribe({
+            next: (res: any) => {
+                // Remplacer le contenu affiché par le résultat normalisé dans un unique bloc tableau
+                const bloc: DocumentBloc = {
+                    type: 'tableau',
+                    numero: 1,
+                    lignes: res.donnees,
+                    metadata: {
+                        nb_lignes: res.nb_lignes_normalisees,
+                        nb_colonnes: res.donnees.length > 0 ? Object.keys(res.donnees[0]).length : 0,
+                        a_entete: true
+                    }
+                };
+                this.extractedContent.set([bloc]);
+                this.loading.set(false);
+                this.expandedTables.set(new Set([0]));
+            },
+            error: (err: any) => {
+                this.error.set(err.error?.error || 'Erreur lors de la normalisation');
                 this.loading.set(false);
             }
         });
