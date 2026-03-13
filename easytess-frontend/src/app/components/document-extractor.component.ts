@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { DocumentService } from '../services/document.service';
 import { DocumentBloc, ExtractDocumentResponse, ExtractionStats } from '../services/models';
 
-type ExtractionMode = 'unified' | 'pdf' | 'convert' | 'position' | 'etiquettes';
+type ExtractionMode = 'unified' | 'pdf' | 'convert' | 'position' | 'etiquettes' | 'hscode';
 type Strategy = 'auto' | 'standard' | 'text' | 'lines_strict';
 
 @Component({
@@ -62,6 +62,7 @@ export class DocumentExtractorComponent {
             case 'pdf': return '.pdf';
             case 'position': return '.pdf';
             case 'etiquettes': return '.pdf';
+            case 'hscode': return '.pdf';
             case 'convert': return '.pdf';
             case 'unified': return '.pdf,.docx';
             default: return '.pdf';
@@ -74,7 +75,7 @@ export class DocumentExtractorComponent {
     setTab(tab: 'extraction' | 'code') {
         const previousTab = this.activeTab();
         this.activeTab.set(tab);
-        
+
         if (tab === 'extraction') {
             this.setMode('unified', previousTab !== tab);
         } else {
@@ -86,9 +87,9 @@ export class DocumentExtractorComponent {
     setMode(mode: ExtractionMode, forceReset: boolean = true) {
         // If we are just switching between position and etiquettes, we might want to keep the results
         // so that we can normalize the existing data.
-        const isCodeTabSwitch = 
-            (this.activeMode() === 'position' && mode === 'etiquettes') ||
-            (this.activeMode() === 'etiquettes' && mode === 'position');
+        const codeTabModes: ExtractionMode[] = ['position', 'etiquettes', 'hscode'];
+        const isCodeTabSwitch =
+            codeTabModes.includes(this.activeMode()) && codeTabModes.includes(mode);
             
         this.activeMode.set(mode);
         
@@ -99,7 +100,7 @@ export class DocumentExtractorComponent {
         const file = this.selectedFile();
         if (file) {
             const ext = file.name.split('.').pop()?.toLowerCase();
-            if ((mode === 'pdf' || mode === 'convert' || mode === 'position' || mode === 'etiquettes') && ext !== 'pdf') {
+            if ((mode === 'pdf' || mode === 'convert' || mode === 'position' || mode === 'etiquettes' || mode === 'hscode') && ext !== 'pdf') {
                 this.selectedFile.set(null);
             }
         }
@@ -298,6 +299,42 @@ export class DocumentExtractorComponent {
                 this.loading.set(false);
             }
         });
+    }
+
+    // ─── Generate Hscode JSON ───
+    private findKey(row: any, hint: string): string {
+        const lower = hint.toLowerCase();
+        const key = Object.keys(row).find(k => k.toLowerCase().includes(lower));
+        return key ? (row[key] || '') : '';
+    }
+
+    generateHscode() {
+        const content = this.extractedContent();
+        if (!content.length) return;
+
+        const rows: any[] = [];
+        content.forEach(bloc => {
+            if (bloc.type === 'tableau' && bloc.lignes) {
+                rows.push(...bloc.lignes);
+            }
+        });
+
+        const hscodeData = rows
+            .map(row => ({
+                code: this.findKey(row, 'position').replace(/[^0-9]/g, ''),
+                description: this.findKey(row, 'désignation') || this.findKey(row, 'designation')
+            }))
+            .filter(item => item.code || item.description);
+
+        const blob = new Blob([JSON.stringify(hscodeData, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'hscode.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     }
 
     // ─── Convert PDF → DOCX ───

@@ -51,10 +51,35 @@
                 <span class="mode-desc">Renommer et normaliser les colonnes des résultats</span>
             </span>
         </button>
+        <button class="mode-btn" [class.active]="activeMode() === 'hscode'" (click)="setMode('hscode')">
+            <span class="mode-icon">🔖</span>
+            <span class="mode-info">
+                <span class="mode-title">Hscode</span>
+                <span class="mode-desc">Générer hscode.json à partir des étiquettes</span>
+            </span>
+        </button>
+    </div>
+    }
+
+    <!-- ─── Hscode panel (no file needed) ─── -->
+    @if (activeMode() === 'hscode') {
+    <div class="hscode-panel">
+        @if (!hasResults()) {
+        <div class="hscode-empty">
+            <span class="hscode-empty-icon">🔖</span>
+            <p>Aucune donnée disponible.</p>
+            <p class="hscode-hint">Lancez d'abord l'extraction via <strong>Position</strong>, puis normalisez via <strong>Étiquettes</strong>.</p>
+        </div>
+        } @else {
+        <button class="btn btn-primary" (click)="generateHscode()">
+            💾 Télécharger hscode.json
+        </button>
+        }
     </div>
     }
 
     <!-- ─── Dropzone ─── -->
+    @if (activeMode() !== 'hscode') {
     <div class="dropzone" [class.drag-over]="dragOver()" [class.has-file]="selectedFile()"
         (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
 
@@ -93,9 +118,10 @@
         </div>
         }
     </div>
+    }
 
     <!-- ─── Options Panel ─── -->
-    @if (selectedFile()) {
+    @if (selectedFile() && activeMode() !== 'hscode') {
     <div class="options-panel">
         <h3 class="options-title">⚙️ Options</h3>
 
@@ -132,7 +158,7 @@
 
         <!-- Action buttons -->
         <div class="action-buttons">
-            @if (activeMode() !== 'convert' && activeMode() !== 'etiquettes') {
+            @if (activeMode() !== 'convert' && activeMode() !== 'etiquettes' && activeMode() !== 'hscode') {
             <button class="btn btn-primary" (click)="extract()" [disabled]="loading()">
                 @if (loading()) {
                 <span class="spinner"></span> Extraction...

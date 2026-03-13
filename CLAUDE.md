@@ -109,18 +109,32 @@ python test_document_extraction.py [fichier.pdf ou fichier.docx]
 - `auto` essaie `standard` puis fallback `text` si aucun tableau détecté
 - Les métadonnées de tableaux incluent en-têtes, bbox, dimensions
 - `pdf_to_docx.py` reconstruit un .docx à partir du contenu structuré
+- **`normalize_labels()`** : renomme les clés des lignes extraites selon un mapping fixe (ex: `"Position & Sous Position"` → `"Position"`, `"col_04"` → `"Désignation"`). La correspondance est **exacte** (pas partielle) — ajouter la variante exacte au mapping si une nouvelle forme apparaît.
 
 ### Frontend — 2 sections distinctes
 - **Section "EasyTess — OCR"** : analyse OCR + gestion des entités (sous-onglets)
-- **Section "Extraction de Documents"** : 3 modes (Unifiée / PDF / Conversion PDF→Word)
+- **Section "Extraction de Documents"** : deux onglets principaux
+  - **Extraction** : 3 modes (`unified`, `pdf`, `convert`)
+  - **Code** : 3 modes enchaînés (`position` → `etiquettes` → `hscode`)
 - Navigation via `activeSection` signal (`'ocr' | 'extraction'`)
 - **Visualisation post-analyse** : cadre de l'entité tracé en **vert pointillé** + zones OCR en **bleu plein** sur le canvas
 - Le composant `document-extractor` utilise des **signals Angular** et `FormsModule` pour les options
 
+### Frontend — Flux onglet Code (Tarif douanier)
+Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF :
+1. **Position** — extrait les lignes ayant un unique code tarifaire (`/api/extract-tariff-codes`)
+2. **Étiquettes** — normalise les noms de colonnes (`/api/normalize-labels`) → produit `etiquettes.json`
+3. **Hscode** — génère `hscode.json` côté client (pas d'appel API) à partir des données d'Étiquettes :
+   - `code` ← clé contenant `"position"` (recherche partielle insensible à la casse), **chiffres uniquement** (`replace(/[^0-9]/g, '')`)
+   - `description` ← clé contenant `"désignation"` ou `"designation"`
+- Les résultats sont **partagés** entre les 3 modes (pas de reset lors du switch entre eux)
+- Le mode `hscode` n'a pas de dropzone ni de panneau options (traitement purement client)
+
 ### Frontend — Signaux Angular
 - Tous les composants utilisent des **signals Angular** (pas de BehaviorSubject)
 - OCR : 3 modes : `single`, `multi`, `folder` (toggle via `activeMode` signal)
-- Extraction : 3 modes : `unified`, `pdf`, `convert`
+- Extraction (onglet **Extraction**) : 3 modes : `unified`, `pdf`, `convert`
+- Extraction (onglet **Code**) : 3 modes : `position`, `etiquettes`, `hscode`
 - SSE via `EventSource` natif avec `NgZone.run()` pour la détection de changements
 - Cleanup du `EventSource` dans `ngOnDestroy()`
 

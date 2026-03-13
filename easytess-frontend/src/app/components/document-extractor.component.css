@@ -271,6 +271,36 @@
     color: white;
 }
 
+/* ─── Hscode Panel ─── */
+.hscode-panel {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.hscode-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: #64748b;
+    text-align: center;
+}
+
+.hscode-empty-icon {
+    font-size: 2.5rem;
+}
+
+.hscode-hint {
+    font-size: 0.9rem;
+    color: #94a3b8;
+}
+
 /* ─── Options Panel ─── */
 .options-panel {
     background: white;

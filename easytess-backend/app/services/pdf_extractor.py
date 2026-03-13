@@ -397,6 +397,7 @@ def normalize_labels(lignes):
     mapping_etiquettes = {
         "SECTION XVII CHAPITRE 87 DOUANES ALGERIENNES - 2024 -": "Position",
         "Position & Sous": "Position",
+        "Position & Sous Position": "Position",
         "Chapitre 87": "Position",  # Sécurité
         "col_02": "GU",
         "Statistiques": "GU",
