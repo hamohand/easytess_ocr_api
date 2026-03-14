@@ -348,39 +348,49 @@ def filter_columns(content, column_names):
 
 def extract_rows_with_single_tariff_code(content):
     """
-    Parcourt le contenu extrait pour trouver tous les objets JSON (lignes de tableaux)
-    dont UNE ET UNE SEULE valeur contient un code tarifaire au format XXXX.XX.XX.XX.
-    Retourne la ligne complète (l'objet JSON d'origine).
+    Parcourt le contenu extrait et retourne les lignes issues de tableaux
+    contenant une colonne "col_04" ou "Désignation des Produits",
+    en écartant les lignes ayant plusieurs codes tarifaires (XXXX.XX.XX.XX).
     """
     results = []
     code_pattern = re.compile(r'\d{4}\.\d{2}\.\d{2}\.\d{2}')
-    
+    target_columns = ['col_04', 'désignation des produits']
+
     for block in content:
         if block.get('type') != 'tableau':
             continue
-            
+
         lignes = block.get('lignes', [])
+        if not lignes:
+            continue
+
+        # Vérifier que le tableau contient au moins une colonne cible
+        sample_keys = list(lignes[0].keys())
+        has_target = any(
+            any(target in key.lower() for target in target_columns)
+            for key in sample_keys
+        )
+        if not has_target:
+            continue
+
         for ligne in lignes:
-            codes_found_in_row = 0
-            
-            # Compter combien de fois un code apparaît dans cette ligne (toutes colonnes confondues)
-            for val in ligne.values():
-                val_str = str(val) if val else ""
-                # Trouver toutes les occurrences du pattern dans la valeur
-                matches = code_pattern.findall(val_str)
-                codes_found_in_row += len(matches)
-            
-            # La condition stricte : il doit y avoir exactement UN et UN SEUL code
-            if codes_found_in_row == 1:
-                # On clone la ligne pour y ajouter les métadonnées (page, tab)
-                row_copy = dict(ligne)
-                if '_page' not in row_copy:
-                    row_copy['_page'] = block.get('page')
-                if '_tableau' not in row_copy:
-                    row_copy['_tableau'] = block.get('numero')
-                
-                results.append(row_copy)
-                
+            # Compter les codes tarifaires dans la ligne
+            codes_found = sum(
+                len(code_pattern.findall(str(val) if val else ""))
+                for val in ligne.values()
+            )
+
+            # Écarter uniquement les lignes avec plusieurs codes
+            if codes_found > 1:
+                continue
+
+            row_copy = dict(ligne)
+            if '_page' not in row_copy:
+                row_copy['_page'] = block.get('page')
+            if '_tableau' not in row_copy:
+                row_copy['_tableau'] = block.get('numero')
+            results.append(row_copy)
+
     return results
 
 

@@ -115,14 +115,14 @@ python test_document_extraction.py [fichier.pdf ou fichier.docx]
 - **Section "EasyTess — OCR"** : analyse OCR + gestion des entités (sous-onglets)
 - **Section "Extraction de Documents"** : deux onglets principaux
   - **Extraction** : 3 modes (`unified`, `pdf`, `convert`)
-  - **Code** : 3 modes enchaînés (`position` → `etiquettes` → `hscode`)
+  - **Code** : 4 modes (`position` → `etiquettes` → `hscode` → `hscode10`)
 - Navigation via `activeSection` signal (`'ocr' | 'extraction'`)
 - **Visualisation post-analyse** : cadre de l'entité tracé en **vert pointillé** + zones OCR en **bleu plein** sur le canvas
 - Le composant `document-extractor` utilise des **signals Angular** et `FormsModule` pour les options
 
 ### Frontend — Flux onglet Code (Tarif douanier)
 Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF :
-1. **Position** — extrait les lignes ayant un unique code tarifaire (`/api/extract-tariff-codes`)
+1. **Position** — extrait les lignes des tableaux contenant une colonne `"col_04"` ou `"Désignation des Produits"`, en écartant celles qui ont plusieurs codes tarifaires (`XXXX.XX.XX.XX`) (`/api/extract-tariff-codes`)
 2. **Étiquettes** — normalise les noms de colonnes (`/api/normalize-labels`) → produit `etiquettes.json`
 3. **Hscode** — génère `hscode.json` côté client (pas d'appel API) à partir des données d'Étiquettes :
    - `code` ← clé contenant `"position"` (recherche partielle insensible à la casse), **chiffres uniquement** (`replace(/[^0-9]/g, '')`)
@@ -134,7 +134,7 @@ Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF
 - Tous les composants utilisent des **signals Angular** (pas de BehaviorSubject)
 - OCR : 3 modes : `single`, `multi`, `folder` (toggle via `activeMode` signal)
 - Extraction (onglet **Extraction**) : 3 modes : `unified`, `pdf`, `convert`
-- Extraction (onglet **Code**) : 3 modes : `position`, `etiquettes`, `hscode`
+- Extraction (onglet **Code**) : 5 modes : `position`, `etiquettes`, `hscode`, `hscode10`, `hscode10folder`
 - SSE via `EventSource` natif avec `NgZone.run()` pour la détection de changements
 - Cleanup du `EventSource` dans `ngOnDestroy()`
 

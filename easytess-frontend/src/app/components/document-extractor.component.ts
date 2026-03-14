@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { DocumentService } from '../services/document.service';
 import { DocumentBloc, ExtractDocumentResponse, ExtractionStats } from '../services/models';
 
-type ExtractionMode = 'unified' | 'pdf' | 'convert' | 'position' | 'etiquettes' | 'hscode';
+type ExtractionMode = 'unified' | 'pdf' | 'convert' | 'position' | 'etiquettes' | 'hscode' | 'hscode10' | 'hscode10folder';
 type Strategy = 'auto' | 'standard' | 'text' | 'lines_strict';
 
 @Component({
@@ -36,6 +36,10 @@ export class DocumentExtractorComponent {
     resultFilename = signal<string>('');
     resultFormat = signal<string>('');
 
+    // Folder mode
+    selectedFolder = signal<File[]>([]);
+    folderProgress = signal<string>('');
+
     // Conversion
     converting = signal(false);
     convertSuccess = signal(false);
@@ -63,6 +67,7 @@ export class DocumentExtractorComponent {
             case 'position': return '.pdf';
             case 'etiquettes': return '.pdf';
             case 'hscode': return '.pdf';
+            case 'hscode10': return '.pdf';
             case 'convert': return '.pdf';
             case 'unified': return '.pdf,.docx';
             default: return '.pdf';
@@ -87,7 +92,7 @@ export class DocumentExtractorComponent {
     setMode(mode: ExtractionMode, forceReset: boolean = true) {
         // If we are just switching between position and etiquettes, we might want to keep the results
         // so that we can normalize the existing data.
-        const codeTabModes: ExtractionMode[] = ['position', 'etiquettes', 'hscode'];
+        const codeTabModes: ExtractionMode[] = ['position', 'etiquettes', 'hscode', 'hscode10', 'hscode10folder'];
         const isCodeTabSwitch =
             codeTabModes.includes(this.activeMode()) && codeTabModes.includes(mode);
             
@@ -100,9 +105,13 @@ export class DocumentExtractorComponent {
         const file = this.selectedFile();
         if (file) {
             const ext = file.name.split('.').pop()?.toLowerCase();
-            if ((mode === 'pdf' || mode === 'convert' || mode === 'position' || mode === 'etiquettes' || mode === 'hscode') && ext !== 'pdf') {
+            if ((mode === 'pdf' || mode === 'convert' || mode === 'position' || mode === 'etiquettes' || mode === 'hscode' || mode === 'hscode10') && ext !== 'pdf') {
                 this.selectedFile.set(null);
             }
+        }
+        if (mode !== 'hscode10folder') {
+            this.selectedFolder.set([]);
+            this.folderProgress.set('');
         }
     }
 
@@ -335,6 +344,145 @@ export class DocumentExtractorComponent {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
+    }
+
+    // ─── Hscode10 : pipeline complet PDF → hscode.json ───
+    generateHscode10() {
+        const file = this.selectedFile();
+        if (!file) return;
+
+        this.loading.set(true);
+        this.error.set(null);
+        this.resetResults();
+
+        const options = {
+            tableColumns: this.parseColumns(),
+            pages: this.parsePages(),
+            strategy: this.strategy()
+        };
+
+        // Étape 1 : extraction des codes tarifaires
+        this.documentService.extractTariffCodes(file, options).subscribe({
+            next: (res: any) => {
+                const rows: any[] = res.donnees || [];
+                if (rows.length === 0) {
+                    this.error.set('Aucune ligne trouvée lors de l\'extraction.');
+                    this.loading.set(false);
+                    return;
+                }
+
+                // Étape 2 : normalisation des étiquettes
+                this.documentService.normalizeLabels(rows).subscribe({
+                    next: (norm: any) => {
+                        const normalizedRows: any[] = norm.donnees || [];
+
+                        // Étape 3 : génération de hscode.json
+                        const hscodeData = normalizedRows
+                            .map(row => ({
+                                code: this.findKey(row, 'position').replace(/[^0-9]/g, ''),
+                                description: this.findKey(row, 'désignation') || this.findKey(row, 'designation')
+                            }))
+                            .filter(item => item.code || item.description);
+
+                        const blob = new Blob([JSON.stringify(hscodeData, null, 2)], { type: 'application/json' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'hscode.json';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+
+                        this.loading.set(false);
+                    },
+                    error: (err: any) => {
+                        this.error.set(err.error?.error || 'Erreur lors de la normalisation');
+                        this.loading.set(false);
+                    }
+                });
+            },
+            error: (err: any) => {
+                this.error.set(err.error?.error || 'Erreur lors de l\'extraction des codes');
+                this.loading.set(false);
+            }
+        });
+    }
+
+    // ─── Hscode10-dossier : sélection dossier ───
+    onFolderSelected(event: Event) {
+        const input = event.target as HTMLInputElement;
+        if (!input.files) return;
+        const pdfs = Array.from(input.files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+        this.selectedFolder.set(pdfs);
+        this.folderProgress.set('');
+        this.error.set(null);
+    }
+
+    getRelativePath(file: File): string {
+        return (file as any).webkitRelativePath || file.name;
+    }
+
+    removeFolder() {
+        this.selectedFolder.set([]);
+        this.folderProgress.set('');
+        this.error.set(null);
+    }
+
+    // ─── Hscode10-dossier : pipeline complet dossier → hscode.json ───
+    async generateHscode10Folder() {
+        const files = this.selectedFolder();
+        if (!files.length) return;
+
+        this.loading.set(true);
+        this.error.set(null);
+        this.folderProgress.set('');
+
+        const options = { strategy: this.strategy() };
+        const allRows: any[] = [];
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            this.folderProgress.set(`Traitement ${i + 1} / ${files.length} : ${this.getRelativePath(file)}`);
+
+            try {
+                // Étape 1 : extraction des codes tarifaires
+                const res: any = await this.documentService.extractTariffCodes(file, options).toPromise();
+                const rows: any[] = res?.donnees || [];
+                if (!rows.length) continue;
+
+                // Étape 2 : normalisation
+                const norm: any = await this.documentService.normalizeLabels(rows).toPromise();
+                allRows.push(...(norm?.donnees || []));
+            } catch (err: any) {
+                this.error.set(`Erreur sur "${file.name}": ${err?.error?.error || err?.message || 'Erreur inconnue'}`);
+                this.loading.set(false);
+                this.folderProgress.set('');
+                return;
+            }
+        }
+
+        this.folderProgress.set(`${files.length} fichier(s) traité(s) — ${allRows.length} lignes collectées.`);
+
+        // Étape 3 : génération du JSON
+        const hscodeData = allRows
+            .map(row => ({
+                code: this.findKey(row, 'position').replace(/[^0-9]/g, ''),
+                description: this.findKey(row, 'désignation') || this.findKey(row, 'designation')
+            }))
+            .filter(item => item.code || item.description);
+
+        const blob = new Blob([JSON.stringify(hscodeData, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'hscode.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        this.loading.set(false);
     }
 
     // ─── Convert PDF → DOCX ───
