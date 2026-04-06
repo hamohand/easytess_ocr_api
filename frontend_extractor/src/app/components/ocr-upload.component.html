@@ -1,0 +1,344 @@
+<!-- ocr-upload.component.html - Analyse simple, multi-fichiers et dossier -->
+<div class="ocr-container">
+  <div class="header">
+    <h1>🔍 Analyse OCR</h1>
+    <p>Sélectionnez une entité et analysez vos documents</p>
+  </div>
+
+  <!-- Mode Toggle (3 modes) -->
+  <div class="mode-toggle">
+    <button class="toggle-btn" [class.active]="activeMode() === 'single'" (click)="setMode('single')">
+      📄 Fichier unique
+    </button>
+    <button class="toggle-btn" [class.active]="activeMode() === 'multi'" (click)="setMode('multi')">
+      📑 Multi-fichiers
+    </button>
+    <button class="toggle-btn" [class.active]="activeMode() === 'folder'" (click)="setMode('folder')">
+      📁 Dossier
+    </button>
+  </div>
+
+  <!-- Sélection d'entité -->
+  <div class="entity-selector">
+    <label for="entite">Modèle d'entité :</label>
+    <select id="entite" [ngModel]="selectedEntite()" (ngModelChange)="selectedEntite.set($event)">
+      <option value="none">Aucun (zones par défaut)</option>
+      @for (entite of entites(); track entite.nom) {
+      <option [value]="entite.nom">{{ entite.nom }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- ==================== SINGLE FILE MODE ==================== -->
+  @if (activeMode() === 'single') {
+  <div class="upload-section">
+    <div class="file-input-wrapper">
+      <input type="file" id="fileInput" accept="image/*,.pdf" (change)="onFileSelected($event)" #fileInput>
+      <label for="fileInput" class="file-label">
+        📁 Choisir une image ou un PDF
+      </label>
+      @if (selectedFile()) {
+      <span class="file-name">{{ selectedFile()!.name }}</span>
+      }
+    </div>
+
+    <button class="btn btn-primary" (click)="uploadImage()" [disabled]="!selectedFile() || isUploading()">
+      @if (isUploading()) {
+      <span class="spinner"></span> Upload en cours...
+      } @else {
+      ⬆️ Uploader
+      }
+    </button>
+  </div>
+
+  @if (imageUrl()) {
+  <div class="image-preview">
+    <h3>Image uploadée avec zones de l'entité :</h3>
+    <canvas #canvas style="max-width: 100%; border: 2px solid #ccc;"></canvas>
+  </div>
+  }
+
+  @if (uploadedFilename()) {
+  <div class="analyze-section">
+    <button class="btn btn-success" (click)="analyser()" [disabled]="isAnalyzing()">
+      @if (isAnalyzing()) {
+      <span class="spinner"></span> Analyse en cours...
+      } @else {
+      🔍 Analyser avec OCR
+      }
+    </button>
+  </div>
+  }
+
+  <!-- Single Results -->
+  @if (analyseResults()) {
+  <div class="results-section">
+    <div class="results-header">
+      <h2>📊 Résultats de l'analyse</h2>
+      <button class="btn btn-secondary" (click)="exportResults()">
+        💾 Exporter JSON
+      </button>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <span class="stat-label">Zones analysées</span>
+        <span class="stat-value">{{ getResultatsArray().length }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Alertes</span>
+        <span class="stat-value alert">{{ analyseResults()!.alertes.length }}</span>
+      </div>
+      @for (moteur of analyseResults()!.stats_moteurs | keyvalue; track moteur.key) {
+      <div class="stat-card">
+        <span class="stat-label">{{ moteur.key }}</span>
+        <span class="stat-value">{{ moteur.value }}</span>
+      </div>
+      }
+    </div>
+
+    <div class="results-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Zone</th>
+            <th>Texte détecté</th>
+            <th>Confiance</th>
+            <th>Moteur</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (result of getResultatsArray(); track result.zone) {
+          <tr>
+            <td class="zone-name">{{ result.zone }}</td>
+            <td class="text-content">{{ result.texte_auto || '(vide)' }}</td>
+            <td class="confidence">
+              <div class="confidence-bar">
+                <div class="confidence-fill" [style.width.%]="result.confiance_auto * 100"></div>
+                <span class="confidence-text">{{ (result.confiance_auto * 100).toFixed(0) }}%</span>
+              </div>
+            </td>
+            <td class="moteur">
+              <span class="badge badge-moteur">{{ result.moteur }}</span>
+              @if (result.ameliore_par) {
+              <span class="badge badge-improved">→ {{ result.ameliore_par }}</span>
+              }
+            </td>
+            <td>
+              <span [class]="'badge ' + getStatutClass(result.statut)">{{ result.statut }}</span>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <button class="btn btn-outline" (click)="reset()">🔄 Nouvelle analyse</button>
+  </div>
+  }
+  }
+
+  <!-- ==================== MULTI-FILE MODE ==================== -->
+  @if (activeMode() === 'multi') {
+  <div class="upload-section">
+    <div class="file-input-wrapper">
+      <input type="file" id="batchFileInput" accept="image/*,.pdf" multiple (change)="onMultiFileSelected($event)"
+        #batchFileInput>
+      <label for="batchFileInput" class="file-label">
+        📑 Choisir plusieurs fichiers
+      </label>
+      @if (selectedFiles().length > 0) {
+      <span class="file-name">{{ selectedFiles().length }} fichier(s) sélectionné(s)</span>
+      }
+    </div>
+
+    <button class="btn btn-primary" (click)="uploadBatch()" [disabled]="selectedFiles().length === 0 || isUploading()">
+      @if (isUploading()) {
+      <span class="spinner"></span> Upload en cours...
+      } @else {
+      ⬆️ Uploader tout
+      }
+    </button>
+  </div>
+
+  <!-- File List Preview -->
+  @if (selectedFiles().length > 0) {
+  <div class="batch-file-list">
+    <h3>📋 Fichiers sélectionnés ({{ selectedFiles().length }})</h3>
+    <div class="file-chips">
+      @for (file of selectedFiles(); track file.name) {
+      <span class="file-chip">{{ file.name }}</span>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Batch Analyse Button -->
+  @if (uploadedBatchFilenames().length > 0 && !batchResults() && !isAnalyzing()) {
+  <div class="analyze-section">
+    <p class="upload-success-msg">✅ {{ uploadedBatchFilenames().length }} fichiers prêts pour l'analyse</p>
+    <button class="btn btn-success btn-large" (click)="analyserBatch()">
+      🔍 Analyser tous les fichiers (async)
+    </button>
+  </div>
+  }
+  }
+
+  <!-- ==================== FOLDER MODE ==================== -->
+  @if (activeMode() === 'folder') {
+  <div class="upload-section">
+    <div class="file-input-wrapper">
+      <input type="file" id="folderInput" webkitdirectory directory multiple (change)="onFolderSelected($event)"
+        #folderInput>
+      <label for="folderInput" class="file-label">
+        📁 Sélectionner un dossier
+      </label>
+      @if (selectedFiles().length > 0) {
+      <span class="file-name">{{ selectedFiles().length }} fichier(s) image trouvé(s)</span>
+      }
+    </div>
+
+    <button class="btn btn-primary" (click)="uploadBatch()" [disabled]="selectedFiles().length === 0 || isUploading()">
+      @if (isUploading()) {
+      <span class="spinner"></span> Upload en cours...
+      } @else {
+      ⬆️ Uploader le dossier
+      }
+    </button>
+  </div>
+
+  <!-- Folder File List -->
+  @if (selectedFiles().length > 0) {
+  <div class="batch-file-list">
+    <h3>📋 Fichiers du dossier ({{ selectedFiles().length }})</h3>
+    <div class="file-chips">
+      @for (file of selectedFiles(); track file.name) {
+      <span class="file-chip">{{ file.name }}</span>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Folder Analyse Button -->
+  @if (uploadedBatchFilenames().length > 0 && !batchResults() && !isAnalyzing()) {
+  <div class="analyze-section">
+    <p class="upload-success-msg">✅ {{ uploadedBatchFilenames().length }} fichiers prêts pour l'analyse</p>
+    <button class="btn btn-success btn-large" (click)="analyserBatch()">
+      🔍 Analyser tout le dossier (async)
+    </button>
+  </div>
+  }
+  }
+
+  <!-- ==================== SHARED: PROGRESS BAR ==================== -->
+  @if (batchProgress()) {
+  <div class="progress-section">
+    <div class="progress-info">
+      <span>⏳ Analyse en cours... {{ batchProgress()!.completed }}/{{ batchProgress()!.total }}</span>
+      @if (batchProgress()!.currentFile) {
+      <span class="current-file">📄 {{ batchProgress()!.currentFile }}</span>
+      }
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" [style.width.%]="getProgressPercent()"></div>
+      <span class="progress-bar-text">{{ getProgressPercent() }}%</span>
+    </div>
+  </div>
+  }
+
+  <!-- ==================== SHARED: BATCH RESULTS ==================== -->
+  @if (batchResults()) {
+  <div class="results-section">
+    <div class="results-header">
+      <h2>📊 Résultats batch</h2>
+      <button class="btn btn-secondary" (click)="exportBatchResults()">
+        💾 Exporter tout en JSON
+      </button>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <span class="stat-label">Total fichiers</span>
+        <span class="stat-value">{{ batchResults()!.total }}</span>
+      </div>
+      <div class="stat-card stat-card-success">
+        <span class="stat-label">Réussis</span>
+        <span class="stat-value">{{ batchResults()!.reussis }}</span>
+      </div>
+      @if (batchResults()!.echoues > 0) {
+      <div class="stat-card stat-card-error">
+        <span class="stat-label">Échoués</span>
+        <span class="stat-value">{{ batchResults()!.echoues }}</span>
+      </div>
+      }
+    </div>
+
+    <!-- Per-file results -->
+    <div class="batch-results-list">
+      @for (fileResult of batchResults()!.resultats_batch; track fileResult.filename; let i = $index) {
+      <div class="batch-file-card" [class.expanded]="expandedFileIndex() === i">
+        <div class="batch-file-header" (click)="toggleFileDetail(i)">
+          <span class="batch-file-status">
+            @if (fileResult.success) { ✅ } @else { ❌ }
+          </span>
+          <span class="batch-file-name">{{ fileResult.filename }}</span>
+          @if (fileResult.success && fileResult.resultats) {
+          <span class="batch-file-zones">{{ (fileResult.resultats | keyvalue).length }} zones</span>
+          }
+          @if (!fileResult.success) {
+          <span class="batch-file-error-badge">{{ fileResult.error }}</span>
+          }
+          <span class="expand-icon">{{ expandedFileIndex() === i ? '▼' : '▶' }}</span>
+        </div>
+
+        @if (expandedFileIndex() === i && fileResult.success && fileResult.resultats) {
+        <div class="batch-file-detail">
+          <table>
+            <thead>
+              <tr>
+                <th>Zone</th>
+                <th>Texte détecté</th>
+                <th>Confiance</th>
+                <th>Moteur</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (result of getFileResultatsArray(fileResult); track result.zone) {
+              <tr>
+                <td class="zone-name">{{ result.zone }}</td>
+                <td class="text-content">{{ result.texte_auto || '(vide)' }}</td>
+                <td class="confidence">
+                  <div class="confidence-bar">
+                    <div class="confidence-fill" [style.width.%]="result.confiance_auto * 100"></div>
+                    <span class="confidence-text">{{ (result.confiance_auto * 100).toFixed(0) }}%</span>
+                  </div>
+                </td>
+                <td class="moteur">
+                  <span class="badge badge-moteur">{{ result.moteur }}</span>
+                </td>
+                <td>
+                  <span [class]="'badge ' + getStatutClass(result.statut)">{{ result.statut }}</span>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    <button class="btn btn-outline" (click)="reset()">🔄 Nouvelle analyse</button>
+  </div>
+  }
+
+  <!-- Error Message -->
+  @if (errorMessage()) {
+  <div class="error-message">
+    ⚠️ {{ errorMessage() }}
+  </div>
+  }
+</div>

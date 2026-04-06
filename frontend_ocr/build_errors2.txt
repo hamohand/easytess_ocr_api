@@ -1,0 +1,36 @@
+
+> easytess-frontend@0.0.0 build
+> ng build
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[33mÔØ»[39m Building...
+[32mÔ£ö[39m Building...
+Application bundle generation failed. [1.894 seconds]
+
+Ôû▓ [WARNING] NG8107: The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator. [plugin angular-compiler]
+
+    src/app/components/document-extractor.component.html:150:67:
+      150 Ôöé ...ss="stat-badge format">{{ resultFormat()?.toUpperCase() }}</span>
+          ÔòÁ                                              ~~~~~~~~~~~
+
+  Error occurs in the template of component DocumentExtractorComponent.
+
+    src/app/components/document-extractor.component.ts:15:17:
+      15 Ôöé     templateUrl: './document-extractor.component.html',
+         ÔòÁ                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+X [ERROR] NG5: Argument of type '{ labels_str: any; position_base: [number, number]; template_coords: [number, number, number, number] | undefined; }' is not assignable to parameter of type 'EtiquetteDrawing'.
+  Type '{ labels_str: any; position_base: [number, number]; template_coords: [number, number, number, number] | undefined; }' is missing the following properties from type 'EtiquetteDrawing': offset_x, offset_y [plugin angular-compiler]
+
+    src/app/components/entity-creator.component.html:136:59:
+      136 Ôöé ...eHaut.set({labels_str: $event, position_base: cadreHaut().posi...
+          ÔòÁ              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Error occurs in the template of component EntityCreatorComponent.
+
+    src/app/components/entity-creator.component.ts:28:17:
+      28 Ôöé     templateUrl: './entity-creator.component.html',
+         ÔòÁ                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+

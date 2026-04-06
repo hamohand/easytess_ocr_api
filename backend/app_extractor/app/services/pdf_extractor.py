@@ -1,0 +1,463 @@
+"""
+Service d'extraction de contenu PDF — Version améliorée
+Extrait le texte et les tableaux directement depuis un fichier PDF
+en utilisant pdfplumber avec plusieurs stratégies de détection.
+
+Fonctionnalités:
+  - Détection multi-stratégie des tableaux (standard, text, lines)
+  - Gestion des cellules fusionnées
+  - Métadonnées de tableaux (dimensions, en-têtes)
+  - Extraction du texte hors-tableaux
+  - Statistiques par page et globales
+"""
+import pdfplumber
+import logging
+import re
+
+logger = logging.getLogger(__name__)
+
+
+# ──────────────────────────────────────────────────────────
+# Stratégies de détection de tableaux
+# ──────────────────────────────────────────────────────────
+TABLE_STRATEGIES = {
+    "standard": {
+        # Détection par défaut — lignes visibles
+        "vertical_strategy": "lines",
+        "horizontal_strategy": "lines",
+        "snap_tolerance": 5,
+        "join_tolerance": 5,
+        "edge_min_length": 10,
+        "min_words_vertical": 3,
+        "min_words_horizontal": 3,
+    },
+    "text": {
+        # Détection par alignement de texte (tableaux sans bordures)
+        "vertical_strategy": "text",
+        "horizontal_strategy": "text",
+        "snap_tolerance": 8,
+        "join_tolerance": 8,
+        "edge_min_length": 5,
+        "min_words_vertical": 2,
+        "min_words_horizontal": 2,
+        "text_x_tolerance": 5,
+        "text_y_tolerance": 5,
+    },
+    "lines_strict": {
+        # Détection stricte — uniquement les lignes bien tracées
+        "vertical_strategy": "lines_strict",
+        "horizontal_strategy": "lines_strict",
+        "snap_tolerance": 3,
+        "join_tolerance": 3,
+        "edge_min_length": 15,
+    },
+}
+
+
+def _clean_cell(value):
+    """Nettoie une valeur de cellule."""
+    if value is None:
+        return ""
+    return str(value).strip().replace('\n', ' ')
+
+
+def _detect_header_row(rows):
+    """
+    Tente de détecter si la première ligne est un en-tête.
+    Heuristique : si les cellules de la 1ère ligne sont toutes
+    non-numériques et non-vides, c'est probablement un en-tête.
+    """
+    if not rows or len(rows) < 2:
+        return False
+
+    first_row = rows[0]
+    if not first_row:
+        return False
+
+    non_empty = [c for c in first_row if c and str(c).strip()]
+    if len(non_empty) == 0:
+        return False
+
+    # Si aucune cellule n'est purement numérique → probablement un en-tête
+    numeric_pattern = re.compile(r'^[\d\s.,€$%]+$')
+    return not any(numeric_pattern.match(str(c).strip()) for c in non_empty if c)
+
+
+def _extract_table_data(table, table_counter, page_num, table_columns=None):
+    """
+    Extrait les données d'un tableau pdfplumber avec métadonnées.
+
+    Returns:
+        dict: bloc tableau structuré ou None si vide
+    """
+    raw_rows = table.extract()
+    if not raw_rows:
+        return None
+
+    has_header = _detect_header_row(raw_rows)
+    nb_cols_detected = max(len(row) for row in raw_rows) if raw_rows else 0
+    headers_list = None
+
+    lignes = []
+    for row_idx, row in enumerate(raw_rows):
+        cols = table_columns if table_columns else list(range(len(row)))
+
+        row_data = {}
+        for col_idx in cols:
+            if 0 <= col_idx < len(row):
+                cell_value = _clean_cell(row[col_idx])
+
+                # Si on a détecté un en-tête et c'est la 1ère ligne,
+                # utiliser les noms comme clés
+                if has_header and row_idx == 0:
+                    if headers_list is None:
+                        headers_list = []
+                    headers_list.append(cell_value if cell_value else f"col_{col_idx:02d}")
+                    continue
+
+                # Utiliser le nom d'en-tête si disponible
+                if headers_list and col_idx < len(headers_list):
+                    key = headers_list[col_idx]
+                else:
+                    key = f"col_{col_idx:02d}"
+
+                row_data[key] = cell_value
+
+        if row_data:
+            lignes.append(row_data)
+
+    if not lignes:
+        return None
+
+    result = {
+        "type": "tableau",
+        "numero": table_counter,
+        "page": page_num,
+        "lignes": lignes,
+        "metadata": {
+            "nb_lignes": len(lignes),
+            "nb_colonnes": nb_cols_detected,
+            "a_entete": has_header,
+        }
+    }
+
+    if headers_list:
+        result["metadata"]["entetes"] = headers_list
+
+    # Bounding box du tableau
+    if hasattr(table, 'bbox') and table.bbox:
+        result["metadata"]["bbox"] = {
+            "x0": round(table.bbox[0], 2),
+            "y0": round(table.bbox[1], 2),
+            "x1": round(table.bbox[2], 2),
+            "y1": round(table.bbox[3], 2),
+        }
+
+    return result
+
+
+def _try_extract_tables(page, strategy_name="standard"):
+    """
+    Tente d'extraire des tableaux avec une stratégie donnée.
+
+    Returns:
+        list: tables trouvées (peut être vide)
+    """
+    settings = TABLE_STRATEGIES.get(strategy_name, TABLE_STRATEGIES["standard"])
+    try:
+        tables = page.find_tables(table_settings=settings)
+        return tables if tables else []
+    except Exception as e:
+        logger.debug(f"Stratégie '{strategy_name}' échouée: {e}")
+        return []
+
+
+def extract_pdf(pdf_path, table_columns=None, pages=None,
+                strategy="auto", include_metadata=True):
+    """
+    Extrait le contenu complet d'un PDF : texte et tableaux dans l'ordre.
+
+    Args:
+        pdf_path: Chemin vers le fichier .pdf
+        table_columns: Liste optionnelle d'indices de colonnes (0-based)
+                       à extraire des tableaux.
+                       Ex: [0, 2] = 1ère et 3ème colonne.
+                       Si None, toutes les colonnes sont extraites.
+        pages: Liste optionnelle de numéros de pages (1-based) à traiter.
+               Si None, toutes les pages sont traitées.
+        strategy: Stratégie de détection des tableaux:
+                  - "standard" : lignes visibles (défaut)
+                  - "text"     : alignement texte (tableaux sans bordures)
+                  - "lines_strict" : lignes strictes uniquement
+                  - "auto"     : essaye standard, puis text si aucun résultat
+        include_metadata: Si True, inclut les métadonnées des tableaux
+
+    Returns:
+        Liste de blocs ordonnés :
+        - {"type": "texte", "contenu": "...", "page": N}
+        - {"type": "tableau", "numero": N, "page": N, "lignes": [...],
+           "metadata": {...}}
+    """
+    content = []
+    table_counter = 0
+    pages_info = []
+
+    with pdfplumber.open(pdf_path) as pdf:
+        total_pages = len(pdf.pages)
+        logger.info(f"PDF ouvert: {total_pages} pages — stratégie: {strategy}")
+
+        for page_num, page in enumerate(pdf.pages, start=1):
+            # Filtrer par pages si spécifié
+            if pages and page_num not in pages:
+                continue
+
+            page_tables_count = 0
+            page_texts_count = 0
+
+            # --- Détecter les tableaux ---
+            tables = []
+            if strategy == "auto":
+                # Essayer d'abord la stratégie standard
+                tables = _try_extract_tables(page, "standard")
+                if not tables:
+                    # Fallback vers la détection par texte
+                    tables = _try_extract_tables(page, "text")
+                    if tables:
+                        logger.info(
+                            f"Page {page_num}: {len(tables)} tableau(x) "
+                            f"détecté(s) avec stratégie 'text' (fallback)"
+                        )
+            else:
+                tables = _try_extract_tables(page, strategy)
+
+            table_bboxes = [t.bbox for t in tables]
+
+            # --- Extraire les tableaux ---
+            for table in tables:
+                table_counter += 1
+                block = _extract_table_data(
+                    table, table_counter, page_num, table_columns
+                )
+                if block:
+                    if not include_metadata:
+                        block.pop("metadata", None)
+                    content.append(block)
+                    page_tables_count += 1
+
+            # --- Extraire le texte hors tableaux ---
+            if table_bboxes:
+                filtered_page = page
+                for bbox in table_bboxes:
+                    filtered_page = filtered_page.filter(
+                        lambda obj, bbox=bbox: not (
+                            bbox[0] <= obj.get("x0", 0) <= bbox[2] and
+                            bbox[1] <= obj.get("top", 0) <= bbox[3]
+                        )
+                    )
+                text = filtered_page.extract_text()
+            else:
+                text = page.extract_text()
+
+            if text and text.strip():
+                paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
+                for para in paragraphs:
+                    content.append({
+                        "type": "texte",
+                        "contenu": para,
+                        "page": page_num
+                    })
+                    page_texts_count += 1
+
+            pages_info.append({
+                "page": page_num,
+                "nb_textes": page_texts_count,
+                "nb_tableaux": page_tables_count,
+            })
+
+    nb_textes = sum(1 for b in content if b['type'] == 'texte')
+    nb_tableaux = sum(1 for b in content if b['type'] == 'tableau')
+    logger.info(
+        f"Extraction PDF terminée: {len(content)} blocs "
+        f"({nb_textes} textes, {nb_tableaux} tableaux)"
+    )
+
+    return content, {
+        "total_pages": total_pages if 'total_pages' in dir() else len(pages_info),
+        "pages_traitees": len(pages_info),
+        "total_blocs": len(content),
+        "nb_textes": nb_textes,
+        "nb_tableaux": nb_tableaux,
+        "strategie_utilisee": strategy,
+        "detail_pages": pages_info,
+    }
+
+
+def filter_columns(content, column_names):
+    """
+    Filtre le contenu extrait pour ne garder que les colonnes spécifiées
+    dans les tableaux.
+
+    Args:
+        content: Liste de blocs extraits par extract_pdf()
+        column_names: Liste de noms de colonnes à conserver.
+                      La recherche est insensible à la casse et partielle
+                      (ex: "Position" matche "Position & Sous Position").
+
+    Returns:
+        Liste de lignes filtrées (dicts avec uniquement les colonnes demandées)
+    """
+    filtered_rows = []
+
+    for block in content:
+        if block.get('type') != 'tableau':
+            continue
+
+        lignes = block.get('lignes', [])
+        if not lignes:
+            continue
+
+        # Trouver les clés réelles correspondant aux noms demandés
+        sample_keys = list(lignes[0].keys())
+        matched_keys = {}
+        for target_name in column_names:
+            target_lower = target_name.lower()
+            for key in sample_keys:
+                if target_lower in key.lower():
+                    matched_keys[target_name] = key
+                    break
+
+        # Si aucune colonne ne matche dans ce tableau, passer
+        if not matched_keys:
+            continue
+
+        # Extraire les lignes filtrées
+        for ligne in lignes:
+            filtered_row = {}
+            for label, real_key in matched_keys.items():
+                value = ligne.get(real_key, '')
+                if value:  # Ne garder que les valeurs non-vides
+                    filtered_row[label] = value
+
+            if filtered_row:
+                filtered_row['_page'] = block.get('page')
+                filtered_row['_tableau'] = block.get('numero')
+                filtered_rows.append(filtered_row)
+
+    return filtered_rows
+
+
+def extract_rows_with_single_tariff_code(content):
+    """
+    Parcourt le contenu extrait et retourne les lignes issues de tableaux
+    contenant une colonne "col_04" ou "Désignation des Produits",
+    en écartant les lignes ayant plusieurs codes tarifaires (XXXX.XX.XX.XX).
+    """
+    results = []
+    code_pattern = re.compile(r'\d{4}\.\d{2}\.\d{2}\.\d{2}')
+    target_columns = ['col_04', 'désignation des produits']
+
+    for block in content:
+        if block.get('type') != 'tableau':
+            continue
+
+        lignes = block.get('lignes', [])
+        if not lignes:
+            continue
+
+        # Vérifier que le tableau contient au moins une colonne cible
+        sample_keys = list(lignes[0].keys())
+        has_target = any(
+            any(target in key.lower() for target in target_columns)
+            for key in sample_keys
+        )
+        if not has_target:
+            continue
+
+        for ligne in lignes:
+            # Compter les codes tarifaires dans la ligne
+            codes_found = sum(
+                len(code_pattern.findall(str(val) if val else ""))
+                for val in ligne.values()
+            )
+
+            # Écarter uniquement les lignes avec plusieurs codes
+            if codes_found > 1:
+                continue
+
+            row_copy = dict(ligne)
+            if '_page' not in row_copy:
+                row_copy['_page'] = block.get('page')
+            if '_tableau' not in row_copy:
+                row_copy['_tableau'] = block.get('numero')
+            results.append(row_copy)
+
+    return results
+
+
+def normalize_labels(lignes):
+    """
+    Renomme les étiquettes (clés) d'une liste de dictionnaires selon un dictionnaire préétabli.
+    
+    Args:
+        lignes: Liste de dictionnaires (lignes de tableaux extraites et filtrées)
+        
+    Returns:
+        Nouvelle liste de dictionnaires avec les clés renommées.
+    """
+    mapping_etiquettes = {
+        "SECTION XVII CHAPITRE 87 DOUANES ALGERIENNES - 2024 -": "Position",
+        "Position & Sous": "Position",
+        "Position & Sous Position": "Position",
+        "Chapitre 87": "Position",  # Sécurité
+        "col_02": "GU",
+        "Statistiques": "GU",
+        "col_03": "UQN",
+        "col_04": "Désignation",
+        "col_05": "DD",
+        "Droits et Taxes Autres": "DD",
+        "col_06": "TVA",
+        "F.A.P": "FAP",
+        "col_07": "Autres",
+        "col_08": "FAP"
+    }
+
+    resultats_normalises = []
+
+    for ligne in lignes:
+        nouvelle_ligne = {}
+        for cle_originale, valeur in ligne.items():
+            # Si la clé est dans le dictionnaire, on utilise la nouvelle clé
+            # sinon on garde la clé originale
+            nouvelle_cle = mapping_etiquettes.get(cle_originale, cle_originale)
+            
+            # Suppression de sous-chaînes spécifiques pour certaines étiquettes
+            if isinstance(valeur, str):
+                if nouvelle_cle == "DD":
+                    valeur = valeur.replace("D.D ", "").replace("D.D", "").strip()
+                elif nouvelle_cle == "GU":
+                    valeur = valeur.replace("G.U ", "").replace("G.U", "").strip()
+                elif nouvelle_cle == "Position":
+                    valeur = valeur.replace("Position ", "").strip()
+                elif nouvelle_cle == "TVA":
+                    valeur = valeur.replace("T.V.A ", "").replace("T.V.A", "").strip()
+                elif nouvelle_cle == "UQN":
+                    valeur = valeur.replace("U.Q.N ", "").replace("U.Q.N", "").strip()
+                elif nouvelle_cle == "Autres":
+                    valeur = valeur.replace("Droits et Taxes ", "").strip()
+            
+            # Gestion des collisions si deux colonnes différentes se retrouvent avec le même nom (ex: col_08 -> FAP et F.A.P -> FAP)
+            if nouvelle_cle in nouvelle_ligne:
+                # Si la clé existe déjà, on concatène s'il y a des valeurs, 
+                # ou on privilégie celle qui n'est pas vide
+                if valeur and str(valeur).strip():
+                    if not nouvelle_ligne[nouvelle_cle]:
+                        nouvelle_ligne[nouvelle_cle] = valeur
+                    else:
+                        nouvelle_ligne[nouvelle_cle] = f"{nouvelle_ligne[nouvelle_cle]} | {valeur}"
+            else:
+                nouvelle_ligne[nouvelle_cle] = valeur
+                
+        resultats_normalises.append(nouvelle_ligne)
+
+    return resultats_normalises
+

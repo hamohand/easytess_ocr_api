@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: easy_core
+Version: 0.1.0
+Summary: Noyau commun pour le traitement d'images et PDF pour EasyTess
+Requires-Dist: pillow
+Requires-Dist: opencv-python
+Requires-Dist: numpy
+Requires-Dist: pypdfium2
+Requires-Dist: pyzbar
+Dynamic: requires-dist
+Dynamic: summary

@@ -1,0 +1,10 @@
+setup.py
+easy_core/__init__.py
+easy_core/image_utils.py
+easy_core/pdf_utils.py
+easy_core/qrcode_utils.py
+easy_core.egg-info/PKG-INFO
+easy_core.egg-info/SOURCES.txt
+easy_core.egg-info/dependency_links.txt
+easy_core.egg-info/requires.txt
+easy_core.egg-info/top_level.txt
