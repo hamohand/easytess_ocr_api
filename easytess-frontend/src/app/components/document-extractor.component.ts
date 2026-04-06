@@ -333,7 +333,8 @@ export class DocumentExtractorComponent {
                 code: this.findKey(row, 'position').replace(/[^0-9]/g, ''),
                 description: this.findKey(row, 'désignation') || this.findKey(row, 'designation')
             }))
-            .filter(item => item.code || item.description);
+            .filter(item => item.code || item.description)
+            .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
 
         const blob = new Blob([JSON.stringify(hscodeData, null, 2)], { type: 'application/json' });
         const url = window.URL.createObjectURL(blob);
@@ -413,7 +414,9 @@ export class DocumentExtractorComponent {
     onFolderSelected(event: Event) {
         const input = event.target as HTMLInputElement;
         if (!input.files) return;
-        const pdfs = Array.from(input.files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+        const pdfs = Array.from(input.files)
+            .filter(f => f.name.toLowerCase().endsWith('.pdf'))
+            .sort((a, b) => this.getRelativePath(a).localeCompare(this.getRelativePath(b)));
         this.selectedFolder.set(pdfs);
         this.folderProgress.set('');
         this.error.set(null);
