@@ -29,42 +29,18 @@ Plateforme complète d'analyse OCR et d'extraction de contenu documentaire. Deux
 
 ## 🏗️ Architecture
 
-```
+```text
 easytess_api/
-├── easytess-backend/          # API Flask (port 8082)
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── file_routes.py      # Upload et gestion fichiers
-│   │   │   ├── ocr_routes.py       # Analyse OCR (simple, batch, async, dossier)
-│   │   │   ├── entity_routes.py    # CRUD entités
-│   │   │   ├── docx_routes.py      # Extraction DOCX (legacy)
-│   │   │   └── document_routes.py  # Extraction unifiée + conversion PDF→Word
-│   │   ├── services/
-│   │   │   ├── ocr_engine.py       # Moteurs OCR (Tesseract + EasyOCR)
-│   │   │   ├── entity_manager.py   # Gestion entités JSON
-│   │   │   ├── pdf_extractor.py    # Extraction PDF (pdfplumber)
-│   │   │   ├── docx_extractor.py   # Extraction Word (python-docx)
-│   │   │   └── pdf_to_docx.py      # Conversion PDF → Word
-│   │   └── utils/
-│   │       ├── pdf_utils.py        # Conversion PDF → image (pour OCR)
-│   │       ├── image_utils.py      # Traitement images
-│   │       └── qrcode_utils.py     # QR codes / codes-barres
-│   ├── entities/             # Stockage entités (JSON)
-│   └── uploads/              # Fichiers uploadés
+├── backend/
+│   ├── core_lib/              # Noyau commun Python (pdf_utils, image_utils, etc.)
+│   ├── app_ocr/               # API Serveur ciblé OCR (Port 8082)
+│   │   ├── app/               # Routes, Services et Config OCR
+│   │   └── requirements.txt
+│   └── app_extractor/         # API Serveur ciblé Extraction (Port 8083)
+│       └── app/               # Routes, Services docx/pdf
 │
-├── easytess-frontend/         # Angular 18+ (port 4200)
-│   └── src/app/
-│       ├── app.component.*           # Layout, 2 sections (OCR / Extraction)
-│       ├── components/
-│       │   ├── ocr-upload.component.*          # Analyse OCR
-│       │   ├── entity-creator.component.*      # Gestion entités
-│       │   └── document-extractor.component.*  # Extraction de documents
-│       └── services/
-│           ├── file.service.ts        # Upload / export
-│           ├── ocr.service.ts         # Analyse OCR
-│           ├── entity.service.ts      # CRUD entités
-│           ├── document.service.ts    # Extraction + conversion
-│           └── models.ts              # Interfaces TypeScript
+├── frontend_ocr/              # Application Angular 18 dédiée à l'OCR (Port 4200)
+├── frontend_extractor/        # Application Angular 18 dédiée à l'Extraction
 │
 └── docs/                      # Documentation
 ```
@@ -76,24 +52,25 @@ easytess_api/
 - Node.js 16+
 - Tesseract OCR
 
-### Backend
+### 1. Backend OCR
 
 ```bash
-cd easytess-backend
+# S'il n'est pas déjà installé, installez le noyau commun en premier
+cd backend/core_lib
+pip install -e .
 
-# Installer les dépendances
+# Ensuite, installez l'environnement OCR et lancez l'API
+cd ../app_ocr
 pip install -r requirements.txt
-
-# Lancer le serveur
 python run.py
 ```
 
 Le serveur démarre sur `http://localhost:8082`
 
-### Frontend
+### 2. Frontend OCR
 
 ```bash
-cd easytess-frontend
+cd frontend_ocr
 
 # Installer les dépendances
 npm install
@@ -170,7 +147,7 @@ L'application est accessible sur `http://localhost:4200`
 Par défaut, les PDF sont convertis en 300 DPI. Pour modifier :
 
 ```python
-# app/utils/pdf_utils.py
+# easy_core/pdf_utils.py
 def convert_pdf_to_image(pdf_path, output_path=None, dpi=300):
     # Changer la valeur de dpi ici
 ```
@@ -179,7 +156,7 @@ def convert_pdf_to_image(pdf_path, output_path=None, dpi=300):
 Par défaut : Arabe + Français. Pour modifier :
 
 ```python
-# app/services/ocr_engine.py
+# app_ocr/app/services/ocr_engine.py
 
 # Tesseract
 texte = pytesseract.image_to_string(zone_img, lang='ara+fra', ...)
@@ -257,13 +234,11 @@ Le système utilise automatiquement :
 - [x] ~~Extraction de contenu PDF/DOCX~~ ✅ v2.5.0
 - [x] ~~Conversion PDF → Word~~ ✅ v2.5.0
 - [x] ~~Détection avancée des tableaux~~ ✅ v2.5.0
+- [x] **Séparation de l'architecture backend/frontend** ✅ v3.0.0
 - [ ] Support multi-pages complet pour l'OCR (actuellement 1ère page uniquement)
 - [ ] Détection de codes-barres avec zbar
 - [ ] Support de plus de langues OCR
 - [ ] API REST complète avec documentation Swagger
-- [ ] Interface de correction manuelle des résultats
-- [ ] Historique des analyses
-- [ ] Authentification et gestion des utilisateurs
 
 ## 📝 Licence
 
@@ -275,9 +250,5 @@ Pour toute question ou suggestion, contactez l'équipe de développement.
 
 ---
 
-**Version** : 2.5.0 (extraction de documents, conversion PDF→Word, détection avancée des tableaux)  
-**Dernière mise à jour** : Février 2026
-#   a s y t e s s _ o c r _ a p i _ v 0 3 0 3  
- #   a s y t e s s _ o c r _ a p i _ v 0 3 0 3  
- #   e a s y t e s s _ o c r _ a p i  
- 
+**Version** : 3.0.0 (Scission Monorepo des applications OCR et Extraction)  
+**Dernière mise à jour** : Avril 2026

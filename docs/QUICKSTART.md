@@ -15,25 +15,25 @@
 - Node.js 16+
 - Tesseract OCR ([Télécharger](https://github.com/tesseract-ocr/tesseract))
 
-### 1. Backend
+### 1. Backend OCR
 
 ```bash
-cd easytess-backend
+# S'il n'est pas déjà installé, installez le noyau commun en premier
+cd backend/core_lib
+pip install -e .
 
-# Installer les dépendances
+# Ensuite, installez l'environnement OCR et lancez l'API
+cd ../app_ocr
 pip install -r requirements.txt
-
-# Lancer le serveur
 python run.py
 ```
-Generating
 
 Le serveur démarre sur `http://localhost:8082`
 
-### 2. Frontend
+### 2. Frontend OCR
 
 ```bash
-cd easytess-frontend
+cd frontend_ocr
 
 # Installer les dépendances
 npm install
