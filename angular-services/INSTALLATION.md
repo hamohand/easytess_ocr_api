@@ -38,8 +38,8 @@ angular-services/
 npm install -g @angular/cli
 
 # Créer un nouveau projet
-ng new easytess-frontend --standalone --routing=false --style=css
-cd easytess-frontend
+ng new frontend_ocr --standalone --routing=false --style=css
+cd frontend_ocr
 ```
 
 ### Étape 2 : Copier les fichiers
@@ -49,13 +49,13 @@ cd easytess-frontend
 1. **Services** → `src/app/services/`
    ```
    Copier tout le dossier angular-services/services/
-   vers easytess-frontend/src/app/services/
+   vers frontend_ocr/src/app/services/
    ```
 
 2. **Composants** → `src/app/components/`
    ```
    Copier tout le dossier angular-services/components/
-   vers easytess-frontend/src/app/components/
+   vers frontend_ocr/src/app/components/
    ```
 
 3. **Fichiers d'application** (depuis `example-app/`) :
@@ -85,12 +85,12 @@ npm install
 ng serve
 ```
 
-Ouvrez `http://localhost:4200`
+Ouvrez `http://localhost:4100`
 
 ## 📁 Structure finale du projet
 
 ```
-easytess-frontend/
+frontend_ocr/
 ├── src/
 │   ├── main.ts
 │   ├── index.html
@@ -125,28 +125,28 @@ Créez un fichier `setup.bat` (Windows) :
 ```batch
 @echo off
 echo Création du projet Angular...
-call ng new easytess-frontend --standalone --routing=false --style=css --skip-git
+call ng new frontend_ocr --standalone --routing=false --style=css --skip-git
 
 echo Copie des services...
-xcopy /E /I angular-services\services easytess-frontend\src\app\services
+xcopy /E /I angular-services\services frontend_ocr\src\app\services
 
 echo Copie des composants...
-xcopy /E /I angular-services\components easytess-frontend\src\app\components
+xcopy /E /I angular-services\components frontend_ocr\src\app\components
 
 echo Copie des fichiers d'application...
-copy /Y angular-services\example-app\app.component.ts easytess-frontend\src\app\
-copy /Y angular-services\example-app\app.component.html easytess-frontend\src\app\
-copy /Y angular-services\example-app\app.component.css easytess-frontend\src\app\
-copy /Y angular-services\example-app\app.config.ts easytess-frontend\src\app\
-copy /Y angular-services\example-app\main.ts easytess-frontend\src\
-copy /Y angular-services\example-app\index.html easytess-frontend\src\
-copy /Y angular-services\example-app\styles.css easytess-frontend\src\
+copy /Y angular-services\example-app\app.component.ts frontend_ocr\src\app\
+copy /Y angular-services\example-app\app.component.html frontend_ocr\src\app\
+copy /Y angular-services\example-app\app.component.css frontend_ocr\src\app\
+copy /Y angular-services\example-app\app.config.ts frontend_ocr\src\app\
+copy /Y angular-services\example-app\main.ts frontend_ocr\src\
+copy /Y angular-services\example-app\index.html frontend_ocr\src\
+copy /Y angular-services\example-app\styles.css frontend_ocr\src\
 
 echo Installation des dépendances...
-cd easytess-frontend
+cd frontend_ocr
 call npm install
 
-echo Terminé! Lancez 'cd easytess-frontend' puis 'ng serve'
+echo Terminé! Lancez 'cd frontend_ocr' puis 'ng serve'
 ```
 
 Ou pour Linux/Mac (`setup.sh`) :
@@ -154,26 +154,26 @@ Ou pour Linux/Mac (`setup.sh`) :
 ```bash
 #!/bin/bash
 echo "Création du projet Angular..."
-ng new easytess-frontend --standalone --routing=false --style=css --skip-git
+ng new frontend_ocr --standalone --routing=false --style=css --skip-git
 
 echo "Copie des services..."
-cp -r angular-services/services easytess-frontend/src/app/
+cp -r angular-services/services frontend_ocr/src/app/
 
 echo "Copie des composants..."
-cp -r angular-services/components easytess-frontend/src/app/
+cp -r angular-services/components frontend_ocr/src/app/
 
 echo "Copie des fichiers d'application..."
-cp angular-services/example-app/app.component.* easytess-frontend/src/app/
-cp angular-services/example-app/app.config.ts easytess-frontend/src/app/
-cp angular-services/example-app/main.ts easytess-frontend/src/
-cp angular-services/example-app/index.html easytess-frontend/src/
-cp angular-services/example-app/styles.css easytess-frontend/src/
+cp angular-services/example-app/app.component.* frontend_ocr/src/app/
+cp angular-services/example-app/app.config.ts frontend_ocr/src/app/
+cp angular-services/example-app/main.ts frontend_ocr/src/
+cp angular-services/example-app/index.html frontend_ocr/src/
+cp angular-services/example-app/styles.css frontend_ocr/src/
 
 echo "Installation des dépendances..."
-cd easytess-frontend
+cd frontend_ocr
 npm install
 
-echo "Terminé! Lancez 'cd easytess-frontend' puis 'ng serve'"
+echo "Terminé! Lancez 'cd frontend_ocr' puis 'ng serve'"
 ```
 
 ## ✅ Vérification
@@ -181,7 +181,7 @@ echo "Terminé! Lancez 'cd easytess-frontend' puis 'ng serve'"
 Après installation, vérifiez que :
 
 1. ✅ Le backend Flask tourne sur `http://localhost:8082`
-2. ✅ Le frontend Angular tourne sur `http://localhost:4200`
+2. ✅ Le frontend Angular tourne sur `http://localhost:4100`
 3. ✅ Pas d'erreurs dans la console du navigateur
 4. ✅ Les deux onglets sont visibles et fonctionnels
 

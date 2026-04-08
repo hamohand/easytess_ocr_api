@@ -145,7 +145,7 @@ POST /api/analyser
 ### 1. Installer pyzbar
 
 ```bash
-cd easytess-backend
+cd backend/app_ocr
 pip install pyzbar
 ```
 
@@ -372,7 +372,7 @@ if (zone.type === 'qrcode') {
 ### Test 1 : Vérifier pyzbar
 
 ```bash
-cd easytess-backend
+cd backend/app_ocr
 python -c "from app.utils.qrcode_utils import PYZBAR_DISPONIBLE; print('pyzbar:', PYZBAR_DISPONIBLE)"
 ```
 
@@ -446,6 +446,6 @@ pip install pyzbar
 
 ---
 
-**Version** : 2.1.0  
-**Date** : 2025-12-03  
-**Statut** : ✅ Backend complet, Frontend à finaliser
+**Version** : 3.0.0  
+**Date** : Avril 2026  
+**Statut** : ✅ Backend complet, Frontend fonctionnel

@@ -148,8 +148,8 @@ Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analy
 
 ## 📅 Informations
 
-**Version actuelle** : 2.4.0  
-**Dernière mise à jour** : Février 2026  
+**Version actuelle** : 3.0.0  
+**Dernière mise à jour** : Avril 2026  
 **Statut** : ✅ Production Ready
 
 ---

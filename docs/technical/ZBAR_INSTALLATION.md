@@ -62,7 +62,7 @@ pip install pyzbar==0.1.9
 
 3. **Ou dans le dossier du projet** :
    ```
-   easytess-backend\libzbar-64.dll
+   backend/app_ocr/libzbar-64.dll
    ```
 
 ---
@@ -138,7 +138,7 @@ powershell -ExecutionPolicy Bypass -File install_zbar.ps1
 Si vous ne pouvez pas copier dans System32, placez la DLL directement dans votre projet :
 
 ```
-easytess-backend/
+backend/app_ocr/
 ├── app/
 ├── libzbar-64.dll  ← Ici
 ├── run.py
@@ -226,7 +226,7 @@ Copy-Item "libzbar-64.dll" -Destination "C:\Windows\System32\" -Force
 
 ```powershell
 # Télécharger dans le dossier backend
-cd easytess-backend
+cd backend/app_ocr
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/NaturalHistoryMuseum/pyzbar/master/pyzbar/libzbar-64.dll" -OutFile "libzbar-64.dll"
 ```
 

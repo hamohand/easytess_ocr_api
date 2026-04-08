@@ -15,34 +15,41 @@
 - Node.js 16+
 - Tesseract OCR ([Télécharger](https://github.com/tesseract-ocr/tesseract))
 
-### 1. Backend OCR
+### 1. Backends (OCR & Extraction)
 
 ```bash
 # S'il n'est pas déjà installé, installez le noyau commun en premier
 cd backend/core_lib
 pip install -e .
 
-# Ensuite, installez l'environnement OCR et lancez l'API
+# Ensuite, pour l'OCR, installez l'environnement et lancez l'API
 cd ../app_ocr
+pip install -r requirements.txt
+python run.py
+
+# (Optionnel) Pour l'extraction de documents (Tableaux, PDF -> Word), dans un autre terminal :
+cd ../app_extractor
 pip install -r requirements.txt
 python run.py
 ```
 
-Le serveur démarre sur `http://localhost:8082`
+Le serveur OCR démarre sur `http://localhost:8082`, et l'extracteur sur `http://localhost:8083`.
 
-### 2. Frontend OCR
+### 2. Frontends (OCR & Extraction)
+
+Les interfaces sont des applications Angular 18+.
 
 ```bash
+# Pour lancer l'interface OCR (Création d'entités, analyses OCR)
 cd frontend_ocr
-
-# Installer les dépendances
 npm install
+ng serve # Tourne sur http://localhost:4100
 
-# Lancer le serveur de développement
-ng serve
+# Pour lancer l'interface Extraction (Tableaux, Conversion Word), dans un autre terminal :
+cd frontend_extractor
+npm install
+ng serve # Tourne sur un autre port (ex: 4200 ou config angular.json)
 ```
-
-L'application est accessible sur `http://localhost:4200`
 
 ---
 
@@ -210,7 +217,7 @@ pip install pypdfium2
 
 ## 🎊 Prêt à commencer !
 
-**Version actuelle** : 2.3.0  
+**Version actuelle** : 3.0.0 (Architecture Micro-services)  
 **Statut** : ✅ Production Ready
 
 Pour toute question, consultez la [documentation complète](../README.md) ou les [exemples pratiques](./guides/DEMO_SCENARIOS.md).

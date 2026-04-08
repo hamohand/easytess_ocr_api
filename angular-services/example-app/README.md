@@ -33,8 +33,8 @@ example-app/
 npm install -g @angular/cli
 
 # Créer un nouveau projet
-ng new easytess-frontend --standalone --routing=false --style=css
-cd easytess-frontend
+ng new frontend_ocr --standalone --routing=false --style=css
+cd frontend_ocr
 ```
 
 ### 2. Copier les fichiers
@@ -42,7 +42,7 @@ cd easytess-frontend
 Copiez les fichiers de cet exemple dans votre projet :
 
 ```
-easytess-frontend/
+frontend_ocr/
 ├── src/
 │   ├── main.ts                    # ← Remplacer
 │   ├── index.html                 # ← Remplacer
@@ -98,7 +98,7 @@ npm install
 ### 1. Démarrer le backend Flask
 
 ```bash
-cd easytess-backend
+cd backend/app_ocr
 python run.py
 ```
 
@@ -107,15 +107,15 @@ Le backend sera sur `http://localhost:8082`
 ### 2. Démarrer le frontend Angular
 
 ```bash
-cd easytess-frontend
+cd frontend_ocr
 ng serve
 ```
 
-Le frontend sera sur `http://localhost:4200`
+Le frontend sera sur `http://localhost:4100`
 
 ### 3. Ouvrir dans le navigateur
 
-Allez sur `http://localhost:4200`
+Allez sur `http://localhost:4100`
 
 ## 🎨 Captures d'écran
 

@@ -30,7 +30,7 @@ Plateforme complète d'analyse OCR et d'extraction de contenu documentaire. Deux
 ## 🏗️ Architecture
 
 ```text
-easytess_api/
+easytess_ocr_api/
 ├── backend/
 │   ├── core_lib/              # Noyau commun Python (pdf_utils, image_utils, etc.)
 │   ├── app_ocr/               # API Serveur ciblé OCR (Port 8082)
@@ -39,8 +39,8 @@ easytess_api/
 │   └── app_extractor/         # API Serveur ciblé Extraction (Port 8083)
 │       └── app/               # Routes, Services docx/pdf
 │
-├── frontend_ocr/              # Application Angular 18 dédiée à l'OCR (Port 4200)
-├── frontend_extractor/        # Application Angular 18 dédiée à l'Extraction
+├── frontend_ocr/              # Application Angular 18 dédiée à l'OCR (Port 4100)
+├── frontend_extractor/        # Application Angular 18 dédiée à l'Extraction (Port 4200 ou conf)
 │
 └── docs/                      # Documentation
 ```
@@ -52,34 +52,39 @@ easytess_api/
 - Node.js 16+
 - Tesseract OCR
 
-### 1. Backend OCR
+### 1. Backends (OCR & Extraction)
 
 ```bash
 # S'il n'est pas déjà installé, installez le noyau commun en premier
 cd backend/core_lib
 pip install -e .
 
-# Ensuite, installez l'environnement OCR et lancez l'API
+# Ensuite, pour l'OCR :
 cd ../app_ocr
+pip install -r requirements.txt
+python run.py
+
+# Pour l'Extraction (dans un autre terminal) :
+cd ../app_extractor
 pip install -r requirements.txt
 python run.py
 ```
 
-Le serveur démarre sur `http://localhost:8082`
+Serveur OCR : `http://localhost:8082` | Serveur Extracteur : `http://localhost:8083`
 
-### 2. Frontend OCR
+### 2. Frontends (OCR & Extraction)
 
 ```bash
+# Pour lancer l'Application OCR
 cd frontend_ocr
-
-# Installer les dépendances
 npm install
+ng serve # Tourne sur http://localhost:4100
 
-# Lancer le serveur de développement
-ng serve
+# Pour lancer l'Application Extraction
+cd frontend_extractor
+npm install
+ng serve # Tourne sur un autre port, ex: 4200
 ```
-
-L'application est accessible sur `http://localhost:4200`
 
 ## 📦 Dépendances principales
 

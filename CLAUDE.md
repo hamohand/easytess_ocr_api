@@ -4,78 +4,113 @@ Ce fichier décrit le projet EasyTess pour les agents IA qui contribuent au code
 
 ## Vue d'ensemble
 
-**EasyTess** est une plateforme d'analyse OCR et d'extraction de documents, composée d'un backend Flask (Python) et d'un frontend Angular (TypeScript). Deux sections principales :
-1. **EasyTess-OCR** : Analyse OCR avec gestion d'entités (zones, ancres, QR codes)
-2. **Extraction de Documents** : Extraction de contenu structuré (texte + tableaux) depuis PDF/DOCX, conversion PDF → Word
+**EasyTess** est une plateforme d'analyse OCR et d'extraction de documents, organisée en **micro-services indépendants**. Deux applications distinctes :
+1. **EasyTess-OCR** (`app_ocr` + `frontend_ocr`) : Analyse OCR avec gestion d'entités (zones, ancres, QR codes)
+2. **Extraction de Documents** (`app_extractor` + `frontend_extractor`) : Extraction de contenu structuré (texte + tableaux) depuis PDF/DOCX, conversion PDF → Word
 
 ## Architecture
 
 ```
-easytess_api/
-├── easytess-backend/           # API Flask (port 8082)
-│   ├── run.py                  # Point d'entrée
-│   ├── config.py               # Configuration
-│   ├── app/
-│   │   ├── __init__.py         # create_app(), CORS, blueprints
-│   │   ├── api/
-│   │   │   ├── file_routes.py      # Upload, upload-batch, export JSON
-│   │   │   ├── ocr_routes.py       # Analyse simple, batch sync, batch async (SSE), dossier
-│   │   │   ├── entity_routes.py    # CRUD entités
-│   │   │   ├── docx_routes.py      # Extraction DOCX (legacy, single endpoint)
-│   │   │   └── document_routes.py  # Extraction unifiée PDF/DOCX + conversion PDF→Word
-│   │   ├── services/
-│   │   │   ├── ocr_engine.py       # Moteurs OCR (Tesseract + EasyOCR), analyse hybride, AABB
-│   │   │   ├── entity_manager.py   # CRUD fichiers JSON entités
-│   │   │   ├── image_matcher.py    # Template matching ORB
-│   │   │   ├── pdf_extractor.py    # Extraction contenu PDF (texte + tableaux) — pdfplumber
-│   │   │   ├── docx_extractor.py   # Extraction contenu Word (texte + tableaux) — python-docx
-│   │   │   └── pdf_to_docx.py      # Conversion PDF → Word (.docx)
-│   │   └── utils/
-│   │       ├── pdf_utils.py        # Conversion PDF → image (pour OCR)
-│   │       ├── image_utils.py      # Traitement images, patch Pillow
-│   │       └── qrcode_utils.py     # Détection QR codes / codes-barres
-│   ├── entities/               # Stockage entités (JSON)
-│   └── uploads/                # Fichiers uploadés
+easytess_ocr_api/
+├── backend/
+│   ├── core_lib/                  # Bibliothèque partagée (installable via pip install -e .)
+│   │   └── easy_core/
+│   │       ├── pdf_utils.py       # Conversion PDF → image (pour OCR)
+│   │       ├── image_utils.py     # Traitement images, patch Pillow
+│   │       └── qrcode_utils.py    # Détection QR codes / codes-barres
+│   │
+│   ├── app_ocr/                   # API Flask OCR (port 8082)
+│   │   ├── run.py                 # Point d'entrée
+│   │   ├── config.py              # Configuration
+│   │   ├── entities/              # Stockage entités (JSON)
+│   │   ├── uploads/               # Fichiers uploadés
+│   │   └── app/
+│   │       ├── __init__.py        # create_app(), CORS, blueprints
+│   │       ├── api/
+│   │       │   ├── file_routes.py     # Upload, upload-batch, export JSON
+│   │       │   ├── ocr_routes.py      # Analyse simple, batch sync, batch async (SSE), dossier
+│   │       │   └── entity_routes.py   # CRUD entités
+│   │       ├── services/
+│   │       │   ├── ocr_engine.py      # Moteurs OCR (Tesseract + EasyOCR), analyse hybride, AABB
+│   │       │   ├── entity_manager.py  # CRUD fichiers JSON entités
+│   │       │   └── image_matcher.py   # Template matching ORB
+│   │       └── utils/                 # Utilitaires spécifiques OCR
+│   │
+│   └── app_extractor/             # API Flask Extraction (port 8083)
+│       ├── run.py                 # Point d'entrée
+│       └── app/
+│           ├── __init__.py        # create_app(), CORS, blueprints
+│           ├── api/
+│           │   ├── document_routes.py  # Extraction unifiée PDF/DOCX + conversion PDF→Word
+│           │   └── docx_routes.py      # Extraction DOCX (legacy)
+│           └── services/
+│               ├── pdf_extractor.py    # Extraction contenu PDF — pdfplumber
+│               ├── docx_extractor.py   # Extraction contenu Word — python-docx
+│               └── pdf_to_docx.py      # Conversion PDF → Word (.docx)
 │
-├── easytess-frontend/          # Angular 18+ (port 4200)
+├── frontend_ocr/                  # Angular 18+ dédié OCR (port 4100)
 │   └── src/app/
-│       ├── app.component.*             # Layout principal, 2 sections (OCR / Extraction)
+│       ├── app.component.*               # Layout principal OCR (2 sous-onglets)
 │       ├── components/
-│       │   ├── ocr-upload.component.*          # Section OCR : analyse (3 modes: single/multi/folder)
-│       │   ├── entity-creator.component.*      # Section OCR : création entités
-│       │   └── document-extractor.component.*  # Section Extraction : PDF/DOCX + conversion
+│       │   ├── ocr-upload.component.*         # Analyse OCR (3 modes: single/multi/folder)
+│       │   └── entity-creator.component.*     # Création/gestion des entités
 │       └── services/
-│           ├── file.service.ts        # Upload simple/batch, export JSON
-│           ├── ocr.service.ts         # Analyse simple/batch/async, SSE progress
-│           ├── entity.service.ts      # CRUD entités
-│           ├── document.service.ts    # Extraction de documents + conversion PDF→DOCX
-│           └── models.ts              # Interfaces TypeScript (OCR + Document extraction)
+│           ├── file.service.ts       # Upload simple/batch, export JSON
+│           ├── ocr.service.ts        # Analyse simple/batch/async, SSE progress
+│           ├── entity.service.ts     # CRUD entités
+│           └── models.ts             # Interfaces TypeScript OCR
 │
-└── docs/                       # Documentation
+├── frontend_extractor/            # Angular 18+ dédié Extraction (port 4200 ou conf)
+│   └── src/app/
+│       ├── app.component.*               # Layout principal Extraction
+│       ├── components/
+│       │   └── document-extractor.component.*  # Extraction PDF/DOCX + conversion
+│       └── services/
+│           ├── document.service.ts   # Extraction de documents + conversion PDF→DOCX
+│           └── models.ts             # Interfaces TypeScript Extraction
+│
+└── docs/                          # Documentation
 ```
 
 ## Commandes essentielles
 
 ```bash
-# Backend
-cd easytess-backend
+# Installer le noyau commun (une seule fois)
+cd backend/core_lib
+pip install -e .
+
+# Backend OCR
+cd backend/app_ocr
 pip install -r requirements.txt
 python run.py                    # → http://localhost:8082
 
-# Frontend
-cd easytess-frontend
+# Backend Extraction (dans un autre terminal)
+cd backend/app_extractor
+pip install -r requirements.txt
+python run.py                    # → http://localhost:8083
+
+# Frontend OCR
+cd frontend_ocr
 npm install
-ng serve                         # → http://localhost:4200
+ng serve                         # → http://localhost:4100
+
+# Frontend Extraction (dans un autre terminal)
+cd frontend_extractor
+npm install
+ng serve                         # → port configuré dans angular.json
 
 # Build frontend (dev)
 npx ng build --configuration=development
-
-# Test extraction documents
-cd easytess-backend
-python test_document_extraction.py [fichier.pdf ou fichier.docx]
 ```
 
 ## Points d'attention
+
+### Architecture — Séparation des services
+- Les backends `app_ocr` et `app_extractor` sont **totalement indépendants** et tournent sur des ports différents
+- Ils partagent **uniquement** `core_lib` (utilitaires communs) via `pip install -e .`
+- Les frontends `frontend_ocr` et `frontend_extractor` sont aussi **indépendants** 
+- Chaque frontend pointe vers **son propre backend** (OCR → 8082, Extraction → 8083)
+- Pour ajouter un nouveau micro-service : créer `backend/app_xxx` + `frontend_xxx` sur de nouveaux ports
 
 ### Backend — Flask Context
 - `ocr_engine.py` utilise `flask.current_app.config` dans `detecter_ancres()` (ligne ~440)
@@ -103,7 +138,7 @@ python test_document_extraction.py [fichier.pdf ou fichier.docx]
 - **`cadre_detecte`** : `{x, y, width, height}` en relatif (0-1) par rapport à l'image originale, utilisé par le frontend pour dessiner le cadre vert
 - **Crop RGBA** : les images PNG avec canal alpha sont converties en RGB avant sauvegarde JPEG du crop
 
-### Backend — Extraction de documents
+### Backend — Extraction de documents (app_extractor)
 - `pdf_extractor.py` retourne un tuple `(content, stats)` — l'ancien code ne retournait que `content`
 - **4 stratégies de détection des tableaux** : `auto`, `standard`, `text`, `lines_strict`
 - `auto` essaie `standard` puis fallback `text` si aucun tableau détecté
@@ -111,13 +146,14 @@ python test_document_extraction.py [fichier.pdf ou fichier.docx]
 - `pdf_to_docx.py` reconstruit un .docx à partir du contenu structuré
 - **`normalize_labels()`** : renomme les clés des lignes extraites selon un mapping fixe (ex: `"Position & Sous Position"` → `"Position"`, `"col_04"` → `"Désignation"`). La correspondance est **exacte** (pas partielle) — ajouter la variante exacte au mapping si une nouvelle forme apparaît.
 
-### Frontend — 2 sections distinctes
-- **Section "EasyTess — OCR"** : analyse OCR + gestion des entités (sous-onglets)
-- **Section "Extraction de Documents"** : deux onglets principaux
-  - **Extraction** : 3 modes (`unified`, `pdf`, `convert`)
-  - **Code** : 4 modes (`position` → `etiquettes` → `hscode` → `hscode10`)
-- Navigation via `activeSection` signal (`'ocr' | 'extraction'`)
+### Frontend OCR — 2 sous-onglets
+- **Sous-onglet "Analyse OCR"** : analyse OCR (3 modes: single/multi/folder)
+- **Sous-onglet "Gestion des Entités"** : création/édition des entités
 - **Visualisation post-analyse** : cadre de l'entité tracé en **vert pointillé** + zones OCR en **bleu plein** sur le canvas
+
+### Frontend Extraction — Interface dédiée
+- **Extraction** : 3 modes (`unified`, `pdf`, `convert`)
+- **Code** : 4 modes (`position` → `etiquettes` → `hscode` → `hscode10`)
 - Le composant `document-extractor` utilise des **signals Angular** et `FormsModule` pour les options
 
 ### Frontend — Flux onglet Code (Tarif douanier)
@@ -144,7 +180,7 @@ Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF
 
 ## Endpoints API principaux
 
-### OCR & Fichiers
+### OCR & Fichiers (app_ocr — port 8082)
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
@@ -161,7 +197,7 @@ Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF
 | GET/POST | `/api/entites` | Lister / créer entités |
 | GET/PUT/DELETE | `/api/entites/<nom>` | CRUD entité |
 
-### Extraction & Conversion de documents
+### Extraction & Conversion de documents (app_extractor — port 8083)
 
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
@@ -180,7 +216,7 @@ Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF
 ## Conventions
 
 - **CSS Budget** : `entity-creator.component.css` dépasse le budget production (~12 kB). Le build `--configuration=development` fonctionne toujours.
-- **Pas de tests automatisés** : Tester manuellement via le navigateur ou `test_document_extraction.py`.
+- **Pas de tests automatisés** : Tester manuellement via le navigateur.
 - **Stockage** : Entités en JSON dans `entities/`, uploads dans `uploads/`.
 - **Pas d'auth** : L'API est ouverte (usage interne).
 

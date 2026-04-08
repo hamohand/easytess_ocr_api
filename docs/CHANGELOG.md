@@ -2,6 +2,36 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [3.0.0] - 2026-04-08
+
+### 🎉 Scission en Micro-services
+
+#### Architecture totalement refondée
+- **Séparation des backends** : L'ancien monolithe `easytess-backend` a été découpé en :
+  - `backend/app_ocr` (port 8082) — API dédiée OCR, entités, ancres, QR codes
+  - `backend/app_extractor` (port 8083) — API dédiée extraction PDF/DOCX, conversion Word
+  - `backend/core_lib` — Bibliothèque partagée installable (`pip install -e .`)
+- **Séparation des frontends** : L'ancien monolithe `easytess-frontend` a été découpé en :
+  - `frontend_ocr` (port 4100) — Interface Angular 18+ dédiée OCR (Analyse + Gestion Entités)
+  - `frontend_extractor` — Interface Angular 18+ dédiée Extraction (PDF/DOCX + Conversion)
+- **Indépendance totale** : Chaque service peut être lancé, déployé et maintenu séparément
+- **Suppression des anciens dossiers** : `easytess-backend/` et `easytess-frontend/` ont été retirés
+
+#### Avantages
+- Déploiement ciblé : seul le service nécessaire est lancé (moins de mémoire, plus rapide)
+- Scalabilité : chaque service peut évoluer indépendamment
+- Maintenabilité : code plus lisible et séparation claire des responsabilités
+- Extensibilité : ajout facile d'un nouveau micro-service (ex: `app_invoice`)
+
+### 🔧 Modifications techniques
+- Migration des entités JSON vers `backend/app_ocr/entities/`
+- Migration des uploads vers `backend/app_ocr/uploads/`
+- Mise à jour des chemins absolus dans les fichiers JSON d'entités
+- Nettoyage des composants frontend (suppression des imports croisés)
+- Mise à jour complète de la documentation (README, QUICKSTART, CLAUDE.md, CHANGELOG, INDEX, guides)
+
+---
+
 ## [2.6.0] - 2026-03-10
 
 ### 🎉 Refonte du système de repérage des zones OCR
@@ -391,25 +421,17 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 ## Versions futures prévues
 
-### [2.2.0] - À venir
+### [3.1.0] - À venir
 - [ ] Support complet de zbar pour tous les types de codes-barres
-- [ ] Support multi-pages pour PDF
-- [ ] Sélection de la page à convertir
+- [ ] Support multi-pages pour PDF (OCR)
 - [ ] Paramétrage de la résolution dans l'interface
-- [ ] Support PNG pour la conversion (en plus de JPEG)
-
-### [2.5.0] - À venir
-- [x] ~~Batch processing (traitement par lot)~~ ✅ v2.4.0
 - [ ] Interface de correction manuelle des résultats
-- [ ] Historique des analyses
-- [ ] Comparaison de résultats
-- [ ] Export en CSV et Excel
 
-### [3.0.0] - À venir
+### [4.0.0] - À venir
 - [ ] API REST complète et documentée (Swagger)
 - [ ] Authentification et gestion des utilisateurs
 - [ ] Base de données (PostgreSQL/MongoDB)
-- [ ] Déploiement Docker
+- [ ] Déploiement Docker (un container par micro-service)
 - [ ] CI/CD
 - [ ] Tests automatisés
 
