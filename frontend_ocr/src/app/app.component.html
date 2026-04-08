@@ -4,25 +4,10 @@
     <header class="app-header">
         <div class="logo">
             <h1>🔍 {{ title }}</h1>
-            <p>Plateforme OCR & Extraction de Documents</p>
+            <p>Module de Reconnaissance et Gestion d'Entités</p>
         </div>
     </header>
 
-    <!-- ─── Section Navigation ─── -->
-    <nav class="section-nav">
-        <button class="section-btn" [class.active]="activeSection() === 'ocr'" (click)="setSection('ocr')">
-            <span class="section-icon">🔍</span>
-            <span class="section-label">EasyTess — OCR</span>
-        </button>
-        <button class="section-btn" [class.active]="activeSection() === 'extraction'"
-            (click)="setSection('extraction')">
-            <span class="section-icon">📄</span>
-            <span class="section-label">Extraction de Documents</span>
-        </button>
-    </nav>
-
-    <!-- ─── Section: EasyTess OCR ─── -->
-    @if (activeSection() === 'ocr') {
     <!-- Sub-tabs -->
     <nav class="sub-tabs">
         <button class="sub-tab-btn" [class.active]="activeOcrTab() === 'analyse'" (click)="setOcrTab('analyse')">
@@ -42,18 +27,10 @@
         <app-entity-creator />
         }
     </main>
-    }
-
-    <!-- ─── Section: Document Extraction ─── -->
-    @if (activeSection() === 'extraction') {
-    <main class="content">
-        <app-document-extractor />
-    </main>
-    }
 
     <!-- Footer -->
     <footer class="app-footer">
-        <p>Powered by Flask + Angular 18 | Backend: <a href="http://localhost:8082" target="_blank">localhost:8082</a>
+        <p>Powered by Flask + Angular 18 | Backend OCR: <a href="http://localhost:8082" target="_blank" rel="noopener">localhost:8082</a>
         </p>
     </footer>
 </div>

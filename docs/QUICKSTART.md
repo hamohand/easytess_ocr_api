@@ -50,7 +50,7 @@ L'application est accessible sur `http://localhost:4200`
 
 ### Analyser un document
 
-1. **Ouvrir l'application** : `http://localhost:4200`
+1. **Ouvrir l'application** : `http://localhost:4100`
 2. **Onglet "OCR Analysis"**
 3. Sélectionner une entité (ou "Aucun" pour analyse libre)
 4. Uploader une **image** ou un **PDF**
