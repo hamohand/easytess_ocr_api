@@ -1,0 +1,190 @@
+{
+  "nom": "cni_algo_recto_01",
+  "description": "",
+  "date_creation": "2026-04-08T16:29:01.553913",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_algo_recto_01\\reference.jpeg",
+  "zones": [
+    {
+      "coords": [
+        0.4705194863606719,
+        0.5363607188703465,
+        0.9045476420716486,
+        0.6277965340179719
+      ],
+      "id": 1775656247833,
+      "lang": "ara",
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.47007218836440506,
+        0.6825468549422337,
+        0.9039512447432928,
+        0.7820423620025677
+      ],
+      "id": 1775656317365,
+      "lang": "ara",
+      "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.5604263836103177,
+        0.8220629011553275,
+        0.8124042548406684,
+        0.9086351091142493
+      ],
+      "id": 1775656571941,
+      "lang": "fra",
+      "nom": "date_naissance",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.48632401556210225,
+        0.8918209242618744,
+        0.8079312748779994,
+        0.9815892169448013
+      ],
+      "id": 1775656644239,
+      "lang": "ara",
+      "nom": "lieu_naissance",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.29383677783524864,
+        0.8148369704749681,
+        0.3883657543796524,
+        0.9111363928112969
+      ],
+      "id": 1775657255158,
+      "lang": "ara",
+      "nom": "sexe",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.003838576922212022,
+        -0.008502246469833115,
+        0.2511943688578048,
+        0.07487387676508342
+      ],
+      "id": 1775657405441,
+      "lang": "ara+fra",
+      "nom": "numero_piece",
+      "preprocess": "auto",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.3208237569433513,
+        0.04513639281129654,
+        0.7976434209638609,
+        0.1333761232349166
+      ],
+      "id": 1775657587425,
+      "lang": "ara",
+      "nom": "delivre_par",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.5413416691029304,
+        0.14032413350449296,
+        0.7931704410011919,
+        0.21841976893453147
+      ],
+      "id": 1775657799661,
+      "lang": "fra",
+      "nom": "delivre_le",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.5413416691029304,
+        0.21841976893453147,
+        0.7998799109451953,
+        0.311523106546855
+      ],
+      "id": 1775657923662,
+      "lang": "ara+fra",
+      "nom": "expire_le",
+      "preprocess": "auto",
+      "type": "text"
+    },
+    {
+      "id": 1775658517750,
+      "nom": "nin",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "latin_simple",
+      "coords": [
+        0.2690862887084804,
+        0.4460365853658538,
+        0.7189189736208874,
+        0.5230205391527601
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [
+        "regex:\\d{9}"
+      ],
+      "position_base": [
+        0.39441930618401205,
+        0.22401847575057737
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        0.9844193061840121,
+        0.5
+      ],
+      "fallback_formula": "G + 0.59 * RW"
+    },
+    "gauche": {
+      "labels": [
+        "regex:\\d{9}"
+      ],
+      "position_base": [
+        0.3137254901960784,
+        0.24364896073903003
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0.9436489607390299
+      ],
+      "fallback_formula": "H + 0.70 * RH"
+    },
+    "image_base_dimensions": {
+      "width": 663,
+      "height": 433
+    },
+    "dimensions_absolues": {
+      "largeur": 0,
+      "hauteur": 0,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 10,
+    "image_dimensions": {
+      "width": 663,
+      "height": 433
+    }
+  }
+}

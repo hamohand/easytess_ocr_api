@@ -112,7 +112,18 @@
           @for (result of getResultatsArray(); track result.zone) {
           <tr>
             <td class="zone-name">{{ result.zone }}</td>
-            <td class="text-content">{{ result.texte_auto || '(vide)' }}</td>
+            <td class="text-content">
+              @if (result.confiance_auto < 0.65 || corrections()[result.zone] !== undefined) {
+                <input type="text"
+                       class="form-control correction-input"
+                       [ngModel]="corrections()[result.zone] ?? result.texte_auto"
+                       (ngModelChange)="updateCorrection(result.zone, $event)"
+                       style="width: 100%; padding: 4px; box-sizing: border-box;"
+                       [placeholder]="result.texte_auto || '(vide)'">
+              } @else {
+                {{ result.texte_auto || '(vide)' }}
+              }
+            </td>
             <td class="confidence">
               <div class="confidence-bar">
                 <div class="confidence-fill" [style.width.%]="result.confiance_auto * 100"></div>
@@ -134,7 +145,18 @@
       </table>
     </div>
 
-    <button class="btn btn-outline" (click)="reset()">🔄 Nouvelle analyse</button>
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button class="btn btn-outline" (click)="reset()">🔄 Nouvelle analyse</button>
+      @if ((corrections() | keyvalue).length > 0) {
+        <button class="btn btn-primary" (click)="sauvegarderCorrections()" [disabled]="isSavingCorrections()">
+          @if (isSavingCorrections()) {
+            <span class="spinner"></span> Sauvegarde...
+          } @else {
+            💾 Sauvegarder les corrections
+          }
+        </button>
+      }
+    </div>
   </div>
   }
   }

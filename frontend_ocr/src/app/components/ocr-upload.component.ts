@@ -46,6 +46,10 @@ export class OcrUploadComponent implements OnDestroy {
     batchResults = signal<BatchAnalyseResponse | null>(null);
     expandedFileIndex = signal<number | null>(null);
 
+    // Signals - Corrections
+    corrections = signal<Record<string, string>>({});
+    isSavingCorrections = signal<boolean>(false);
+
     // Signals - Async progress
     batchProgress = signal<{ completed: number; total: number; currentFile: string } | null>(null);
 
@@ -590,10 +594,43 @@ export class OcrUploadComponent implements OnDestroy {
     getStatutClass(statut: string): string {
         switch (statut) {
             case 'ok': return 'statut-ok';
+            case 'corrigé': return 'statut-ok';
             case 'faible_confiance': return 'statut-warning';
             case 'echec': return 'statut-error';
             default: return '';
         }
+    }
+
+    updateCorrection(zone: string, text: string) {
+        this.corrections.update(c => ({...c, [zone]: text}));
+    }
+
+    sauvegarderCorrections() {
+        const corr = this.corrections();
+        if (Object.keys(corr).length === 0) return;
+        
+        this.isSavingCorrections.set(true);
+        this.ocrService.sauvegarderCorrections(corr).subscribe({
+            next: () => {
+                this.isSavingCorrections.set(false);
+                const res = this.analyseResults();
+                if (res) {
+                    for (const [zone, text] of Object.entries(corr)) {
+                        if (res.resultats[zone]) {
+                            res.resultats[zone].texte_auto = text;
+                            res.resultats[zone].texte_final = text;
+                            res.resultats[zone].statut = 'corrigé';
+                        }
+                    }
+                    this.analyseResults.set({ ...res });
+                }
+                this.corrections.set({});
+            },
+            error: (err: any) => {
+                this.isSavingCorrections.set(false);
+                this.errorMessage.set('Erreur lors de la sauvegarde: ' + err.message);
+            }
+        });
     }
 
     exportResults() {
@@ -639,6 +676,8 @@ export class OcrUploadComponent implements OnDestroy {
         this.expandedFileIndex.set(null);
         this.batchProgress.set(null);
         // Folder mode
-        this.folderPath.set('');
+        // Corrections
+        this.corrections.set({});
+        this.isSavingCorrections.set(false);
     }
 }
