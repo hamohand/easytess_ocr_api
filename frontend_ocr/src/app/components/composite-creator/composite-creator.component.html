@@ -1,0 +1,140 @@
+<div class="composite-container">
+  <div class="header">
+    <h2>🧩 Gestion des Entités Composites (Recto/Verso)</h2>
+    <p>Créez des structures complexes en combinant plusieurs entités (ex: CNI Recto + CNI Verso)</p>
+  </div>
+
+  @if (message()) {
+  <div class="alert" [class.alert-error]="message()!.isError" [class.alert-success]="!message()!.isError">
+    {{ message()!.text }}
+  </div>
+  }
+
+  <div class="split-view">
+    <!-- Colonne Création -->
+    <div class="creator-pane">
+      <div class="card">
+        <h3>1. Informations de la composite</h3>
+        <div class="form-group">
+          <label>Nom de l'entité composite (ex: cni_mali_complete) :</label>
+          <input type="text" class="form-control" [ngModel]="compositeName()" (ngModelChange)="compositeName.set($event)" placeholder="cni_mali_complete">
+        </div>
+        <div class="form-group">
+          <label>Description (optionnel) :</label>
+          <input type="text" class="form-control" [ngModel]="compositeDescription()" (ngModelChange)="compositeDescription.set($event)" placeholder="CNI Malienne Recto + Verso">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>2. Sélection des sous-entités (Faces)</h3>
+        <p class="text-muted">Sélectionnez les parties qui composent le document (ex: face avant, face arrière)</p>
+        
+        <div class="entity-selector">
+          <select #entitySelect class="form-control">
+            <option value="">-- Choisir une entité --</option>
+            @for (ent of entities(); track ent.nom) {
+              <option [value]="ent.nom">{{ ent.nom }}</option>
+            }
+          </select>
+          <button class="btn btn-primary" (click)="addEntity(entitySelect.value); entitySelect.value=''">Ajouter la face</button>
+        </div>
+
+        @if (selectedEntities().length > 0) {
+        <div class="selected-entities">
+          @for (se of selectedEntities(); track se.nom) {
+          <div class="entity-chip">
+            <span class="chip-label">{{ se.nom }}</span>
+            <button class="btn-close" (click)="removeEntity(se.nom)">✖</button>
+          </div>
+          }
+        </div>
+        }
+      </div>
+
+      <div class="card">
+        <h3>3. Mapping (Champs finaux)</h3>
+        <p class="text-muted">Définissez quels champs extraits vont composer le document final.</p>
+        
+        <table class="table" *ngIf="selectedEntities().length > 0">
+          <thead>
+            <tr>
+              <th>Champ final (Destination)</th>
+              <th>Origine : Face</th>
+              <th>Origine : Zone</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of mappings(); track $index) {
+            <tr>
+              <td><b>{{ m.destinationZone }}</b></td>
+              <td><span class="badge">{{ m.sourceEntity }}</span></td>
+              <td>{{ m.sourceZone }}</td>
+              <td><button class="btn btn-danger btn-sm" (click)="removeMapping($index)">🗑️</button></td>
+            </tr>
+            }
+            
+            <!-- Ajout -->
+            <tr class="add-row">
+              <td>
+                <input type="text" class="form-control" [ngModel]="newDestZone()" (ngModelChange)="newDestZone.set($event)" placeholder="ex: Nom de famille">
+              </td>
+              <td>
+                <select class="form-control" [ngModel]="newSrcEntity()" (ngModelChange)="newSrcEntity.set($event); newSrcZone.set('')">
+                  <option value="">-- Face --</option>
+                  @for (se of selectedEntities(); track se.nom) {
+                    <option [value]="se.nom">{{ se.nom }}</option>
+                  }
+                </select>
+              </td>
+              <td>
+                 <select class="form-control" [ngModel]="newSrcZone()" (ngModelChange)="newSrcZone.set($event)" [disabled]="!newSrcEntity()">
+                   <option value="">-- Choisir zone --</option>
+                   @for (zone of getZonesForEntity(newSrcEntity()); track zone.nom) {
+                     <option [value]="zone.nom">{{ zone.nom }}</option>
+                   }
+                 </select>
+              </td>
+              <td>
+                <button class="btn btn-success btn-sm" (click)="addMapping()">➕ Ajouter</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <button class="btn btn-primary btn-large btn-block" style="margin-top:20px" (click)="saveComposite()">💾 Enregistrer la Composite</button>
+      </div>
+    </div>
+
+    <!-- Colonne Liste -->
+    <div class="list-pane">
+      <div class="card">
+        <h3>Composites existantes ({{ composites().length }})</h3>
+        
+        <div class="composite-list">
+          @for (c of composites(); track c.nom) {
+          <div class="composite-item">
+            <h4>{{ c.nom }}</h4>
+            <div class="text-muted">{{ c.description || 'Pas de description' }}</div>
+            <div class="composite-details">
+              <strong>Faces : </strong>
+              @for (se of c.sous_entites; track $index) {
+                <span class="badge">{{ se }}</span>
+              }
+            </div>
+            <div class="composite-details">
+              <strong>Champs ({{(c.mapping | keyvalue).length}}) : </strong>
+              @for (m of c.mapping | keyvalue; track m.key) {
+                <span class="champ-badge">{{m.key}}</span>
+              }
+            </div>
+          </div>
+          }
+          @if (composites().length === 0) {
+            <p class="text-muted text-center" style="padding: 20px;">Aucune composite créée pour le moment.</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

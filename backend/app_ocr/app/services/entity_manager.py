@@ -8,7 +8,9 @@ from io import BytesIO
 class EntityManager:
     def __init__(self, entities_dir="entities"):
         self.entities_dir = entities_dir
+        self.composites_dir = os.path.join(entities_dir, "composites")
         os.makedirs(entities_dir, exist_ok=True)
+        os.makedirs(self.composites_dir, exist_ok=True)
     
     def sauvegarder_entite(self, nom_entite, zones, image_path=None, description="", cadre_reference=None):
         """Sauvegarde une entité avec ses zones et cadre de référence optionnel"""
@@ -54,6 +56,45 @@ class EntityManager:
                 if entite_data:
                     entites.append(entite_data)
         return entites
+    
+    # --- GESTION DES ENTITÉS COMPOSITES ---
+    
+    def sauvegarder_composite(self, nom_composite, sous_entites, mapping, description=""):
+        """Sauvegarde une entité composite (fusion recto/verso par ex)"""
+        composite_data = {
+            'nom': nom_composite,
+            'description': description,
+            'date_creation': datetime.now().isoformat(),
+            'sous_entites': sous_entites,  # Liste des noms d'entités attendues (ex: ['cni_recto', 'cni_verso'])
+            'mapping': mapping  # Dictionnaire: { 'champ_final': {'entite': 'cni_recto', 'zone': 'nom_famille'} }
+        }
+        
+        fichier = os.path.join(self.composites_dir, f"{nom_composite}.json")
+        with open(fichier, 'w', encoding='utf-8') as f:
+            json.dump(composite_data, f, ensure_ascii=False, indent=2)
+        return fichier
+
+    def charger_composite(self, nom_composite):
+        """Charge une entité composite"""
+        fichier = os.path.join(self.composites_dir, f"{nom_composite}.json")
+        if os.path.exists(fichier):
+            with open(fichier, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return None
+
+    def lister_composites(self):
+        """Liste toutes les entités composites"""
+        composites = []
+        if not os.path.exists(self.composites_dir):
+            return []
+            
+        for fichier in os.listdir(self.composites_dir):
+            if fichier.endswith('.json'):
+                nom = fichier[:-5]
+                data = self.charger_composite(nom)
+                if data:
+                    composites.append(data)
+        return composites
     
     def _get_image_dimensions(self, image_path):
         """Récupère les dimensions d'une image"""

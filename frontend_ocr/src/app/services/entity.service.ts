@@ -135,4 +135,20 @@ export class EntityService {
             etiquettes
         });
     }
+
+    // --- COMPOSITES ---
+
+    listerComposites(): Observable<any[]> {
+        return this.http.get<any[]>(`${this.apiUrl}/composites`);
+    }
+
+    getComposite(nom: string): Observable<any> {
+        return this.http.get<any>(`${this.apiUrl}/composite/${nom}`);
+    }
+
+    sauvegarderComposite(nom: string, sous_entites: string[], mapping: any, description: string = ''): Observable<{success: boolean}> {
+        return this.http.post<{success: boolean}>(`${this.apiUrl}/entite-composite`, {
+            nom, sous_entites, mapping, description
+        });
+    }
 }

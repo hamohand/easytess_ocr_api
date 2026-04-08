@@ -1,0 +1,100 @@
+<div class="matching-container">
+  <div class="header">
+    <h2>🔗 Appariement (Recto/Verso)</h2>
+    <p>Uploadez les différentes parties d'un document composite pour générer le résultat unifié final.</p>
+  </div>
+
+  @if (message()) {
+  <div class="alert" [class.alert-error]="message()!.isError" [class.alert-success]="!message()!.isError">
+    {{ message()!.text }}
+  </div>
+  }
+
+  <div class="card">
+    <label>1. Choisir le document composite (ex: Carte d'identité Recto/Verso) :</label>
+    <select #compSelect class="form-control composite-select" (change)="onCompositeChange(compSelect.value)">
+      <option value="">-- Sélectionner une structure --</option>
+      @for (c of composites(); track c.nom) {
+        <option [value]="c.nom">{{ c.nom }}</option>
+      }
+    </select>
+  </div>
+
+  @if (selectedComposite()) {
+  <div class="faces-grid">
+    @for (face of selectedComposite().sous_entites; track face) {
+      <div class="card face-card">
+        <h3>Face: {{ face }}</h3>
+        
+        <div class="file-input-wrapper">
+          <input type="file" [id]="'file_' + face" accept="image/*,.pdf" (change)="onFileSelected($event, face)">
+          <label [for]="'file_' + face" class="btn btn-outline" style="display:block; text-align:center">
+            📁 Choisir image pour {{ face }}
+          </label>
+        </div>
+
+        @if (faceInputs()[face]?.previewUrl) {
+          <div class="preview-box">
+             <img [src]="faceInputs()[face]?.previewUrl" alt="Aperçu">
+          </div>
+          
+          @if (!faceInputs()[face]?.analyseResult) {
+             <button class="btn btn-primary btn-block" (click)="analyserFace(face)" [disabled]="faceInputs()[face]?.isAnalyzing">
+               @if (faceInputs()[face]?.isAnalyzing) {
+                 <span class="spinner"></span> Analyse OCR en cours...
+               } @else {
+                 🔍 Analyser cette face
+               }
+             </button>
+          } @else {
+             <div class="badge statut-ok" style="display:block; text-align:center; margin-top: 10px;">✅ OCR Terminé</div>
+          }
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Actions globales -->
+  <div class="global-actions card text-center">
+     <button class="btn btn-success btn-large" (click)="analyserTout()">⚡ Tout Analyser</button>
+  </div>
+  }
+
+  <!-- Final Result -->
+  @if (finalResult()) {
+  <div class="card final-result-card">
+    <div style="display:flex; justify-content:space-between; align-items:center">
+       <h2>📄 Document Final : {{ finalResult().nom_composite }}</h2>
+       <button class="btn btn-primary" (click)="exportResult()">💾 Exporter JSON Final</button>
+    </div>
+    
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Attribut Final</th>
+          <th>Valeur Extraite</th>
+          <th>Fiabilité</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of finalResult().donnees | keyvalue; track item.key) {
+        <tr>
+          <td><strong>{{ item.key }}</strong></td>
+          <td>{{ item.value.texte_final || item.value.texte_auto || '(vide)' }}</td>
+          <td>
+            @if (item.value.statut) {
+               <span class="badge" 
+                     [class.statut-ok]="item.value.statut === 'ok' || item.value.statut === 'corrigé'"
+                     [class.statut-warning]="item.value.statut === 'faible_confiance'"
+                     [class.statut-error]="item.value.statut === 'non trouvé' || item.value.statut === 'echec'">
+                 {{ item.value.statut }} ({{ (item.value.confiance_auto * 100) | number:'1.0-0' }}%)
+               </span>
+            }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+</div>

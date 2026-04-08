@@ -1,0 +1,125 @@
+.matching-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h2 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px var(--shadow-color);
+}
+
+.faces-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.face-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.face-card h3 {
+    text-align: center;
+    color: #444;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.file-input-wrapper input[type="file"] {
+    display: none;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+}
+
+.btn-large {
+    font-size: 1.1em;
+    padding: 12px 24px;
+}
+
+.preview-box {
+    margin: 15px 0;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border: 1px dashed #ccc;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.preview-box img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.final-result-card {
+    border: 2px solid var(--primary-color);
+    background: #f0fbff;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background: white;
+}
+
+.table th, .table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+    background: #eee;
+    color: #333;
+}
+
+.statut-ok { background-color: #e6ffed; color: #008a20; border: 1px solid #008a20; }
+.statut-warning { background-color: #fff8c5; color: #a67c00; border: 1px solid #a67c00; }
+.statut-error { background-color: #ffebe9; color: #cf222e; border: 1px solid #cf222e; }
+
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

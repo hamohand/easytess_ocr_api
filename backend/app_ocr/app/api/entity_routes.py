@@ -453,3 +453,33 @@ def supprimer_entite(nom):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# --- ROUTES COMPOSITES ---
+
+@entity_bp.route('/api/composites', methods=['GET'])
+def lister_composites():
+    composites = get_manager().lister_composites()
+    return jsonify(composites)
+
+@entity_bp.route('/api/composite/<nom>', methods=['GET'])
+def get_composite(nom):
+    comp = get_manager().charger_composite(nom)
+    if comp:
+        return jsonify(comp)
+    return jsonify({'error': 'Not found'}), 404
+
+@entity_bp.route('/api/entite-composite', methods=['POST'])
+def save_composite():
+    data = request.json
+    nom = data.get('nom')
+    sous_entites = data.get('sous_entites', [])
+    mapping = data.get('mapping', {})
+    description = data.get('description', "")
+    
+    if not nom or not sous_entites:
+        return jsonify({'error': 'Données invalides'}), 400
+        
+    try:
+        get_manager().sauvegarder_composite(nom, sous_entites, mapping, description)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
