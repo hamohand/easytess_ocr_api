@@ -1172,25 +1172,10 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
         x_ref_px = x_ref_min
         y_ref_px = y_ref_min
 
-        logger.info(f"📐 CADRE DÉTECTÉ (brut): Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
-
-        # ─── TRANSLATION RIGIDE (algorithme utilisateur) ───
-        # Utiliser la DÉTECTION pour la POSITION du cadre (l'origine),
-        # mais FORCER les DIMENSIONS du cadre de référence.
-        # Ainsi les zones gardent un mapping identique à l'image de référence
-        # tout en se positionnant correctement sur le document réel.
-        ref_dims = cadre_reference.get('dimensions_absolues') if cadre_reference else None
-        if ref_dims:
-            ref_w = ref_dims.get('largeur')
-            ref_h = ref_dims.get('hauteur')
-            if ref_w and ref_h and ref_w > 0 and ref_h > 0:
-                logger.info(f"📐 Dimensions RÉFÉRENCE: {ref_w:.0f}x{ref_h:.0f}px → FORCÉES sur le cadre (translation rigide)")
-                detected_w_px = ref_w
-                detected_h_px = ref_h
-            else:
-                logger.info(f"📐 Dimensions référence invalides → on garde les dimensions détectées")
-        else:
-            logger.info(f"📐 Pas de dimensions_absolues → on garde les dimensions détectées ({detected_w_px:.0f}x{detected_h_px:.0f}px)")
+        # ─── Dimensions du Cadre ───
+        # On garde les dimensions détectées (via OCR, templates ou Formules)
+        # pour respecter le redimensionnement et les ancres de Droite/Bas.
+        logger.info(f"📐 CADRE DÉTECTÉ: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
 
         # Clamp pour ne pas dépasser l'image
         if x_ref_px + detected_w_px > img_w:
