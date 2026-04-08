@@ -1,0 +1,27 @@
+{
+  "nom": "cni_complete_exemple",
+  "description": "Exemple de Carte Nationale Recto-Verso",
+  "date_creation": "2026-04-08T18:00:00",
+  "sous_entites": [
+    "cni_algo_recto_01",
+    "cni_verso_imaginaire"
+  ],
+  "mapping": {
+    "Document_Type": {
+      "entite": "cni_algo_recto_01",
+      "zone": "type_document"
+    },
+    "Nom_Famille": {
+      "entite": "cni_algo_recto_01",
+      "zone": "nom"
+    },
+    "Prenom": {
+      "entite": "cni_algo_recto_01",
+      "zone": "prenoms"
+    },
+    "Bande_MRZ": {
+      "entite": "cni_verso_imaginaire",
+      "zone": "mrz"
+    }
+  }
+}
