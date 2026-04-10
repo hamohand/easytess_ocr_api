@@ -20,9 +20,9 @@
     </select>
   </div>
 
-  @if (selectedComposite()) {
+  @if (selectedComposite(); as selectedComp) {
   <div class="faces-grid">
-    @for (face of selectedComposite().sous_entites; track face) {
+    @for (face of selectedComp.sous_entites; track face) {
       <div class="card face-card">
         <h3>Face: {{ face }}</h3>
         
@@ -61,10 +61,10 @@
   }
 
   <!-- Final Result -->
-  @if (finalResult()) {
+  @if (finalResult(); as finalRes) {
   <div class="card final-result-card">
     <div style="display:flex; justify-content:space-between; align-items:center">
-       <h2>📄 Document Final : {{ finalResult().nom_composite }}</h2>
+       <h2>📄 Document Final : {{ finalRes.nom_composite }}</h2>
        <button class="btn btn-primary" (click)="exportResult()">💾 Exporter JSON Final</button>
     </div>
     
@@ -77,7 +77,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (item of finalResult().donnees | keyvalue; track item.key) {
+        @for (item of finalRes.donnees | keyvalue; track item.key) {
         <tr>
           <td><strong>{{ item.key }}</strong></td>
           <td>{{ item.value.texte_final || item.value.texte_auto || '(vide)' }}</td>
@@ -87,7 +87,7 @@
                      [class.statut-ok]="item.value.statut === 'ok' || item.value.statut === 'corrigé'"
                      [class.statut-warning]="item.value.statut === 'faible_confiance'"
                      [class.statut-error]="item.value.statut === 'non trouvé' || item.value.statut === 'echec'">
-                 {{ item.value.statut }} ({{ (item.value.confiance_auto * 100) | number:'1.0-0' }}%)
+                 {{ item.value.statut }} ({{ ((item.value.confiance_auto || 0) * 100) | number:'1.0-0' }}%)
                </span>
             }
           </td>

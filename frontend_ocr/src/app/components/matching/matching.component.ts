@@ -5,6 +5,20 @@ import { EntityService } from '../../services/entity.service';
 import { OcrService } from '../../services/ocr.service';
 import { FileService } from '../../services/file.service';
 
+export interface MatchingDataResult {
+  texte_final?: string | null;
+  texte_auto?: string | null;
+  statut?: string | null;
+  confiance_auto?: number | null;
+  [key: string]: any;
+}
+
+export interface MatchingResult {
+  nom_composite: string;
+  date_fusion: Date;
+  donnees: Record<string, MatchingDataResult>;
+}
+
 @Component({
   selector: 'app-matching',
   standalone: true,
@@ -25,7 +39,7 @@ export class MatchingComponent implements OnInit {
   faceInputs = signal<Record<string, any>>({});
   
   // Résultat fusionné
-  finalResult = signal<any | null>(null);
+  finalResult = signal<MatchingResult | null>(null);
   
   message = signal<{text: string, isError: boolean} | null>(null);
   globalAnalyzing = signal(false);
