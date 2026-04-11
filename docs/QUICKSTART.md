@@ -51,6 +51,17 @@ npm install
 ng serve # Tourne sur un autre port (ex: 4200 ou config angular.json)
 ```
 
+### 3. Portail Global (Page Informative)
+
+Un hub central ("Portal") est disponible pour lister et rediriger la navigation vers les différentes interfaces. **Attention : il a un rôle uniquement informatif** et de redirection web. Il ne démarre pas physiquement les processus sous-jacents (vous devez toujours lancer les backends/frontends manuellement via les étapes ci-dessus).
+
+```bash
+# Pour lancer la page du portail :
+cd portal
+npm install
+npm run dev # Accessible sur http://localhost:5173
+```
+
 ---
 
 ## 🎯 Utilisation

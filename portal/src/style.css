@@ -1,0 +1,244 @@
+:root {
+  --bg-color: #0b1120;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  
+  --primary-accent: #3b82f6;
+  --primary-glow: rgba(59, 130, 246, 0.4);
+  
+  --secondary-accent: #10b981;
+  --secondary-glow: rgba(16, 185, 129, 0.4);
+  
+  --card-bg: rgba(30, 41, 59, 0.7);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --card-hover-border: rgba(255, 255, 255, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Background Animated Blobs */
+.background-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  overflow: hidden;
+  filter: blur(80px);
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.6;
+  animation: float 10s infinite ease-in-out alternate;
+}
+
+.blob-1 {
+  width: 400px;
+  height: 400px;
+  background-color: var(--primary-accent);
+  top: -10%;
+  left: -5%;
+  animation-delay: 0s;
+}
+
+.blob-2 {
+  width: 450px;
+  height: 450px;
+  background-color: var(--secondary-accent);
+  bottom: -10%;
+  right: -5%;
+  animation-delay: -5s;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(50px, 30px) scale(1.1); }
+}
+
+/* Layout Container */
+.container {
+  width: 100%;
+  max-width: 1000px;
+  padding: 2rem;
+  z-index: 10;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 4rem;
+  animation: fadeInDown 1s ease-out;
+}
+
+.logo {
+  font-size: 3.5rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(to right, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glow {
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  font-weight: 300;
+}
+
+/* Cards Grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  animation: fadeInUp 1s ease-out 0.2s both;
+}
+
+/* Glassmorphism Card */
+.module-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  background: var(--card-bg);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: 24px;
+  padding: 2.5rem;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Card pseudo-element for hover glow */
+.module-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: radial-gradient(circle at 50% 0%, var(--primary-glow) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.module-card.secondary-card::before {
+  background: radial-gradient(circle at 50% 0%, var(--secondary-glow) 0%, transparent 60%);
+}
+
+.module-card:hover {
+  transform: translateY(-10px);
+  border-color: var(--card-hover-border);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.module-card:hover::before {
+  opacity: 1;
+}
+
+/* Content positioning over the background */
+.card-icon, .card-content, .card-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.card-icon {
+  margin-bottom: 1.5rem;
+  color: var(--primary-accent);
+  transition: transform 0.3s ease;
+}
+.secondary-card .card-icon {
+  color: var(--secondary-accent);
+}
+
+.module-card:hover .card-icon {
+  transform: scale(1.1);
+}
+
+.card-content h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.card-content p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 1rem;
+  flex-grow: 1;
+  margin-bottom: 2rem;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.port-badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.launch-text {
+  font-weight: 600;
+  color: #fff;
+  transition: transform 0.2s ease;
+}
+
+.module-card:hover .launch-text {
+  transform: translateX(5px);
+  color: var(--primary-accent);
+}
+.secondary-card:hover .launch-text {
+  color: var(--secondary-accent);
+}
+
+/* Animations */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .logo { font-size: 2.5rem; }
+  .cards-grid { grid-template-columns: 1fr; }
+}

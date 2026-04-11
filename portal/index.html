@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EasyTess - Portail Global</title>
+    <!-- Modern Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app">
+      <div class="background-elements">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+      </div>
+      
+      <main class="container">
+        <header class="header">
+          <h1 class="logo glow">EasyTess Core</h1>
+          <p class="subtitle">Sélectionnez le module à lancer</p>
+        </header>
+
+        <section class="cards-grid">
+          <!-- OCR App -->
+          <a href="http://localhost:4100" target="_blank" rel="noopener noreferrer" class="module-card">
+            <div class="card-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="currentColor"><path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm0-80h640v-480H160v480Zm120-120h320v-80H280v80Zm0-120h400v-80H280v80Zm-120 320v-480 480Z"/></svg>
+            </div>
+            <div class="card-content">
+              <h2>EasyTess OCR</h2>
+              <p>Reconnaissance optique de caractères ciblée (Zones), analyse des documents, création d'entités, fridas et appariement (recto-verso).</p>
+            </div>
+            <div class="card-footer">
+              <span class="port-badge">Port 4100</span>
+              <span class="launch-text">Lancer &rarr;</span>
+            </div>
+          </a>
+
+          <!-- Document Extractor -->
+          <a href="http://localhost:4200" target="_blank" rel="noopener noreferrer" class="module-card secondary-card">
+            <div class="card-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="currentColor"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
+            </div>
+            <div class="card-content">
+              <h2>Document Extractor</h2>
+              <p>Extraction intelligente depuis des PDF complets ou des fichiers Word, détection de tableaux, de textes, et conversion PDF vers DOCX.</p>
+            </div>
+            <div class="card-footer">
+              <span class="port-badge">Port 4200</span>
+              <span class="launch-text">Lancer &rarr;</span>
+            </div>
+          </a>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
