@@ -138,7 +138,7 @@
   "cadre_reference": {
     "haut": {
       "labels": [
-        "regex:\\d{9}"
+        "regex:(?<!\\d)\\d{9}(?!\\d)"
       ],
       "position_base": [
         0.39441930618401205,
@@ -155,7 +155,7 @@
     },
     "gauche": {
       "labels": [
-        "regex:\\d{9}"
+        "regex:(?<!\\d)\\d{9}(?!\\d)"
       ],
       "position_base": [
         0.3137254901960784,
