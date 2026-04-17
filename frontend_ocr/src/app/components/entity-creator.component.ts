@@ -290,12 +290,10 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
             return; // Arrêter ici, pas de dessin de zone
         }
 
-        // Si on est en mode "Traçage cadre utile", "Sélection de template ancre" ou !editMode()
-        if (this.isTracingCadreUtile() || this.anchorTemplateSelection() || !this.editMode()) {
-            this.startX = mouseX;
-            this.startY = mouseY;
-            this.isDrawing.set(true);
-        }
+        // Enregistre les coordonnées de départ (toujours autorisé)
+        this.startX = mouseX;
+        this.startY = mouseY;
+        this.isDrawing.set(true);
     }
 
     onMouseMove(event: MouseEvent) {
@@ -947,6 +945,7 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                 str.split(',').map(l => l.trim()).filter(l => l.length > 0);
 
             cadre_reference = {
+                image_base_dimensions: { width: this.imgWidth, height: this.imgHeight },
                 haut: {
                     labels: parseLabels(this.cadreHaut().labels_str),
                     position_base: this.cadreHaut().position_base,

@@ -370,6 +370,21 @@ def sauvegarder_entite():
             current_app.logger.info(f"✅ Image de référence copiée vers: {permanent_image_path}")
         image_path = permanent_image_path
 
+    # Extraction du DPI s'il est disponible pour robustesse de mise à l'échelle OCR
+    if cadre_reference and image_path and os.path.exists(image_path):
+        from PIL import Image
+        try:
+            with Image.open(image_path) as img:
+                dpi = img.info.get('dpi')
+                if dpi:
+                    if 'image_base_dimensions' not in cadre_reference:
+                        cadre_reference['image_base_dimensions'] = {}
+                    cadre_reference['image_base_dimensions']['dpi_x'] = float(dpi[0])
+                    cadre_reference['image_base_dimensions']['dpi_y'] = float(dpi[1])
+                    current_app.logger.info(f"📊 Extraction DPI de la référence: {dpi}")
+        except Exception as e:
+            current_app.logger.warning(f"Impossible d'extraire le DPI de l'image de référence: {e}")
+
     # NOUVEAU: Extraire et sauvegarder les templates d'ancres image si définis
     if cadre_reference and image_path and os.path.exists(image_path):
         templates_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'templates', nom)

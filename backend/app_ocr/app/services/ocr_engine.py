@@ -778,7 +778,7 @@ def evaluer_formule_securisee(formule, variables):
         return None
 
 
-def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
+def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims, img_info=None):
     """
     Résout les formules de fallback pour les ancres non détectées.
     Effectue jusqu'à 4 passes pour gérer les dépendances croisées.
@@ -817,9 +817,17 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
     ref_w = ref_base_dims.get('width', img_w)
     ref_h = ref_base_dims.get('height', img_h)
     
-    # Ratios: sur l'image de référence, RH=RW=1
-    ratio_h = ref_h / img_h if img_h > 0 else 1.0
-    ratio_w = ref_w / img_w if img_w > 0 else 1.0
+    img_info = img_info or {}
+    ref_dpi_x = ref_base_dims.get('dpi_x')
+    ref_dpi_y = ref_base_dims.get('dpi_y')
+    current_dpi = img_info.get('dpi')
+    
+    scale_x = img_w / ref_w if ref_w > 0 else 1.0
+    scale_y = img_h / ref_h if ref_h > 0 else 1.0
+
+    # Ratios (legacy)
+    ratio_h = scale_y
+    ratio_w = scale_x
     
     if ref_base_dims and (abs(ratio_h - 1.0) > 0.01 or abs(ratio_w - 1.0) > 0.01):
         logger.info(f"🧮 Ratios de mise à l'échelle: RH={ratio_h:.3f} (ref={ref_h}px, cur={img_h}px), RW={ratio_w:.3f} (ref={ref_w}px, cur={img_w}px)")
@@ -846,8 +854,8 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
         
         dimensions_absolues = cadre_reference.get('dimensions_absolues', {})
         variables_manuel = {
-            'largeur': dimensions_absolues.get('largeur', 0),
-            'hauteur': dimensions_absolues.get('hauteur', 0),
+            'largeur': dimensions_absolues.get('largeur', 0) * scale_x,
+            'hauteur': dimensions_absolues.get('hauteur', 0) * scale_y,
         }
         
         for ancre_id, info in ANCRE_MAP.items():
@@ -1027,6 +1035,13 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
     largeur_cadre_rel = None
     hauteur_cadre_rel = None
     img_dims = None
+    img_info = {}
+    try:
+        with Image.open(image_path) as img:
+            img_dims = img.size
+            img_info = img.info
+    except:
+        pass
     
     # 0. NOUVEAU: Si un cadre de référence est défini, détecter les étiquettes et transformer les coordonnées
     # Support des clés: haut, droite, gauche_bas (Nouveau) OU origine, largeur, hauteur (Legacy)
@@ -1114,7 +1129,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 logger.warning(f"⚠️ Certaines étiquettes non trouvées: {', '.join(etiquettes_manquantes)}")
             
             # Résolution par formule (Algorithmique + Manuel en pixels)
-            nb_resolues = resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims)
+            nb_resolues = resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims, img_info)
             if nb_resolues > 0:
                 logger.info(f"🧮 {nb_resolues} ancre(s) résolue(s) par formule algorithmique/manuelle")
         else:

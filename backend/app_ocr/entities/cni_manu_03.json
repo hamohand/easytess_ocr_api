@@ -1,84 +1,90 @@
 {
   "nom": "cni_manu_03",
   "description": "",
-  "date_creation": "2026-04-17T17:30:31.583698",
+  "date_creation": "2026-04-17T20:19:24.730532",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_manu_03\\reference.jpeg",
   "zones": [
     {
       "coords": [
-        -0.002897452607809895,
-        0.18656349944871486,
-        0.25356984351567613,
-        0.2543945116499718
+        0.6829193966174004,
+        0.6768974541993814,
+        0.9149779064452231,
+        0.7593385676897455
       ],
-      "id": 1776433634094,
-      "lang": "ara+fra",
-      "nom": "num",
-      "preprocess": "auto",
-      "type": "text"
-    },
-    {
-      "coords": [
-        0.7059013799314652,
-        0.6270700562232666,
-        0.9179365104330861,
-        0.7235684180070847
-      ],
-      "id": 1776433714131,
+      "id": 1776449529895,
       "lang": "ara",
       "nom": "nom",
       "preprocess": "arabic_textured",
       "type": "text"
+    },
+    {
+      "coords": [
+        0.5427396007923205,
+        0.3279800142755175,
+        0.8069480420539388,
+        0.407684986914109
+      ],
+      "id": 1776449545531,
+      "lang": "fra",
+      "nom": "date1",
+      "preprocess": "latin_simple",
+      "type": "text"
     }
   ],
   "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 663,
+      "height": 433,
+      "dpi_x": 200.0,
+      "dpi_y": 200.0
+    },
     "haut": {
       "labels": [],
       "position_base": [
-        0.9469,
-        0.047
+        0.9491,
+        0.0447
       ],
       "template_coords": [
-        0.9205,
-        0.047,
-        0.9733,
-        0.0932
+        0.9235,
+        0.0447,
+        0.9748,
+        0.0955
       ],
       "template_path": "templates/cni_manu_03/haut_template.png"
     },
     "droite": {
       "labels": [],
       "position_base": [
-        0.9739,
-        0.0714
+        0.9733,
+        0.0723
       ],
       "template_coords": [
-        0.9271,
-        0.053,
-        0.9739,
-        0.0899
+        0.9235,
+        0.0562,
+        0.9733,
+        0.0885
       ],
       "template_path": "templates/cni_manu_03/droite_template.png"
     },
     "gauche": {
       "labels": [],
       "position_base": [
-        0.31221719457013575,
-        0.5
+        0.317,
+        0.5908
       ],
       "manuel_formula": "D - largeur"
     },
     "bas": {
       "labels": [],
       "position_base": [
-        0.5,
-        0.9330254041570438
+        0.1648,
+        0.8853
       ],
       "manuel_formula": "H + hauteur"
     },
     "dimensions_absolues": {
-      "largeur": 438,
-      "hauteur": 384,
+      "largeur": 435,
+      "hauteur": 364,
       "angle": 0
     }
   },
