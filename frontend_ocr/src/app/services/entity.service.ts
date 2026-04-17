@@ -112,15 +112,16 @@ export class EntityService {
     detecterEtiquettes(
         filename: string,
         etiquettes: {
-            haut?: { labels?: string[], template_coords?: number[] } | string[];
-            droite?: { labels?: string[], template_coords?: number[] } | string[];
-            gauche?: { labels?: string[], template_coords?: number[] } | string[];
-            bas?: { labels?: string[], template_coords?: number[] } | string[];
-            gauche_bas?: string[]; // Legacy (toujours string[])
+            haut?: { labels?: string[], template_coords?: number[], fallback_formula?: string, manuel_formula?: string } | string[];
+            droite?: { labels?: string[], template_coords?: number[], fallback_formula?: string, manuel_formula?: string } | string[];
+            gauche?: { labels?: string[], template_coords?: number[], fallback_formula?: string, manuel_formula?: string } | string[];
+            bas?: { labels?: string[], template_coords?: number[], fallback_formula?: string, manuel_formula?: string } | string[];
+            gauche_bas?: string[]; // Legacy
             origine?: string[]; // Legacy
             largeur?: string[]; // Legacy
             hauteur?: string[]; // Legacy
-        }
+        },
+        dimensions_absolues?: { largeur: number; hauteur: number; angle: number }
     ): Observable<{
         success: boolean;
         toutes_trouvees: boolean;
@@ -132,7 +133,8 @@ export class EntityService {
     }> {
         return this.http.post<any>(`${this.apiUrl}/detecter-etiquettes`, {
             filename,
-            etiquettes
+            etiquettes,
+            dimensions_absolues
         });
     }
 

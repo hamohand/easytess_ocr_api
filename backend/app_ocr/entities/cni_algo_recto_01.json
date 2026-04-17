@@ -1,7 +1,7 @@
 {
   "nom": "cni_algo_recto_01",
   "description": "",
-  "date_creation": "2026-04-08T16:29:01.553913",
+  "date_creation": "2026-04-17T03:53:43.693026",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_algo_recto_01\\reference.jpeg",
   "zones": [
     {
@@ -122,17 +122,17 @@
       "type": "text"
     },
     {
-      "id": 1775658517750,
-      "nom": "nin",
-      "type": "text",
-      "lang": "fra",
-      "preprocess": "latin_simple",
       "coords": [
         0.2690862887084804,
         0.4460365853658538,
         0.7189189736208874,
         0.5230205391527601
-      ]
+      ],
+      "id": 1775658517750,
+      "lang": "fra",
+      "nom": "nin",
+      "preprocess": "latin_simple",
+      "type": "text"
     }
   ],
   "cadre_reference": {
@@ -175,8 +175,8 @@
       "height": 433
     },
     "dimensions_absolues": {
-      "largeur": 0,
-      "hauteur": 0,
+      "largeur": 443,
+      "hauteur": 311,
       "angle": 0
     }
   },

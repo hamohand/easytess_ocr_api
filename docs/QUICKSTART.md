@@ -25,7 +25,8 @@ pip install -e .
 # Ensuite, pour l'OCR, installez l'environnement et lancez l'API
 cd ../app_ocr
 pip install -r requirements.txt
-python run.py
+//python run.py
+..\..\.venv\Scripts\python.exe run.py
 
 # (Optionnel) Pour l'extraction de documents (Tableaux, PDF -> Word), dans un autre terminal :
 cd ../app_extractor

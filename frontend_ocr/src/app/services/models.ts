@@ -15,6 +15,7 @@ export interface EtiquetteReference {
     labels: string[];                        // Textes à chercher (ex: ["PASSPORT", "PASSEPORT"])
     position_base: [number, number];         // Position (x, y) sur l'image de base (0-1)
     template_coords?: [number, number, number, number]; // NEW: Image template region [x1, y1, x2, y2] relative (0-1)
+    manuel_formula?: string;                 // NEW: Formule de secours experte en pixels (ex: "G + largeur")
     fallback_formula?: string;               // Formule de secours si OCR+Image échouent (ex: "H + 0.40")
                                              // Variables: H (haut.y), B (bas.y), G (gauche.x), D (droite.x)
 }

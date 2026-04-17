@@ -1,0 +1,96 @@
+{
+  "nom": "cni_manu_03",
+  "description": "",
+  "date_creation": "2026-04-17T15:49:11.449692",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_manu_03\\reference.jpeg",
+  "zones": [
+    {
+      "id": 1776433634094,
+      "nom": "num",
+      "type": "text",
+      "lang": "ara+fra",
+      "preprocess": "auto",
+      "coords": [
+        -0.002897452607809895,
+        0.17578659693821852,
+        0.25356984351567613,
+        0.2440786103576557
+      ]
+    },
+    {
+      "id": 1776433714131,
+      "nom": "nom",
+      "type": "text",
+      "lang": "ara",
+      "preprocess": "arabic_textured",
+      "coords": [
+        0.7059013799314651,
+        0.6192869769316685,
+        0.9179365104330861,
+        0.7164411723952604
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.9483,
+        0.0576
+      ],
+      "template_coords": [
+        0.9226,
+        0.0576,
+        0.9739,
+        0.0899
+      ],
+      "template_path": "templates/cni_manu_03/haut_template.png"
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        0.9739,
+        0.0714
+      ],
+      "template_coords": [
+        0.9271,
+        0.053,
+        0.9739,
+        0.0899
+      ],
+      "template_path": "templates/cni_manu_03/droite_template.png"
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0.31221719457013575,
+        0.5
+      ],
+      "manuel_formula": "D - largeur"
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0.9376443418013857
+      ],
+      "manuel_formula": "H + hauteur"
+    },
+    "image_base_dimensions": {
+      "width": 663,
+      "height": 433
+    },
+    "dimensions_absolues": {
+      "largeur": 438,
+      "hauteur": 382,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 663,
+      "height": 433
+    }
+  }
+}

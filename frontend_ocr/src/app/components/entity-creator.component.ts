@@ -18,7 +18,9 @@ interface EtiquetteDrawing {
     template_preview?: string; // Base64 preview of the template
     detected_bbox?: [number, number, number, number]; // Bounding box detected by OCR/Image matching
     fallback_formula?: string; // Formule de secours (ex: "H + 0.40")
+    manuel_formula?: string;   // Formule manuelle en pixels (ex: "G + largeur") - NOUVEAU
 }
+
 
 @Component({
     selector: 'app-entity-creator',
@@ -66,6 +68,10 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         angle: number;      // Angle (toujours 0 pour AABB)
     } | null>(null);
 
+    // NOUVEAU: Dimensions manuelles du cadre du contenu utile (en pixels)
+    // Définies par l'utilisateur sur l'image de référence
+    manualContentDims = signal<{ largeur: number; hauteur: number }>({ largeur: 0, hauteur: 0 });
+
     // Signals - Gestion des entités existantes
     entites = signal<Entite[]>([]);
     isLoadingEntites = signal<boolean>(false);
@@ -78,6 +84,9 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
 
     // NOUVEAU: Mode de sélection d'image template pour ancre
     anchorTemplateSelection = signal<'haut' | 'droite' | 'gauche' | 'bas' | null>(null);
+
+    // 🆕 Mode traçage visuel global
+    isTracingCadreUtile = signal<boolean>(false);
 
     // Canvas state
     private ctx: CanvasRenderingContext2D | null = null;
@@ -232,6 +241,17 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         return false;
     }
 
+    /**
+     * 🆕 Active le mode de traçage pour mesurer le cadre utile global
+     */
+    startCadreUtileTracing() {
+        this.isTracingCadreUtile.set(true);
+        if (this.canvasRef) {
+            this.canvasRef.nativeElement.style.cursor = 'crosshair';
+        }
+        this.successMessage.set('📏 Dessinez un rectangle représentant tout le document pour mesurer sa taille exacte.');
+    }
+
     onMouseDown(event: MouseEvent) {
         if (!this.img) return;
 
@@ -270,9 +290,12 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
             return; // Arrêter ici, pas de dessin de zone
         }
 
-        this.startX = mouseX;
-        this.startY = mouseY;
-        this.isDrawing.set(true);
+        // Si on est en mode "Traçage cadre utile", "Sélection de template ancre" ou !editMode()
+        if (this.isTracingCadreUtile() || this.anchorTemplateSelection() || !this.editMode()) {
+            this.startX = mouseX;
+            this.startY = mouseY;
+            this.isDrawing.set(true);
+        }
     }
 
     onMouseMove(event: MouseEvent) {
@@ -390,6 +413,22 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                 this.currentRect = null;
                 this.redrawCanvas();
                 return; // Ne pas créer de zone OCR
+            }
+
+            // 🆕 Mode Traçage du Cadre Utile (mesure de dimensions)
+            if (this.isTracingCadreUtile()) {
+                const widthPx = Math.round((finalCoords[2] - finalCoords[0]) * this.imgWidth);
+                const heightPx = Math.round((finalCoords[3] - finalCoords[1]) * this.imgHeight);
+                this.manualContentDims.set({ largeur: widthPx, hauteur: heightPx });
+                
+                this.isTracingCadreUtile.set(false);
+                canvas.style.cursor = 'default';
+                this.successMessage.set(`✅ Dimensions mesurées : ${widthPx}px × ${heightPx}px`);
+                setTimeout(() => this.successMessage.set(''), 4000);
+                
+                this.currentRect = null;
+                this.redrawCanvas();
+                return;
             }
 
             // Mode normal: créer une zone OCR
@@ -624,31 +663,37 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
             let labels: string[] = [];
             let template_coords: [number, number, number, number] | undefined = undefined;
             let fallback_formula: string | undefined = undefined;
+            let manuel_formula: string | undefined = undefined;
 
             if (type === 'haut') {
                 labels = this.cadreHaut().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreHaut().template_coords;
                 fallback_formula = this.cadreHaut().fallback_formula;
+                manuel_formula = this.cadreHaut().manuel_formula;
             } else if (type === 'droite') {
                 labels = this.cadreDroite().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreDroite().template_coords;
                 fallback_formula = this.cadreDroite().fallback_formula;
+                manuel_formula = this.cadreDroite().manuel_formula;
             } else if (type === 'gauche') {
                 labels = this.cadreGauche().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreGauche().template_coords;
                 fallback_formula = this.cadreGauche().fallback_formula;
+                manuel_formula = this.cadreGauche().manuel_formula;
             } else if (type === 'bas') {
                 labels = this.cadreBas().labels_str.split(',').map(s => s.trim()).filter(s => s);
                 template_coords = this.cadreBas().template_coords;
                 fallback_formula = this.cadreBas().fallback_formula;
+                manuel_formula = this.cadreBas().manuel_formula;
             }
 
             // Inclure si labels, template OU formule de secours
-            if (labels.length > 0 || template_coords || fallback_formula) {
+            if (labels.length > 0 || template_coords || fallback_formula || manuel_formula) {
                 etiquettes[type] = {
                     labels: labels,
                     template_coords: template_coords,
-                    ...(fallback_formula && { fallback_formula: fallback_formula })
+                    ...(fallback_formula && { fallback_formula: fallback_formula }),
+                    ...(manuel_formula && { manuel_formula: manuel_formula })
                 };
             }
         };
@@ -673,10 +718,20 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
             return;
         }
 
+        const dimensions_absolues = {
+            largeur: this.manualContentDims().largeur > 0
+                ? this.manualContentDims().largeur
+                : (this.cadreParams()?.largeur_px ?? 0),
+            hauteur: this.manualContentDims().hauteur > 0
+                ? this.manualContentDims().hauteur
+                : (this.cadreParams()?.hauteur_px ?? 0),
+            angle: this.cadreParams()?.angle ?? 0
+        };
+
         this.isDetecting.set(true);
         this.errorMessage.set('');
 
-        this.entityService.detecterEtiquettes(filename, etiquettes).subscribe({
+        this.entityService.detecterEtiquettes(filename, etiquettes, dimensions_absolues).subscribe({
             next: (result) => {
                 this.isDetecting.set(false);
 
@@ -728,6 +783,11 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                     updateAnchor('droite', this.cadreDroite, [1, 0.5]);
                     updateAnchor('gauche', this.cadreGauche, [0, 0.5]);
                     updateAnchor('bas', this.cadreBas, [0.5, 1]);
+
+                    // NOUVEAU: Le mode "DIMENSIONS ABSOLUES GLOBALES" (qui forçait DROITE = GAUCHE + largeur et BAS = HAUT + hauteur) 
+                    // a été supprimé au profit des formules "Manuel" (par ancre).
+                    // Le recalcul des positions en pixels n'est plus fait ici en frontend.
+                    // Il est fait entièrement par le moteur de formules dans ocr_engine.py.
 
                     // Recalculer les paramètres
                     this.calculerParametresCadre();
@@ -886,33 +946,41 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                     labels: parseLabels(this.cadreHaut().labels_str),
                     position_base: this.cadreHaut().position_base,
                     ...(this.cadreHaut().template_coords && { template_coords: this.cadreHaut().template_coords }),
-                    ...(this.cadreHaut().fallback_formula && { fallback_formula: this.cadreHaut().fallback_formula })
+                    ...(this.cadreHaut().fallback_formula && { fallback_formula: this.cadreHaut().fallback_formula }),
+                    ...(this.cadreHaut().manuel_formula && { manuel_formula: this.cadreHaut().manuel_formula })
                 },
                 droite: {
                     labels: parseLabels(this.cadreDroite().labels_str),
                     position_base: this.cadreDroite().position_base,
                     ...(this.cadreDroite().template_coords && { template_coords: this.cadreDroite().template_coords }),
-                    ...(this.cadreDroite().fallback_formula && { fallback_formula: this.cadreDroite().fallback_formula })
+                    ...(this.cadreDroite().fallback_formula && { fallback_formula: this.cadreDroite().fallback_formula }),
+                    ...(this.cadreDroite().manuel_formula && { manuel_formula: this.cadreDroite().manuel_formula })
                 },
                 gauche: {
                     labels: parseLabels(this.cadreGauche().labels_str),
                     position_base: this.cadreGauche().position_base,
                     ...(this.cadreGauche().template_coords && { template_coords: this.cadreGauche().template_coords }),
-                    ...(this.cadreGauche().fallback_formula && { fallback_formula: this.cadreGauche().fallback_formula })
+                    ...(this.cadreGauche().fallback_formula && { fallback_formula: this.cadreGauche().fallback_formula }),
+                    ...(this.cadreGauche().manuel_formula && { manuel_formula: this.cadreGauche().manuel_formula })
                 },
                 bas: {
                     labels: parseLabels(this.cadreBas().labels_str),
                     position_base: this.cadreBas().position_base,
                     ...(this.cadreBas().template_coords && { template_coords: this.cadreBas().template_coords }),
-                    ...(this.cadreBas().fallback_formula && { fallback_formula: this.cadreBas().fallback_formula })
+                    ...(this.cadreBas().fallback_formula && { fallback_formula: this.cadreBas().fallback_formula }),
+                    ...(this.cadreBas().manuel_formula && { manuel_formula: this.cadreBas().manuel_formula })
                 },
                 image_base_dimensions: {
                     width: this.imgWidth,
                     height: this.imgHeight
                 },
                 dimensions_absolues: {
-                    largeur: this.cadreParams()?.largeur_px ?? 0,
-                    hauteur: this.cadreParams()?.hauteur_px ?? 0,
+                    largeur: this.manualContentDims().largeur > 0
+                        ? this.manualContentDims().largeur
+                        : (this.cadreParams()?.largeur_px ?? 0),
+                    hauteur: this.manualContentDims().hauteur > 0
+                        ? this.manualContentDims().hauteur
+                        : (this.cadreParams()?.hauteur_px ?? 0),
                     angle: this.cadreParams()?.angle ?? 0
                 }
             };
@@ -954,6 +1022,7 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         this.cadreGauche.set({ labels_str: '', position_base: [0, 0.5] });
         this.cadreBas.set({ labels_str: '', position_base: [0.5, 1] });
         this.cadreParams.set(null);
+        this.manualContentDims.set({ largeur: 0, hauteur: 0 });
         this.currentZoneName.set('');
         this.successMessage.set('');
         this.errorMessage.set('');
@@ -1009,13 +1078,15 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                             labels_str: cadre.haut.labels.join(', '),
                             position_base: cadre.haut.position_base,
                             template_coords: cadre.haut.template_coords,
-                            fallback_formula: cadre.haut.fallback_formula || ''
+                            fallback_formula: cadre.haut.fallback_formula || '',
+                            manuel_formula: cadre.haut.manuel_formula || ''
                         });
                         this.cadreDroite.set({
                             labels_str: cadre.droite.labels.join(', '),
                             position_base: cadre.droite.position_base,
                             template_coords: cadre.droite.template_coords,
-                            fallback_formula: cadre.droite.fallback_formula || ''
+                            fallback_formula: cadre.droite.fallback_formula || '',
+                            manuel_formula: cadre.droite.manuel_formula || ''
                         });
 
                         // Migration automatique: ancien format 3-étiquettes (GAUCHE-BAS) → nouveau 4-étiquettes (GAUCHE + BAS)
@@ -1025,13 +1096,15 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                                 labels_str: cadre.gauche.labels.join(', '),
                                 position_base: cadre.gauche.position_base,
                                 template_coords: cadre.gauche.template_coords,
-                                fallback_formula: cadre.gauche.fallback_formula || ''
+                                fallback_formula: cadre.gauche.fallback_formula || '',
+                                manuel_formula: cadre.gauche.manuel_formula || ''
                             });
                             this.cadreBas.set({
                                 labels_str: cadre.bas.labels.join(', '),
                                 position_base: cadre.bas.position_base,
                                 template_coords: cadre.bas.template_coords,
-                                fallback_formula: cadre.bas.fallback_formula || ''
+                                fallback_formula: cadre.bas.fallback_formula || '',
+                                manuel_formula: cadre.bas.manuel_formula || ''
                             });
                             console.log('✅ Cadre 4-anchors chargé');
                         } else if (cadre.gauche_bas) {
@@ -1078,6 +1151,13 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                     // Calculer les paramètres du cadre
                     this.calculerParametresCadre();
                     console.log('📐 Cadre de référence chargé:', this.cadreParams());
+
+                    // Charger les dimensions manuelles du contenu si définies
+                    const dims = cadre.dimensions_absolues;
+                    if (dims && (dims.largeur > 0 || dims.hauteur > 0)) {
+                        this.manualContentDims.set({ largeur: dims.largeur || 0, hauteur: dims.hauteur || 0 });
+                        console.log('📏 Dimensions contenu chargées:', this.manualContentDims());
+                    }
                 } else {
                     // Réinitialiser les signaux du cadre (4 anchors)
                     this.cadreHaut.set({ labels_str: '', position_base: [0.5, 0] });

@@ -1020,3 +1020,81 @@ canvas.drawing {
     color: #ce93d8;
     font-style: italic;
 }
+
+/* ==================== CONTENT FRAME DIMENSIONS ==================== */
+
+.content-dims-section {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(76, 175, 80, 0.10));
+    border-radius: 8px;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.content-dims-section h4 {
+    color: #2e7d32;
+    margin: 0 0 0.5rem 0;
+    font-size: 0.95rem;
+}
+
+.dims-help {
+    font-size: 0.8rem;
+    color: #558b2f;
+    margin: 0 0 0.75rem 0;
+    line-height: 1.4;
+}
+
+.dims-inputs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.dim-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dim-field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #37474f;
+    white-space: nowrap;
+}
+
+.dim-input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #a5d6a7;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-family: 'Consolas', monospace;
+    background: white;
+    transition: all 0.2s;
+}
+
+.dim-input:focus {
+    outline: none;
+    border-color: #4caf50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+.dims-status {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+}
+
+.dims-status.success {
+    background: rgba(76, 175, 80, 0.15);
+    color: #2e7d32;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.dims-status.warning {
+    background: rgba(255, 152, 0, 0.1);
+    color: #e65100;
+    border: 1px solid rgba(255, 152, 0, 0.3);
+}

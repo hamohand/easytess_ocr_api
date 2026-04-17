@@ -839,46 +839,72 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
     
     for passe in range(MAX_PASSES):
         # 1. Construire les variables à partir des ancres DÉJÀ détectées
-        variables = {
+        variables_legacy = {
             'RH': ratio_h,  # Ratio hauteur (ref/current)
             'RW': ratio_w,  # Ratio largeur (ref/current)
         }
+        
+        dimensions_absolues = cadre_reference.get('dimensions_absolues', {})
+        variables_manuel = {
+            'largeur': dimensions_absolues.get('largeur', 0),
+            'hauteur': dimensions_absolues.get('hauteur', 0),
+        }
+        
         for ancre_id, info in ANCRE_MAP.items():
             det = etiquettes_detectees.get(ancre_id, {})
             ref_data = cadre_reference.get(ancre_id, {})
             pos_base = ref_data.get('position_base')
             
+            val = None
             if det.get('found'):
-                detected_val = det.get(info['axis'], 0)
+                # Utiliser les bords de la bbox si disponible, sinon le centre
+                if 'x_min' in det:
+                    if ancre_id == 'haut':
+                        detected_val = det.get('y_min', det.get('y', 0))
+                    elif ancre_id == 'bas':
+                        detected_val = det.get('y_max', det.get('y', 0))
+                    elif ancre_id == 'gauche':
+                        detected_val = det.get('x_min', det.get('x', 0))
+                    elif ancre_id == 'droite':
+                        detected_val = det.get('x_max', det.get('x', 0))
+                    else:
+                        detected_val = det.get(info['axis'], 0)
+                else:
+                    detected_val = det.get(info['axis'], 0)
+                    
                 source = det.get('source', 'ocr')
                 
                 # Validation de cohérence pour les détections par template image
-                # Les templates sont sujets aux faux positifs → vérifier contre position_base
                 if source == 'image_template' and pos_base and len(pos_base) > info['pos_idx']:
                     expected_val = pos_base[info['pos_idx']]
                     ecart = abs(detected_val - expected_val)
                     
                     if ecart > TOLERANCE:
-                        # Faux positif probable → utiliser position_base
                         logger.warning(
                             f"🧮⚠️ Ancre '{ancre_id}' détectée par template à {info['var']}={detected_val:.4f} "
                             f"mais position_base={expected_val:.4f} (écart={ecart:.4f} > seuil={TOLERANCE}). "
                             f"Faux positif probable → utilisation de position_base pour les formules."
                         )
-                        variables[info['var']] = expected_val
-                        continue
-                
-                # Position détectée fiable
-                variables[info['var']] = detected_val
+                        val = expected_val
+                    else:
+                        val = detected_val
+                else:
+                    val = detected_val
             else:
                 # Ancre non détectée → fallback vers position_base
-                # Permet aux formules de fonctionner même si l'ancre parente
-                # n'est pas visuellement détectée sur l'image d'analyse.
                 if pos_base and len(pos_base) > info['pos_idx']:
-                    variables[info['var']] = pos_base[info['pos_idx']]
-                    logger.debug(f"🧮 Variable {info['var']} = {pos_base[info['pos_idx']]:.4f} (depuis position_base, ancre '{ancre_id}' non détectée)")
+                    val = pos_base[info['pos_idx']]
+                    logger.debug(f"🧮 Variable {info['var']} = {val:.4f} (depuis position_base, ancre '{ancre_id}' non détectée)")
+            
+            if val is not None:
+                variables_legacy[info['var']] = val
+                # Pour les formules manuelles, les variables de position sont en pixels de l'image courante
+                if info['axis'] == 'x':
+                    variables_manuel[info['var']] = val * img_w
+                else:
+                    variables_manuel[info['var']] = val * img_h
         
-        logger.debug(f"🧮 Passe {passe + 1}/{MAX_PASSES}: Variables disponibles = {variables}")
+        logger.debug(f"🧮 Passe {passe + 1}/{MAX_PASSES}: Variables = Legacy: {variables_legacy}, Manuel(px): {variables_manuel}")
         
         # 2. Essayer de résoudre les ancres manquantes
         resolues_cette_passe = 0
@@ -890,12 +916,32 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
             
             # Récupérer la formule depuis cadre_reference
             ref_data = cadre_reference.get(ancre_id, {})
-            formule = ref_data.get('fallback_formula', '').strip()
-            if not formule:
+            manuel_formula = (ref_data.get('manuel_formula') or '').strip()
+            legacy_formula = (ref_data.get('fallback_formula') or '').strip()
+            
+            if not manuel_formula and not legacy_formula:
                 continue  # Pas de formule configurée
             
-            # Évaluer la formule
-            result = evaluer_formule_securisee(formule, variables)
+            result = None
+            formule_utilisee = ""
+            
+            # Évaluer la formule manuelle (pixels) en priorité
+            if manuel_formula:
+                result_px = evaluer_formule_securisee(manuel_formula, variables_manuel)
+                if result_px is not None:
+                    # Convertir le pixel calculé en coordonnée relative
+                    if info['axis'] == 'x':
+                        result = result_px / img_w if img_w > 0 else 0.5
+                    else:
+                        result = result_px / img_h if img_h > 0 else 0.5
+                    formule_utilisee = manuel_formula
+            
+            # Sinon évaluer la formule legacy (relatif avec ratio)
+            if result is None and legacy_formula:
+                result = evaluer_formule_securisee(legacy_formula, variables_legacy)
+                if result is not None:
+                    formule_utilisee = legacy_formula
+            
             if result is None:
                 continue  # Pas assez de variables pour résoudre, on réessaiera
             
@@ -909,7 +955,7 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
                 # Ancre horizontale (GAUCHE, DROITE)
                 etiquettes_detectees[ancre_id] = {
                     'found': True,
-                    'text': f'[Formule: {formule} = {result:.4f}]',
+                    'text': f'[Formule: {formule_utilisee} = {result:.4f}]',
                     'x': result,
                     'y': pos_base[1] if len(pos_base) > 1 else 0.5,
                     'x_min': result,
@@ -917,14 +963,14 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
                     'x_max': result,
                     'y_max': pos_base[1] if len(pos_base) > 1 else 0.5,
                     'source': 'formula',
-                    'formula': formule,
+                    'formula': formule_utilisee,
                     'formula_result': result
                 }
             else:
                 # Ancre verticale (HAUT, BAS)
                 etiquettes_detectees[ancre_id] = {
                     'found': True,
-                    'text': f'[Formule: {formule} = {result:.4f}]',
+                    'text': f'[Formule: {formule_utilisee} = {result:.4f}]',
                     'x': pos_base[0] if len(pos_base) > 0 else 0.5,
                     'y': result,
                     'x_min': pos_base[0] if len(pos_base) > 0 else 0.5,
@@ -932,13 +978,13 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
                     'x_max': pos_base[0] if len(pos_base) > 0 else 0.5,
                     'y_max': result,
                     'source': 'formula',
-                    'formula': formule,
+                    'formula': formule_utilisee,
                     'formula_result': result
                 }
             
             resolues_cette_passe += 1
             total_resolues += 1
-            logger.info(f"🧮 Ancre '{ancre_id.upper()}' résolue par formule: {formule} = {result:.4f} (passe {passe + 1})")
+            logger.info(f"🧮 Ancre '{ancre_id.upper()}' résolue par formule: {formule_utilisee} = {result:.4f} (passe {passe + 1})")
         
         if resolues_cette_passe == 0:
             if passe > 0:
@@ -1059,12 +1105,10 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                 etiquettes_manquantes = [k for k, v in etiquettes_detectees.items() if not v.get('found')]
                 logger.warning(f"⚠️ Certaines étiquettes non trouvées: {', '.join(etiquettes_manquantes)}")
             
-            # 🆕 TOUJOURS tenter la résolution par formule algorithmique
-            # (même si toutes les ancres visuelles sont trouvées, car certaines ancres
-            # peuvent être définies UNIQUEMENT par formule, sans labels ni template)
+            # Résolution par formule (Algorithmique + Manuel en pixels)
             nb_resolues = resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims)
             if nb_resolues > 0:
-                logger.info(f"🧮 {nb_resolues} ancre(s) résolue(s) par formule algorithmique")
+                logger.info(f"🧮 {nb_resolues} ancre(s) résolue(s) par formule algorithmique/manuelle")
         else:
             # Pas d'ancres configurées
             try:

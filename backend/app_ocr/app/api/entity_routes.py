@@ -237,10 +237,18 @@ def detecter_etiquettes():
         # 🆕 Résoudre les ancres par formule algorithmique
         # Construire un cadre_reference temporaire pour la résolution de formules
         cadre_ref_for_formulas = {}
+        
+        # Injecter explicitement les dimensions_absolues (largeur, hauteur) depuis la requête
+        data = request.json or {}
+        if data.get('dimensions_absolues'):
+            cadre_ref_for_formulas['dimensions_absolues'] = data.get('dimensions_absolues')
+            current_app.logger.info(f"📏 dimensions_absolues (largeur/hauteur) passées aux formules: {data.get('dimensions_absolues')}")
+
         for etiquette_id, config in etiquettes.items():
-            if isinstance(config, dict) and config.get('fallback_formula'):
+            if isinstance(config, dict) and (config.get('fallback_formula') or config.get('manuel_formula')):
                 cadre_ref_for_formulas[etiquette_id] = {
-                    'fallback_formula': config['fallback_formula'],
+                    'fallback_formula': config.get('fallback_formula'),
+                    'manuel_formula': config.get('manuel_formula'),
                     'position_base': [0.5, 0.5]  # Position par défaut
                 }
         
