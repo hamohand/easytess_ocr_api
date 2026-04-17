@@ -810,9 +810,9 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
     MAX_PASSES = 4
     total_resolues = 0
     
-    # Calculer les ratios de mise à l'échelle (référence / courant)
-    # Si les dimensions de référence sont disponibles, RH et RW permettent
-    # d'écrire des formules indépendantes de la taille de l'image.
+    # Calcul des ratios RH/RW pour formules legacy (ex: "H * RH + 0.5").
+    # Si image_base_dimensions est absent (entités récentes avec formules manuelles),
+    # on utilise RH=RW=1 (pas de mise à l'échelle → formules manuelles en pixels absolus).
     ref_base_dims = cadre_reference.get('image_base_dimensions', {})
     ref_w = ref_base_dims.get('width', img_w)
     ref_h = ref_base_dims.get('height', img_h)
@@ -821,7 +821,7 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
     ratio_h = ref_h / img_h if img_h > 0 else 1.0
     ratio_w = ref_w / img_w if img_w > 0 else 1.0
     
-    if abs(ratio_h - 1.0) > 0.01 or abs(ratio_w - 1.0) > 0.01:
+    if ref_base_dims and (abs(ratio_h - 1.0) > 0.01 or abs(ratio_w - 1.0) > 0.01):
         logger.info(f"🧮 Ratios de mise à l'échelle: RH={ratio_h:.3f} (ref={ref_h}px, cur={img_h}px), RW={ratio_w:.3f} (ref={ref_w}px, cur={img_w}px)")
     
     # Mapping: ancre_id -> (axe de la variable, variable_name, edge_key_for_position)
@@ -949,7 +949,14 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
             result = max(0.0, min(1.0, result))
             
             # Injecter le résultat comme ancre détectée
-            pos_base = ref_data.get('position_base', [0.5, 0.5])
+            # Défauts de position Y/X si position_base absent:
+            # HAUT/BAS → centre Y = 0.5 ;  GAUCHE → bord gauche = 0 ; DROITE → bord droit = 1
+            pos_base = ref_data.get('position_base')
+            default_x = 0.0 if ancre_id == 'gauche' else (1.0 if ancre_id == 'droite' else 0.5)
+            default_y = 0.0 if ancre_id == 'haut' else (1.0 if ancre_id == 'bas' else 0.5)
+            
+            pb_x = pos_base[0] if pos_base and len(pos_base) > 0 else default_x
+            pb_y = pos_base[1] if pos_base and len(pos_base) > 1 else default_y
             
             if info['axis'] == 'x':
                 # Ancre horizontale (GAUCHE, DROITE)
@@ -957,11 +964,11 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
                     'found': True,
                     'text': f'[Formule: {formule_utilisee} = {result:.4f}]',
                     'x': result,
-                    'y': pos_base[1] if len(pos_base) > 1 else 0.5,
+                    'y': pb_y,
                     'x_min': result,
-                    'y_min': pos_base[1] if len(pos_base) > 1 else 0.5,
+                    'y_min': pb_y,
                     'x_max': result,
-                    'y_max': pos_base[1] if len(pos_base) > 1 else 0.5,
+                    'y_max': pb_y,
                     'source': 'formula',
                     'formula': formule_utilisee,
                     'formula_result': result
@@ -971,16 +978,17 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims):
                 etiquettes_detectees[ancre_id] = {
                     'found': True,
                     'text': f'[Formule: {formule_utilisee} = {result:.4f}]',
-                    'x': pos_base[0] if len(pos_base) > 0 else 0.5,
+                    'x': pb_x,
                     'y': result,
-                    'x_min': pos_base[0] if len(pos_base) > 0 else 0.5,
+                    'x_min': pb_x,
                     'y_min': result,
-                    'x_max': pos_base[0] if len(pos_base) > 0 else 0.5,
+                    'x_max': pb_x,
                     'y_max': result,
                     'source': 'formula',
                     'formula': formule_utilisee,
                     'formula_result': result
                 }
+
             
             resolues_cette_passe += 1
             total_resolues += 1

@@ -970,10 +970,6 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                     ...(this.cadreBas().fallback_formula && { fallback_formula: this.cadreBas().fallback_formula }),
                     ...(this.cadreBas().manuel_formula && { manuel_formula: this.cadreBas().manuel_formula })
                 },
-                image_base_dimensions: {
-                    width: this.imgWidth,
-                    height: this.imgHeight
-                },
                 dimensions_absolues: {
                     largeur: this.manualContentDims().largeur > 0
                         ? this.manualContentDims().largeur
