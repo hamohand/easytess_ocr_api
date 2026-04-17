@@ -1,48 +1,48 @@
 {
   "nom": "cni_manu_03",
   "description": "",
-  "date_creation": "2026-04-17T15:49:11.449692",
+  "date_creation": "2026-04-17T17:30:31.583698",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_manu_03\\reference.jpeg",
   "zones": [
     {
-      "id": 1776433634094,
-      "nom": "num",
-      "type": "text",
-      "lang": "ara+fra",
-      "preprocess": "auto",
       "coords": [
         -0.002897452607809895,
-        0.17578659693821852,
+        0.18656349944871486,
         0.25356984351567613,
-        0.2440786103576557
-      ]
+        0.2543945116499718
+      ],
+      "id": 1776433634094,
+      "lang": "ara+fra",
+      "nom": "num",
+      "preprocess": "auto",
+      "type": "text"
     },
     {
-      "id": 1776433714131,
-      "nom": "nom",
-      "type": "text",
-      "lang": "ara",
-      "preprocess": "arabic_textured",
       "coords": [
-        0.7059013799314651,
-        0.6192869769316685,
+        0.7059013799314652,
+        0.6270700562232666,
         0.9179365104330861,
-        0.7164411723952604
-      ]
+        0.7235684180070847
+      ],
+      "id": 1776433714131,
+      "lang": "ara",
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "text"
     }
   ],
   "cadre_reference": {
     "haut": {
       "labels": [],
       "position_base": [
-        0.9483,
-        0.0576
+        0.9469,
+        0.047
       ],
       "template_coords": [
-        0.9226,
-        0.0576,
-        0.9739,
-        0.0899
+        0.9205,
+        0.047,
+        0.9733,
+        0.0932
       ],
       "template_path": "templates/cni_manu_03/haut_template.png"
     },
@@ -72,17 +72,13 @@
       "labels": [],
       "position_base": [
         0.5,
-        0.9376443418013857
+        0.9330254041570438
       ],
       "manuel_formula": "H + hauteur"
     },
-    "image_base_dimensions": {
-      "width": 663,
-      "height": 433
-    },
     "dimensions_absolues": {
       "largeur": 438,
-      "hauteur": 382,
+      "hauteur": 384,
       "angle": 0
     }
   },

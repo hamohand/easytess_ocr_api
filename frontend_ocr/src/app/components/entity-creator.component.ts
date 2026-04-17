@@ -160,7 +160,7 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
     loadImageOnCanvas(url: string) {
         console.log('Chargement image depuis URL:', url);
         const img = new Image();
-        // img.crossOrigin = "Anonymous"; // Désactivé pour éviter les erreurs CORS sur les fichiers statiques
+        img.crossOrigin = "Anonymous"; // Re-activé pour éviter le blocage 'Tainted canvas' dans toDataURL
 
         img.onload = () => {
             this.img = img;
@@ -388,8 +388,13 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                     tempCanvas.height = sh;
                     const ctx = tempCanvas.getContext('2d');
                     if (ctx) {
-                        ctx.drawImage(this.img, sx, sy, sw, sh, 0, 0, sw, sh);
-                        previewUrl = tempCanvas.toDataURL('image/png');
+                        try {
+                            ctx.drawImage(this.img, sx, sy, sw, sh, 0, 0, sw, sh);
+                            previewUrl = tempCanvas.toDataURL('image/png');
+                        } catch (e) {
+                            console.error("Impossible de générer l'aperçu (Image cross-origin / Canva tainted):", e);
+                            previewUrl = ''; // On continue sans la preview
+                        }
                     }
                 }
 
