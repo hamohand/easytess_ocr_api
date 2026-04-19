@@ -1,0 +1,76 @@
+{
+  "nom": "cni_visual_01",
+  "description": "essai",
+  "date_creation": "2026-04-19T03:27:09.453073",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_visual_01\\reference.jpeg",
+  "zones": [
+    {
+      "coords": [
+        0.5067045454545455,
+        0.624306,
+        0.906107,
+        0.7950339999999998
+      ],
+      "id": 1776560838535,
+      "lang": "ara",
+      "nom": "zone",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 663,
+      "height": 433,
+      "dpi_x": 200.0,
+      "dpi_y": 200.0
+    },
+    "haut": {
+      "labels": [
+        "regex:\\d{9}"
+      ],
+      "position_base": [
+        0.39441930618401205,
+        0.22401847575057737
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        0.9773755656108597,
+        0.5
+      ],
+      "manuel_formula": "G + largeur "
+    },
+    "gauche": {
+      "labels": [
+        "regex:\\d{9}"
+      ],
+      "position_base": [
+        0.3137254901960784,
+        0.24364896073903003
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0.9422632794457275
+      ],
+      "fallback_formula": "H + 336",
+      "manuel_formula": "H + hauteur"
+    },
+    "dimensions_absolues": {
+      "largeur": 440,
+      "hauteur": 311,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 1,
+    "image_dimensions": {
+      "width": 663,
+      "height": 433
+    }
+  }
+}

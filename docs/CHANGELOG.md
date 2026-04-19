@@ -2,6 +2,40 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [3.1.0] - 2026-04-18
+
+### 🎉 Outil d'optimisation des zones OCR
+
+#### Nouvel outil CLI : `test_zone_optimizer.py`
+- **Optimisation automatique** des coordonnées de zones d'entités pour maximiser la confiance OCR
+- **Descente de gradient discrétisée** en 2 passes (grossière ±15% / fine ±3%)
+- **Score composite** : `confiance_OCR × similarité_texte` pour une évaluation robuste
+- **Application automatique** : mise à jour du JSON de l'entité avec backup horodaté
+- **Interface CLI complète** avec `argparse` :
+  - `-e / --entite` : nom de l'entité
+  - `-z / --zone` : zone à optimiser (répétable)
+  - `-t / --texte` : texte attendu (vérité terrain)
+  - `-i / --image` : image de test personnalisée
+  - `--dry-run` : aperçu sans modification
+  - `--easyocr` : activer EasyOCR en plus de Tesseract
+
+#### Rapports générés
+- **Rapport HTML** visuel (glassmorphism, barres de progression, comparaison avant/après)
+- **Rapport JSON** détaillé dans `tests_output/`
+
+#### Résultats mesurés (entité `cni_algo_recto_001`)
+- **Zone 'nom'** (حمرون) : score 12% → **87.8%** (+75.7%) 🚀
+- **Zone 'prenom'** (محمد) : score 94% → **96%** (+2%)
+
+### 📚 Documentation
+- **README.md** : Nouvelle section "Optimisation des zones OCR" avec syntaxe et exemples CLI
+- **INDEX.md** : Ajout de l'entrée dans la navigation et le tableau résumé
+- **QUICKSTART.md** : Ajout du conseil d'optimisation des zones
+- **OCR_ENGINE.md** : Nouvelle section sur l'outil d'optimisation
+- **CHANGELOG.md** : Entrée v3.1.0
+
+---
+
 ## [3.0.0] - 2026-04-08
 
 ### 🎉 Scission en Micro-services
@@ -421,7 +455,7 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 ## Versions futures prévues
 
-### [3.1.0] - À venir
+### [3.2.0] - À venir
 - [ ] Support complet de zbar pour tous les types de codes-barres
 - [ ] Support multi-pages pour PDF (OCR)
 - [ ] Paramétrage de la résolution dans l'interface

@@ -27,6 +27,9 @@ Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analy
 ### Moteur OCR & Algorithmes
 - **[OCR_ENGINE.md](./technical/OCR_ENGINE.md)** ⚙️ Pipeline hybride, AABB et Rognage physique
 
+### Optimisation des Zones
+- **[README.md — Section Optimisation](../README.md#-optimisation-des-zones-ocr)** 🎯 Outil CLI pour trouver la taille optimale des zones
+
 ### Analyse par Lot (Batch)
 - **[CLAUDE.md](../CLAUDE.md)** 🤖 Guide de développement pour agents IA (architecture, endpoints, gotchas)
 
@@ -57,6 +60,9 @@ Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analy
 #### Comprendre l'architecture
 → [README.md](../README.md) - Documentation complète
 
+#### Optimiser les coordonnées d'une zone OCR
+→ [README.md — Optimisation](../README.md#-optimisation-des-zones-ocr) - Outil CLI `test_zone_optimizer.py`
+
 #### Installer zbar pour les codes-barres
 → [ZBAR_INSTALLATION.md](./technical/ZBAR_INSTALLATION.md) - Installation zbar
 
@@ -77,6 +83,7 @@ Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analy
 | **PDF_SUPPORT.md** | Doc technique | Développeurs | Implémentation PDF |
 | **ZBAR_INSTALLATION.md** | Guide technique | Développeurs | Installation zbar |
 | **OCR_ENGINE.md** | Doc technique | Développeurs | Architecture & AABB |
+| **test_zone_optimizer.py** | Outil CLI | Développeurs | Optimisation des zones OCR |
 | **CLAUDE.md** | Guide dev | Agents IA | Architecture, endpoints, gotchas |
 | **CHANGELOG.md** | Historique | Tous | Versions et modifications |
 
@@ -118,6 +125,7 @@ Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analy
 - **QR Code** → guides/QRCODE_SUPPORT.md
 - **Codes-barres** → guides/QRCODE_SUPPORT.md, technical/ZBAR_INSTALLATION.md
 - **Entités** → ../README.md, guides/DEMO_SCENARIOS.md
+- **Optimisation zones** → ../README.md (section Optimisation), technical/OCR_ENGINE.md
 
 ### Installation
 - **Démarrage rapide** → QUICKSTART.md
@@ -148,7 +156,7 @@ Bienvenue dans la documentation du projet **EasyTess OCR** - Application d'analy
 
 ## 📅 Informations
 
-**Version actuelle** : 3.0.0  
+**Version actuelle** : 3.1.0  
 **Dernière mise à jour** : Avril 2026  
 **Statut** : ✅ Production Ready
 

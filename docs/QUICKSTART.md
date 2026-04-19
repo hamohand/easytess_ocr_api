@@ -224,12 +224,17 @@ pip install pypdfium2
 - Utiliser des coordonnées relatives (automatique)
 - Tester avec plusieurs documents du même type
 - Nommer les zones de façon explicite
+- **Optimiser les zones** : utiliser l'outil CLI pour trouver la taille optimale
+  ```bash
+  python test_zone_optimizer.py -e mon_entite -z nom -t "texte attendu"
+  ```
+  → Voir la [section Optimisation du README](../README.md#-optimisation-des-zones-ocr) pour plus de détails
 
 ---
 
 ## 🎊 Prêt à commencer !
 
-**Version actuelle** : 3.0.0 (Architecture Micro-services)  
+**Version actuelle** : 3.1.0 (Optimisation des zones OCR)  
 **Statut** : ✅ Production Ready
 
 Pour toute question, consultez la [documentation complète](../README.md) ou les [exemples pratiques](./guides/DEMO_SCENARIOS.md).

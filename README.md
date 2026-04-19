@@ -233,6 +233,53 @@ Le système utilise automatiquement :
 - Statistiques par moteur
 - Possibilité de correction manuelle
 
+## 🎯 Optimisation des zones OCR
+
+Un outil CLI permet de trouver automatiquement la **taille optimale** d'une zone d'entité pour maximiser la confiance OCR.
+
+**Fichier** : `backend/app_ocr/test_zone_optimizer.py`
+
+### Syntaxe
+
+```bash
+python test_zone_optimizer.py --entite <entité> --zone <zone> --texte "<texte attendu>"
+```
+
+### Options
+
+| Option | Court | Description |
+|--------|-------|-------------|
+| `--entite` | `-e` | Nom de l'entité |
+| `--zone` | `-z` | Nom de la zone à optimiser (répétable) |
+| `--texte` | `-t` | Texte attendu pour la zone (répétable, même ordre que `--zone`) |
+| `--image` | `-i` | Image de test (défaut: image de référence de l'entité) |
+| `--dry-run` | | Aperçu sans modifier le fichier entité |
+| `--easyocr` | | Activer EasyOCR en plus de Tesseract |
+
+### Exemples
+
+```bash
+# Optimiser une zone :
+python test_zone_optimizer.py -e cni_algo_recto_001 -z nom -t "حمرون"
+
+# Plusieurs zones :
+python test_zone_optimizer.py -e cni_algo_recto_001 -z nom -t "حمرون" -z prenom -t "محمد"
+
+# Avec une image personnalisée :
+python test_zone_optimizer.py -e pp_01 -z nom -t "HAMROUNE" -i scan.jpg
+
+# Mode aperçu (sans modifier l'entité) :
+python test_zone_optimizer.py -e cni_algo_recto_001 -z nom -t "حمرون" --dry-run
+```
+
+### Fonctionnement
+
+1. **Passe 1** (grossière) : balaye chaque bord ±15% avec un pas de 2%
+2. **Passe 2** (fine) : affine autour du meilleur résultat ±3% avec un pas de 0.5%
+3. **Score** : `confiance_OCR × similarité_texte` (maximisé)
+4. **Application** : met à jour automatiquement le JSON de l'entité (avec backup horodaté)
+5. **Rapport** : génère un rapport HTML et JSON dans `tests_output/`
+
 ## 📈 Améliorations futures
 
 - [x] ~~Batch processing (traitement par lot)~~ ✅ v2.4.0
@@ -255,5 +302,5 @@ Pour toute question ou suggestion, contactez l'équipe de développement.
 
 ---
 
-**Version** : 3.0.0 (Scission Monorepo des applications OCR et Extraction)  
+**Version** : 3.1.0 (Optimisation des zones OCR)  
 **Dernière mise à jour** : Avril 2026

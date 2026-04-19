@@ -1,0 +1,8 @@
+{
+  "_commentaire": "Fichier de vérité terrain pour l'optimiseur de zones OCR.",
+  "_usage": "python test_zone_optimizer.py -e cni_algo_recto_001 -f verite_exemple.json",
+  "_astuce": "Copiez ce fichier, renommez-le et adaptez les valeurs à votre entité.",
+  "nom": "حمرون",
+  "prenom": "محمد",
+  "date_naissance": "عزازقه"
+}

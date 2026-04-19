@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+
+# Application Specific Temp Files and Uploads
+backend/app_ocr/uploads_temp/
+backend/app_ocr/tests_output/
+backend/app_ocr/entities/entities_olds/
+
+# Test image output files scattered (e.g. optimizer test crops)
+backend/app_ocr/uploads/entities/*/_optimizer_crop_*.jpg
+backend/app_ocr/uploads/entities/*/_optimizer_original_*.jpg
+backend/app_ocr/tests_output/zones_annotees_*.jpg

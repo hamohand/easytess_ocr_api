@@ -84,3 +84,45 @@ Si les logs indiquent cette erreur, l'analyse bascule en mode "Image Complète" 
 ### Zones affichées en haut à gauche (0,0)
 Signifie que le re-mapping des coordonnées a échoué ou que le cadre n'a pas été trouvé.
 *   **Solution** : Sauvegardez à nouveau l'entité avec la dernière version de l'éditeur pour mettre à jour ses métadonnées.
+
+---
+
+## 🎯 Optimisation des Zones (`test_zone_optimizer.py`)
+
+Un outil CLI permet de trouver automatiquement les **coordonnées optimales** d'une zone pour maximiser la confiance OCR.
+
+### Problème résolu
+
+Les zones dessinées manuellement ne sont pas toujours optimales : trop larges (capture de bruit), trop étroites (texte tronqué), ou mal positionnées. Cet outil explore systématiquement les variations de chaque bord pour trouver le meilleur cadrage.
+
+### Algorithme : Descente de gradient discrétisée
+
+```
+Pour chaque zone à optimiser :
+    Pour chaque bord (x1, y1, x2, y2) :
+        PASSE 1 (grossière) : varier le bord ±15% avec un pas de 2%
+            → Garder la meilleure valeur
+        PASSE 2 (fine) : varier le bord ±3% avec un pas de 0.5%
+            → Affiner la meilleure valeur
+    → Score = confiance_OCR × similarité(texte_OCR, texte_attendu)
+```
+
+Les bords sont optimisés **séquentiellement** : le résultat du bord précédent alimente le suivant.
+
+### Utilisation
+
+```bash
+# Depuis backend/app_ocr/ :
+python test_zone_optimizer.py -e <entité> -z <zone> -t "<texte attendu>"
+
+# Exemple concret :
+python test_zone_optimizer.py -e cni_algo_recto_001 -z nom -t "حمرون"
+```
+
+### Sortie
+
+- Mise à jour automatique du JSON de l'entité (avec backup horodaté)
+- Rapport HTML visuel dans `tests_output/zone_optimization_report.html`
+- Rapport JSON dans `tests_output/zone_optimization_report.json`
+
+> **Conseil** : Utilisez `--dry-run` pour voir les résultats sans modifier l'entité.
