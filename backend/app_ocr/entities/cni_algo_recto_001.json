@@ -1,7 +1,7 @@
 {
   "nom": "cni_algo_recto_001",
   "description": "essai",
-  "date_creation": "2026-04-19T03:31:50.246488",
+  "date_creation": "2026-04-20T21:26:54.013963",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_algo_recto_001\\reference.jpeg",
   "zones": [
     {
@@ -94,6 +94,45 @@
       "nom": "sexe",
       "preprocess": "arabic_textured",
       "type": "text"
+    },
+    {
+      "coords": [
+        0.35074886363636365,
+        0.03965434083601286,
+        0.8052052272727273,
+        0.1489485530546624
+      ],
+      "id": 1776694428708,
+      "lang": "ara",
+      "nom": "delivre_par",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.551909090909091,
+        0.11678681672025724,
+        0.8052052272727273,
+        0.2294225080385852
+      ],
+      "id": 1776694447175,
+      "lang": "fra",
+      "nom": "delivre_le",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.551909090909091,
+        0.20366527331189713,
+        0.8074654545454546,
+        0.3355144694533763
+      ],
+      "id": 1776694472683,
+      "lang": "fra",
+      "nom": "expire_le",
+      "preprocess": "latin_simple",
+      "type": "text"
     }
   ],
   "cadre_reference": {
@@ -105,7 +144,7 @@
     },
     "haut": {
       "labels": [
-        "regex:\\d{9}"
+        "regex:(?<!\\d)\\d{9}(?!\\d)"
       ],
       "position_base": [
         0.39441930618401205,
@@ -122,7 +161,7 @@
     },
     "gauche": {
       "labels": [
-        "regex:\\d{9}"
+        "regex:(?<!\\d)\\d{9}(?!\\d)"
       ],
       "position_base": [
         0.3137254901960784,
@@ -145,7 +184,7 @@
     }
   },
   "metadata": {
-    "nombre_zones": 7,
+    "nombre_zones": 10,
     "image_dimensions": {
       "width": 663,
       "height": 433

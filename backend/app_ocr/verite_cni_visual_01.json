@@ -2,5 +2,7 @@
   "_commentaire": "Fichier de vérité terrain pour l'optimiseur de zones OCR.",
   "_usage": "python test_zone_optimizer.py -e cni_algo_recto_001 -f verite_exemple.json",
   "_astuce": "Copiez ce fichier, renommez-le et adaptez les valeurs à votre entité.",
-  "zone": "محمد"
+  "delivre_par": "ليل-وزارة الشوون الخارجية",
+  "delivre_le": "2019.07.09",
+  "expire_le": "2029.07.08"
 }
