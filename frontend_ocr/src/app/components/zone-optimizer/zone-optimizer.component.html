@@ -1,0 +1,132 @@
+<div class="optimizer-container">
+    <h2>🎯 Optimisation des Zones OCR</h2>
+    <p class="subtitle">Ajuste automatiquement les coordonnées d'une zone pour maximiser la confiance OCR.</p>
+
+    <!-- Alertes globales -->
+    <div *ngIf="errorMsg" class="alert alert-error">
+        <span class="icon">❌</span> {{ errorMsg }}
+    </div>
+    <div *ngIf="successMsg" class="alert alert-success">
+        <span class="icon">✅</span> {{ successMsg }}
+    </div>
+
+    <div class="setup-panel card">
+        <div class="form-group">
+            <label for="entitySelect">1. Choisir l'Entité</label>
+            <select id="entitySelect" [(ngModel)]="selectedEntityName" (change)="onEntitySelect()">
+                <option value="">-- Sélectionner --</option>
+                <option *ngFor="let e of entities" [value]="e.nom">{{ e.nom }}</option>
+            </select>
+        </div>
+
+        <div class="form-group" *ngIf="availableZones.length > 0">
+            <label for="zoneSelect">2. Choisir la Zone</label>
+            <select id="zoneSelect" [(ngModel)]="selectedZoneName" (change)="onZoneSelect()">
+                <option value="">-- Sélectionner --</option>
+                <option *ngFor="let z of availableZones" [value]="z.nom">{{ z.nom }}</option>
+            </select>
+        </div>
+
+        <div class="form-group" *ngIf="selectedZoneName">
+            <label for="truthTarget" class="truth-label">3. Texte Attendu (Vérité Terrain)</label>
+            <span class="hint">Texte exact que l'OCR devrait lire dans cette zone.</span>
+            <input type="text" id="truthTarget" [(ngModel)]="texteAttendu" placeholder="Ex: HAMROUNE" class="large-input" dir="auto" />
+        </div>
+
+        <div class="form-group" *ngIf="selectedZoneName">
+            <label for="stopThreshold" class="truth-label">4. Seuil d'arrêt anticipé (Optionnel)</label>
+            <span class="hint">Arrête l'optimisation dès que la confiance OCR atteint ce seuil (entre 0 et 1). Laissez vide pour ignorer.</span>
+            <input type="number" id="stopThreshold" [(ngModel)]="stopThreshold" placeholder="Ex: 0.95" min="0" max="1" step="0.05" class="large-input" />
+        </div>
+
+        <button class="btn btn-primary btn-large mt-3" 
+                [disabled]="!selectedEntityName || !selectedZoneName || !texteAttendu || isOptimizing"
+                (click)="runOptimization()">
+            <span *ngIf="!isOptimizing">🚀 Lancer l'Optimisation</span>
+            <span *ngIf="isOptimizing" class="spinner">⚙️ Optimisation en cours... (Environ 30-60s)</span>
+        </button>
+    </div>
+
+    <!-- RÉSULTATS -->
+    <div *ngIf="optimizationComplete && optimizationResult" class="result-panel card fade-in">
+        <div class="amelioration-banner" [ngClass]="{'positive': optimizationResult.amelioration > 0.01, 'negative': optimizationResult.amelioration < -0.01, 'neutral': optimizationResult.amelioration >= -0.01 && optimizationResult.amelioration <= 0.01}">
+            <h3>
+                <span *ngIf="optimizationResult.amelioration > 0.01">📈 Amélioration : +{{ (optimizationResult.amelioration * 100) | number:'1.0-1' }}%</span>
+                <span *ngIf="optimizationResult.amelioration < -0.01">📉 Dégradation : {{ (optimizationResult.amelioration * 100) | number:'1.0-1' }}%</span>
+                <span *ngIf="optimizationResult.amelioration >= -0.01 && optimizationResult.amelioration <= 0.01">↔️ Pas d'amélioration notable</span>
+            </h3>
+            <p>Durée : {{ optimizationResult.duree_secondes }}s | {{ optimizationResult.nb_evaluations }} évaluations OCR</p>
+        </div>
+
+        <div class="comparison-grid">
+            <!-- AVANT -->
+            <div class="compare-box initial">
+                <h4>❌ Avant (Original)</h4>
+                
+                <div class="metric">
+                    <span class="label">Texte OCR :</span>
+                    <strong class="value text-val">{{ optimizationResult.initial.texte || '(vide)' }}</strong>
+                </div>
+                
+                <div class="metric">
+                    <span class="label">Confiance :</span>
+                    <div class="progress-bar-wrap">
+                        <div class="progress-bar initial-bar" [style.width.%]="optimizationResult.initial.confiance * 100"></div>
+                        <span class="pct">{{ (optimizationResult.initial.confiance * 100) | number:'1.0-1' }}%</span>
+                    </div>
+                </div>
+
+                <div class="metric">
+                    <span class="label">Similarité :</span>
+                    <div class="progress-bar-wrap">
+                        <div class="progress-bar initial-bar" [style.width.%]="optimizationResult.initial.similarite * 100"></div>
+                        <span class="pct">{{ (optimizationResult.initial.similarite * 100) | number:'1.0-1' }}%</span>
+                    </div>
+                </div>
+
+                <div class="metric total-score">
+                    <span class="label">Score Composite :</span>
+                    <strong>{{ (optimizationResult.initial.score * 100) | number:'1.0-1' }}%</strong>
+                </div>
+            </div>
+
+            <!-- APRÈS -->
+            <div class="compare-box optimal">
+                <h4>✅ Après (Optimisé)</h4>
+                
+                <div class="metric">
+                    <span class="label">Texte OCR :</span>
+                    <strong class="value text-val">{{ optimizationResult.optimal.texte || '(vide)' }}</strong>
+                </div>
+                
+                <div class="metric">
+                    <span class="label">Confiance :</span>
+                    <div class="progress-bar-wrap">
+                        <div class="progress-bar optimal-bar" [style.width.%]="optimizationResult.optimal.confiance * 100"></div>
+                        <span class="pct">{{ (optimizationResult.optimal.confiance * 100) | number:'1.0-1' }}%</span>
+                    </div>
+                </div>
+
+                <div class="metric">
+                    <span class="label">Similarité :</span>
+                    <div class="progress-bar-wrap">
+                        <div class="progress-bar optimal-bar" [style.width.%]="optimizationResult.optimal.similarite * 100"></div>
+                        <span class="pct">{{ (optimizationResult.optimal.similarite * 100) | number:'1.0-1' }}%</span>
+                    </div>
+                </div>
+
+                <div class="metric total-score">
+                    <span class="label">Score Composite :</span>
+                    <strong>{{ (optimizationResult.optimal.score * 100) | number:'1.0-1' }}%</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions mt-3">
+            <button class="btn btn-success btn-large" (click)="applyOptimalCoordinates()" [disabled]="optimizationResult.amelioration <= 0">
+                💾 Appliquer les Nouvelles Coordonnées
+            </button>
+            <span *ngIf="optimizationResult.amelioration <= 0" class="hint ml-2">Le score n'a pas été amélioré, il est déconseillé d'appliquer.</span>
+        </div>
+    </div>
+</div>

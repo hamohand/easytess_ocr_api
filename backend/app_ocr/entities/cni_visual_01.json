@@ -1,47 +1,21 @@
 {
   "nom": "cni_visual_01",
   "description": "essai",
-  "date_creation": "2026-04-20T16:23:36.486971",
+  "date_creation": "2026-04-21T02:37:20.537705",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_visual_01\\reference.jpeg",
   "zones": [
     {
-      "coords": [
-        0.35074886363636365,
-        0.03965434083601286,
-        0.8052052272727273,
-        0.1489485530546624
-      ],
-      "id": 1776694428708,
-      "lang": "ara",
-      "nom": "delivre_par",
-      "preprocess": "arabic_textured",
-      "type": "text"
-    },
-    {
-      "coords": [
-        0.551909090909091,
-        0.11678681672025724,
-        0.8052052272727273,
-        0.2294225080385852
-      ],
-      "id": 1776694447175,
+      "id": 1776731799336,
+      "nom": "rh",
+      "type": "text",
       "lang": "fra",
-      "nom": "delivre_le",
       "preprocess": "latin_simple",
-      "type": "text"
-    },
-    {
       "coords": [
-        0.551909090909091,
-        0.20366527331189713,
-        0.8074654545454546,
-        0.3355144694533763
-      ],
-      "id": 1776694472683,
-      "lang": "fra",
-      "nom": "expire_le",
-      "preprocess": "latin_simple",
-      "type": "text"
+        0.11071272727272727,
+        0.8126498392282959,
+        0.20383409090909094,
+        0.9348922829581993
+      ]
     }
   ],
   "cadre_reference": {
@@ -93,7 +67,7 @@
     }
   },
   "metadata": {
-    "nombre_zones": 3,
+    "nombre_zones": 1,
     "image_dimensions": {
       "width": 663,
       "height": 433

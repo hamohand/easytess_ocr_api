@@ -22,10 +22,12 @@ interface EtiquetteDrawing {
 }
 
 
+import { ZoneOptimizerComponent } from './zone-optimizer/zone-optimizer.component';
+
 @Component({
     selector: 'app-entity-creator',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, ZoneOptimizerComponent],
     templateUrl: './entity-creator.component.html',
     styleUrls: ['./entity-creator.component.css']
 })
@@ -46,6 +48,13 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
     isSaving = signal<boolean>(false);
     errorMessage = signal<string>('');
     successMessage = signal<string>('');
+
+    // NOUVEAU: Onglets internes
+    activeSubTab = signal<'gestion' | 'optimizer'>('gestion');
+
+    setSubTab(tab: 'gestion' | 'optimizer') {
+        this.activeSubTab.set(tab);
+    }
 
     // NOUVEAU: Signaux pour Cadre de Référence (4 étiquettes)
     // HAUT : pour déterminer le point le plus haut (Y min)

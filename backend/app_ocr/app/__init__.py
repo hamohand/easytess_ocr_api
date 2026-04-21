@@ -28,10 +28,12 @@ def create_app(config_class=Config):
     from app.api.ocr_routes import ocr_bp
     from app.api.entity_routes import entity_bp
     from app.api.file_routes import file_bp
+    from app.api.optimizer_routes import optimizer_bp
     
     app.register_blueprint(ocr_bp)
     app.register_blueprint(entity_bp)
     app.register_blueprint(file_bp)
+    app.register_blueprint(optimizer_bp)
     
     @app.route('/')
     def index():
