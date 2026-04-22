@@ -1,0 +1,194 @@
+{
+  "nom": "cni_algo_recto_01_old",
+  "description": "",
+  "date_creation": "2026-04-18T02:48:17.081975",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_algo_recto_01\\reference.jpeg",
+  "zones": [
+    {
+      "coords": [
+        0.4722932279909706,
+        0.5234726688102894,
+        0.9079575620767495,
+        0.6290077170418006
+      ],
+      "id": 1775656247833,
+      "lang": "ara",
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.4718442437923251,
+        0.6557395498392282,
+        0.9073589164785554,
+        0.7835511254019294
+      ],
+      "id": 1775656317365,
+      "lang": "ara",
+      "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.5625390519187359,
+        0.8236488745980708,
+        0.8154668171557563,
+        0.9103881028938908
+      ],
+      "id": 1775656571941,
+      "lang": "fra",
+      "nom": "date_naissance",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.4881573363431152,
+        0.8935414790996786,
+        0.8109769751693003,
+        0.983482958199357
+      ],
+      "id": 1775656644239,
+      "lang": "ara",
+      "nom": "lieu_naissance",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.29494446952595943,
+        0.8164090032154341,
+        0.38982979683972924,
+        0.9128942122186496
+      ],
+      "id": 1775657255158,
+      "lang": "ara",
+      "nom": "sexe",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.0038530474040632504,
+        -0.00851864951768488,
+        0.25214130925507916,
+        0.07501832797427649
+      ],
+      "id": 1775657405441,
+      "lang": "ara+fra",
+      "nom": "numero_piece",
+      "preprocess": "auto",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.32203318284424387,
+        0.04522347266881029,
+        0.8006503386004515,
+        0.13363344051446946
+      ],
+      "id": 1775657587425,
+      "lang": "ara",
+      "nom": "delivre_par",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.5433823927765239,
+        0.14059485530546625,
+        0.7961604966139956,
+        0.21884115755627007
+      ],
+      "id": 1775657799661,
+      "lang": "fra",
+      "nom": "delivre_le",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.5433823927765239,
+        0.21884115755627007,
+        0.8028952595936795,
+        0.312124115755627
+      ],
+      "id": 1775657923662,
+      "lang": "ara+fra",
+      "nom": "expire_le",
+      "preprocess": "auto",
+      "type": "text"
+    },
+    {
+      "coords": [
+        0.2701006772009029,
+        0.4468971061093248,
+        0.7216291196388264,
+        0.5240295819935692
+      ],
+      "id": 1775658517750,
+      "lang": "fra",
+      "nom": "nin",
+      "preprocess": "latin_simple",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 663,
+      "height": 433,
+      "dpi_x": 200.0,
+      "dpi_y": 200.0
+    },
+    "haut": {
+      "labels": [
+        "regex:(?<!\\d)\\d{9}(?!\\d)"
+      ],
+      "position_base": [
+        0.39441930618401205,
+        0.22401847575057737
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        0.9819004524886877,
+        0.5
+      ],
+      "fallback_formula": "G + 0.59 * RW",
+      "manuel_formula": "G + largeur"
+    },
+    "gauche": {
+      "labels": [
+        "regex:(?<!\\d)\\d{9}(?!\\d)"
+      ],
+      "position_base": [
+        0.3137254901960784,
+        0.24364896073903003
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0.9422632794457275
+      ],
+      "fallback_formula": "H + 0.70 * RH",
+      "manuel_formula": "H + hauteur"
+    },
+    "dimensions_absolues": {
+      "largeur": 443,
+      "hauteur": 311,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 10,
+    "image_dimensions": {
+      "width": 663,
+      "height": 433
+    }
+  }
+}

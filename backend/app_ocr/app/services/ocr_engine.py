@@ -2,6 +2,7 @@ import os
 import ast
 import shutil
 import logging
+import threading
 import numpy as np
 from difflib import SequenceMatcher
 from PIL import Image, ImageOps
@@ -1013,6 +1014,8 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims, im
     return total_resolues
 
 
+_analyser_lock = threading.Lock()
+
 def analyser_hybride(image_path, zones_config, cadre_reference=None):
     """
     Analyse hybride avec support pour le cadre de référence à 3 étiquettes.
@@ -1028,436 +1031,437 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
     Returns:
         tuple: (resultats, alertes) ou (None, erreur) si étiquettes non trouvées
     """
-    resultats = {}
-    temp_crop_path = None  # IMPORTANT: Initialiser au niveau fonction pour portée globale
-    x_ref_px = None
-    y_ref_px = None
-    largeur_cadre_rel = None
-    hauteur_cadre_rel = None
-    img_dims = None
-    img_info = {}
-    try:
-        with Image.open(image_path) as img:
-            img_dims = img.size
-            img_info = img.info
-    except:
-        pass
-    
-    # 0. NOUVEAU: Si un cadre de référence est défini, détecter les étiquettes et transformer les coordonnées
-    # Support des clés: haut, droite, gauche_bas (Nouveau) OU origine, largeur, hauteur (Legacy)
-    if not cadre_reference:
-        logger.warning("⚠️ DEBUG: Pas de cadre de référence fourni. Analyse en coordonnées Image (0,0).")
-    
-    if cadre_reference and (cadre_reference.get('haut') or cadre_reference.get('origine')):
-        logger.info(f"📐 Détection du cadre de référence (3 étiquettes)...")
+    with _analyser_lock:
+        resultats = {}
+        temp_crop_path = None  # IMPORTANT: Initialiser au niveau fonction pour portée globale
+        x_ref_px = None
+        y_ref_px = None
+        largeur_cadre_rel = None
+        hauteur_cadre_rel = None
+        img_dims = None
+        img_info = {}
+        try:
+            with Image.open(image_path) as img:
+                img_dims = img.size
+                img_info = img.info
+        except:
+            pass
         
-        # Convertir format cadre_reference vers format ancres pour détection
-        ancres_config = []
+        # 0. NOUVEAU: Si un cadre de référence est défini, détecter les étiquettes et transformer les coordonnées
+        # Support des clés: haut, droite, gauche_bas (Nouveau) OU origine, largeur, hauteur (Legacy)
+        if not cadre_reference:
+            logger.warning("⚠️ DEBUG: Pas de cadre de référence fourni. Analyse en coordonnées Image (0,0).")
         
-        logger.info(f"🔍 DEBUG: Cadre reference reçu: {cadre_reference}")
-        
-        
-        # Helper pour construire la config ancre
-        def add_anchor_config(anchor_id, ref_data, default_pos):
-            if not ref_data: return
+        if cadre_reference and (cadre_reference.get('haut') or cadre_reference.get('origine')):
+            logger.info(f"📐 Détection du cadre de référence (3 étiquettes)...")
             
-            labels = ref_data.get('labels', [])
-            template_path = ref_data.get('template_path')
+            # Convertir format cadre_reference vers format ancres pour détection
+            ancres_config = []
             
-            # Ajouter si labels OU template présent
-            if labels or template_path:
-                conf = {
-                    'id': anchor_id, 
-                    'labels': labels, 
-                    'position_base': ref_data.get('position_base', default_pos),
-                    'template_path': template_path
-                }
-                ancres_config.append(conf)
+            logger.info(f"🔍 DEBUG: Cadre reference reçu: {cadre_reference}")
+            
+            
+            # Helper pour construire la config ancre
+            def add_anchor_config(anchor_id, ref_data, default_pos):
+                if not ref_data: return
                 
-                log_msg = f"  ✅ Ancre {anchor_id.upper()} configurée:"
-                if labels: log_msg += f" Labels={labels}"
-                if template_path: log_msg += f" Template={template_path}"
-                logger.info(log_msg)
-
-        add_anchor_config('haut', cadre_reference.get('haut'), [0.5, 0])
-        add_anchor_config('droite', cadre_reference.get('droite'), [1, 0.5])
-        add_anchor_config('gauche', cadre_reference.get('gauche'), [0, 0.5])
-        add_anchor_config('bas', cadre_reference.get('bas'), [0.5, 1])
-        
-        # Support ancien format 3 ancres (backward compatibility)
-        if not cadre_reference.get('gauche') and not cadre_reference.get('bas'):
-             add_anchor_config('gauche_bas', cadre_reference.get('gauche_bas'), [0, 1])
-            
-        # Mapping legacy (si nouveau format absent)
-        if not ancres_config and cadre_reference.get('origine'):
-             add_anchor_config('origine', cadre_reference.get('origine'), [0, 0])
-             add_anchor_config('largeur', cadre_reference.get('largeur'), [1, 0])
-             add_anchor_config('hauteur', cadre_reference.get('hauteur'), [0, 1])
-        
-        logger.info(f"📋 Total ancres configurées: {len(ancres_config)}")
-        
-        etiquettes_detectees = {}
-        
-        # S'il y a des ancres à chercher
-        if len(ancres_config) > 0:
-            # OCR global pour trouver les étiquettes
-            mots_ocr, img_dims = ocr_global_avec_positions(image_path, lang='fra+eng')
-            
-            # Note: mots_ocr peut être vide si pas de texte, mais on continue pour les templates
-            if not mots_ocr:
-                logger.warning("⚠️ OCR global vide (pas de texte détecté)")
-                mots_ocr = []
-                # Besoin de img_dims si OCR n'a rien renvoyé
-                if not img_dims:
-                    try: 
-                        with Image.open(image_path) as img: img_dims = img.size
-                    except: pass
-
-            if not img_dims: # Si toujours pas de dims, erreur
-                 return None, "Impossible de lire les dimensions de l'image"
-            
-            # Détecter les étiquettes (avec image_path pour fallback template)
-            etiquettes_detectees, toutes_trouvees = detecter_ancres(
-                mots_ocr, 
-                ancres_config, 
-                img_dims,
-                image_path=image_path
-            )
-            
-            if not toutes_trouvees:
-                etiquettes_manquantes = [k for k, v in etiquettes_detectees.items() if not v.get('found')]
-                logger.warning(f"⚠️ Certaines étiquettes non trouvées: {', '.join(etiquettes_manquantes)}")
-            
-            # Résolution par formule (Algorithmique + Manuel en pixels)
-            nb_resolues = resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims, img_info)
-            if nb_resolues > 0:
-                logger.info(f"🧮 {nb_resolues} ancre(s) résolue(s) par formule algorithmique/manuelle")
-        else:
-            # Pas d'ancres configurées
-            try:
-                with Image.open(image_path) as img:
-                    img_dims = img.size
-                    logger.info(f"📏 Pas d'ancres configurées, dimensions image: {img_dims}")
-            except Exception as e:
-                logger.error(f"❌ Impossible d'ouvrir l'image: {e}")
-                return None, str(e)
-
-        # Calculer la transformation de coordonnées (Unified Logic)
-        # On construit les 4 bornes (Top, Bottom, Left, Right)
-        # IMPORTANT: Les zones dans l'entité sont relatives au cadre défini par position_base.
-        # Donc on DOIT utiliser position_base pour reconstruire le même cadre qu'à la sauvegarde.
-        # ORB/OCR est un fallback si position_base n'existe pas.
-        
-        img_w, img_h = img_dims
-        
-        def get_anchor_edge(anchor_id, axis, edge_side, default_val):
-            """
-            Retourne la coordonnée de bord correcte pour une ancre.
-            ALGORITHME UTILISATEUR:
-            Priorité: DÉTECTION (position réelle dans l'image courante) > position_base > défaut
-            
-            Validation: Les détections par template image sont vérifiées contre position_base.
-            Si l'écart dépasse 25%, c'est un faux positif probable → fallback vers position_base.
-            """
-            ref_data = cadre_reference.get(anchor_id) if cadre_reference else None
-            det = etiquettes_detectees.get(anchor_id, {})
-            TOLERANCE_PX = 0.25  # 25% de l'image
-            
-            # 1. PRIORITÉ: résultat de DÉTECTION (position réelle dans l'image courante)
-            if det.get('found') and edge_side in det:
-                val = det[edge_side] * (img_w if axis == 'x' else img_h)
-                source = det.get('source', 'ocr')
+                labels = ref_data.get('labels', [])
+                template_path = ref_data.get('template_path')
                 
-                # Validation de cohérence pour les détections par template image
-                if source == 'image_template' and ref_data and ref_data.get('position_base'):
-                    idx = 0 if axis == 'x' else 1
-                    dim = img_w if axis == 'x' else img_h
-                    pb_val = ref_data['position_base'][idx] * dim
-                    ecart_rel = abs(det[edge_side] - ref_data['position_base'][idx])
+                # Ajouter si labels OU template présent
+                if labels or template_path:
+                    conf = {
+                        'id': anchor_id, 
+                        'labels': labels, 
+                        'position_base': ref_data.get('position_base', default_pos),
+                        'template_path': template_path
+                    }
+                    ancres_config.append(conf)
                     
-                    if ecart_rel > TOLERANCE_PX:
-                        # Faux positif probable → fallback vers position_base
-                        logger.warning(
-                            f"  🚫 {anchor_id.upper()}: Template détecté à {val:.0f}px mais position_base={pb_val:.0f}px "
-                            f"(écart={ecart_rel:.2%} > seuil={TOLERANCE_PX:.0%}). Faux positif → position_base utilisée."
-                        )
-                        return pb_val
+                    log_msg = f"  ✅ Ancre {anchor_id.upper()} configurée:"
+                    if labels: log_msg += f" Labels={labels}"
+                    if template_path: log_msg += f" Template={template_path}"
+                    logger.info(log_msg)
+    
+            add_anchor_config('haut', cadre_reference.get('haut'), [0.5, 0])
+            add_anchor_config('droite', cadre_reference.get('droite'), [1, 0.5])
+            add_anchor_config('gauche', cadre_reference.get('gauche'), [0, 0.5])
+            add_anchor_config('bas', cadre_reference.get('bas'), [0.5, 1])
+            
+            # Support ancien format 3 ancres (backward compatibility)
+            if not cadre_reference.get('gauche') and not cadre_reference.get('bas'):
+                 add_anchor_config('gauche_bas', cadre_reference.get('gauche_bas'), [0, 1])
+                
+            # Mapping legacy (si nouveau format absent)
+            if not ancres_config and cadre_reference.get('origine'):
+                 add_anchor_config('origine', cadre_reference.get('origine'), [0, 0])
+                 add_anchor_config('largeur', cadre_reference.get('largeur'), [1, 0])
+                 add_anchor_config('hauteur', cadre_reference.get('hauteur'), [0, 1])
+            
+            logger.info(f"📋 Total ancres configurées: {len(ancres_config)}")
+            
+            etiquettes_detectees = {}
+            
+            # S'il y a des ancres à chercher
+            if len(ancres_config) > 0:
+                # OCR global pour trouver les étiquettes
+                mots_ocr, img_dims = ocr_global_avec_positions(image_path, lang='fra+eng')
+                
+                # Note: mots_ocr peut être vide si pas de texte, mais on continue pour les templates
+                if not mots_ocr:
+                    logger.warning("⚠️ OCR global vide (pas de texte détecté)")
+                    mots_ocr = []
+                    # Besoin de img_dims si OCR n'a rien renvoyé
+                    if not img_dims:
+                        try: 
+                            with Image.open(image_path) as img: img_dims = img.size
+                        except: pass
+    
+                if not img_dims: # Si toujours pas de dims, erreur
+                     return None, "Impossible de lire les dimensions de l'image"
+                
+                # Détecter les étiquettes (avec image_path pour fallback template)
+                etiquettes_detectees, toutes_trouvees = detecter_ancres(
+                    mots_ocr, 
+                    ancres_config, 
+                    img_dims,
+                    image_path=image_path
+                )
+                
+                if not toutes_trouvees:
+                    etiquettes_manquantes = [k for k, v in etiquettes_detectees.items() if not v.get('found')]
+                    logger.warning(f"⚠️ Certaines étiquettes non trouvées: {', '.join(etiquettes_manquantes)}")
+                
+                # Résolution par formule (Algorithmique + Manuel en pixels)
+                nb_resolues = resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims, img_info)
+                if nb_resolues > 0:
+                    logger.info(f"🧮 {nb_resolues} ancre(s) résolue(s) par formule algorithmique/manuelle")
+            else:
+                # Pas d'ancres configurées
+                try:
+                    with Image.open(image_path) as img:
+                        img_dims = img.size
+                        logger.info(f"📏 Pas d'ancres configurées, dimensions image: {img_dims}")
+                except Exception as e:
+                    logger.error(f"❌ Impossible d'ouvrir l'image: {e}")
+                    return None, str(e)
+    
+            # Calculer la transformation de coordonnées (Unified Logic)
+            # On construit les 4 bornes (Top, Bottom, Left, Right)
+            # IMPORTANT: Les zones dans l'entité sont relatives au cadre défini par position_base.
+            # Donc on DOIT utiliser position_base pour reconstruire le même cadre qu'à la sauvegarde.
+            # ORB/OCR est un fallback si position_base n'existe pas.
+            
+            img_w, img_h = img_dims
+            
+            def get_anchor_edge(anchor_id, axis, edge_side, default_val):
+                """
+                Retourne la coordonnée de bord correcte pour une ancre.
+                ALGORITHME UTILISATEUR:
+                Priorité: DÉTECTION (position réelle dans l'image courante) > position_base > défaut
+                
+                Validation: Les détections par template image sont vérifiées contre position_base.
+                Si l'écart dépasse 25%, c'est un faux positif probable → fallback vers position_base.
+                """
+                ref_data = cadre_reference.get(anchor_id) if cadre_reference else None
+                det = etiquettes_detectees.get(anchor_id, {})
+                TOLERANCE_PX = 0.25  # 25% de l'image
+                
+                # 1. PRIORITÉ: résultat de DÉTECTION (position réelle dans l'image courante)
+                if det.get('found') and edge_side in det:
+                    val = det[edge_side] * (img_w if axis == 'x' else img_h)
+                    source = det.get('source', 'ocr')
+                    
+                    # Validation de cohérence pour les détections par template image
+                    if source == 'image_template' and ref_data and ref_data.get('position_base'):
+                        idx = 0 if axis == 'x' else 1
+                        dim = img_w if axis == 'x' else img_h
+                        pb_val = ref_data['position_base'][idx] * dim
+                        ecart_rel = abs(det[edge_side] - ref_data['position_base'][idx])
+                        
+                        if ecart_rel > TOLERANCE_PX:
+                            # Faux positif probable → fallback vers position_base
+                            logger.warning(
+                                f"  🚫 {anchor_id.upper()}: Template détecté à {val:.0f}px mais position_base={pb_val:.0f}px "
+                                f"(écart={ecart_rel:.2%} > seuil={TOLERANCE_PX:.0%}). Faux positif → position_base utilisée."
+                            )
+                            return pb_val
+                        else:
+                            logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION (template) → {val:.0f}px (position_base: {pb_val:.0f}px, Δ={abs(val-pb_val):.0f}px ✓)")
+                            return val
+                    
+                    # Log de comparaison avec position_base si disponible (OCR ou formule)
+                    if ref_data and ref_data.get('position_base'):
+                        idx = 0 if axis == 'x' else 1
+                        pb_val = ref_data['position_base'][idx] * (img_w if axis == 'x' else img_h)
+                        diff = abs(val - pb_val)
+                        logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION ({source}) → {val:.0f}px (position_base: {pb_val:.0f}px, Δ={diff:.0f}px)")
                     else:
-                        logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION (template) → {val:.0f}px (position_base: {pb_val:.0f}px, Δ={abs(val-pb_val):.0f}px ✓)")
-                        return val
-                
-                # Log de comparaison avec position_base si disponible (OCR ou formule)
-                if ref_data and ref_data.get('position_base'):
+                        logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION ({source}) → {val:.0f}px")
+                    return val
+                # 2. Fallback: position_base de l'entité
+                elif ref_data and ref_data.get('position_base'):
                     idx = 0 if axis == 'x' else 1
-                    pb_val = ref_data['position_base'][idx] * (img_w if axis == 'x' else img_h)
-                    diff = abs(val - pb_val)
-                    logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION ({source}) → {val:.0f}px (position_base: {pb_val:.0f}px, Δ={diff:.0f}px)")
+                    val = ref_data['position_base'][idx] * (img_w if axis == 'x' else img_h)
+                    logger.info(f"  📌 {anchor_id.upper()}: position_base → {val:.0f}px (détection échouée)")
+                    return val
                 else:
-                    logger.info(f"  🔍 {anchor_id.upper()}: DÉTECTION ({source}) → {val:.0f}px")
-                return val
-            # 2. Fallback: position_base de l'entité
-            elif ref_data and ref_data.get('position_base'):
-                idx = 0 if axis == 'x' else 1
-                val = ref_data['position_base'][idx] * (img_w if axis == 'x' else img_h)
-                logger.info(f"  📌 {anchor_id.upper()}: position_base → {val:.0f}px (détection échouée)")
-                return val
+                    logger.info(f"  ⚠️ {anchor_id.upper()}: non trouvée → défaut {default_val:.0f}px")
+                    return default_val
+            
+            # 1. TOP (Y Min) — HAUT
+            y_ref_min = get_anchor_edge('haut', 'y', 'y_min', 0)
+                
+            # 2. BOTTOM (Y Max) — BAS (avec fallback gauche_bas legacy)
+            if cadre_reference and cadre_reference.get('bas'):
+                y_ref_max = get_anchor_edge('bas', 'y', 'y_max', img_h)
+            elif 'gauche_bas' in etiquettes_detectees and etiquettes_detectees['gauche_bas']['found']:
+                y_ref_max = etiquettes_detectees['gauche_bas']['y_max'] * img_h
             else:
-                logger.info(f"  ⚠️ {anchor_id.upper()}: non trouvée → défaut {default_val:.0f}px")
-                return default_val
-        
-        # 1. TOP (Y Min) — HAUT
-        y_ref_min = get_anchor_edge('haut', 'y', 'y_min', 0)
-            
-        # 2. BOTTOM (Y Max) — BAS (avec fallback gauche_bas legacy)
-        if cadre_reference and cadre_reference.get('bas'):
-            y_ref_max = get_anchor_edge('bas', 'y', 'y_max', img_h)
-        elif 'gauche_bas' in etiquettes_detectees and etiquettes_detectees['gauche_bas']['found']:
-            y_ref_max = etiquettes_detectees['gauche_bas']['y_max'] * img_h
-        else:
-            y_ref_max = img_h
-            
-        # 3. LEFT (X Min) — GAUCHE (avec fallback gauche_bas legacy)
-        if cadre_reference and cadre_reference.get('gauche'):
-            x_ref_min = get_anchor_edge('gauche', 'x', 'x_min', 0)
-        elif 'gauche_bas' in etiquettes_detectees and etiquettes_detectees['gauche_bas']['found']:
-            x_ref_min = etiquettes_detectees['gauche_bas']['x_min'] * img_w
-        else:
-            x_ref_min = 0
-            
-        # 4. RIGHT (X Max) — DROITE
-        x_ref_max = get_anchor_edge('droite', 'x', 'x_max', img_w)
-            
-        
-        # Validation des dimensions calculées
-        detected_w_px = x_ref_max - x_ref_min
-        detected_h_px = y_ref_max - y_ref_min
-        
-        # Protection contre croisements ou dimensions nulles
-        if detected_w_px <= 10: detected_w_px = max(10, img_w - x_ref_min)
-        if detected_h_px <= 10: detected_h_px = max(10, img_h - y_ref_min)
-        
-        x_ref_px = x_ref_min
-        y_ref_px = y_ref_min
-
-        # ─── Dimensions du Cadre ───
-        # On garde les dimensions détectées (via OCR, templates ou Formules)
-        # pour respecter le redimensionnement et les ancres de Droite/Bas.
-        logger.info(f"📐 CADRE DÉTECTÉ: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
-
-        # Clamp pour ne pas dépasser l'image
-        if x_ref_px + detected_w_px > img_w:
-            detected_w_px = img_w - x_ref_px
-            logger.warning(f"⚠️ Cadre tronqué en largeur: {detected_w_px:.0f}px")
-        if y_ref_px + detected_h_px > img_h:
-            detected_h_px = img_h - y_ref_px
-            logger.warning(f"⚠️ Cadre tronqué en hauteur: {detected_h_px:.0f}px")
-
-        logger.info(f"📐 CADRE FINAL: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
-
-        # Flag pour déclencher le rognage
-        has_4_anchors = True
-
-
-    # --- Code Commun : Rognage physique ---
-    if x_ref_px is not None:
-        logger.info(f"✂️ Début du rognage de l'image sur le cadre...")
-        import uuid
-        try:
-            with Image.open(image_path) as img_pil:
-                left = int(x_ref_px)
-                top = int(y_ref_px)
-                right = int(left + detected_w_px)
-                bottom = int(top + detected_h_px)
+                y_ref_max = img_h
                 
-                # Clamp
-                left = max(0, left)
-                top = max(0, top)
-                right = min(img_pil.width, right)
-                bottom = min(img_pil.height, bottom)
+            # 3. LEFT (X Min) — GAUCHE (avec fallback gauche_bas legacy)
+            if cadre_reference and cadre_reference.get('gauche'):
+                x_ref_min = get_anchor_edge('gauche', 'x', 'x_min', 0)
+            elif 'gauche_bas' in etiquettes_detectees and etiquettes_detectees['gauche_bas']['found']:
+                x_ref_min = etiquettes_detectees['gauche_bas']['x_min'] * img_w
+            else:
+                x_ref_min = 0
                 
-                if right > left and bottom > top:
-                    img_crop = img_pil.crop((left, top, right, bottom))
+            # 4. RIGHT (X Max) — DROITE
+            x_ref_max = get_anchor_edge('droite', 'x', 'x_max', img_w)
+                
+            
+            # Validation des dimensions calculées
+            detected_w_px = x_ref_max - x_ref_min
+            detected_h_px = y_ref_max - y_ref_min
+            
+            # Protection contre croisements ou dimensions nulles
+            if detected_w_px <= 10: detected_w_px = max(10, img_w - x_ref_min)
+            if detected_h_px <= 10: detected_h_px = max(10, img_h - y_ref_min)
+            
+            x_ref_px = x_ref_min
+            y_ref_px = y_ref_min
+    
+            # ─── Dimensions du Cadre ───
+            # On garde les dimensions détectées (via OCR, templates ou Formules)
+            # pour respecter le redimensionnement et les ancres de Droite/Bas.
+            logger.info(f"📐 CADRE DÉTECTÉ: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
+    
+            # Clamp pour ne pas dépasser l'image
+            if x_ref_px + detected_w_px > img_w:
+                detected_w_px = img_w - x_ref_px
+                logger.warning(f"⚠️ Cadre tronqué en largeur: {detected_w_px:.0f}px")
+            if y_ref_px + detected_h_px > img_h:
+                detected_h_px = img_h - y_ref_px
+                logger.warning(f"⚠️ Cadre tronqué en hauteur: {detected_h_px:.0f}px")
+    
+            logger.info(f"📐 CADRE FINAL: Origine=({x_ref_px:.0f}px, {y_ref_px:.0f}px), L={detected_w_px:.0f}px, H={detected_h_px:.0f}px")
+    
+            # Flag pour déclencher le rognage
+            has_4_anchors = True
+    
+    
+        # --- Code Commun : Rognage physique ---
+        if x_ref_px is not None:
+            logger.info(f"✂️ Début du rognage de l'image sur le cadre...")
+            import uuid
+            try:
+                with Image.open(image_path) as img_pil:
+                    left = int(x_ref_px)
+                    top = int(y_ref_px)
+                    right = int(left + detected_w_px)
+                    bottom = int(top + detected_h_px)
                     
-                    # Convertir RGBA → RGB si nécessaire (JPEG ne supporte pas la transparence)
-                    if img_crop.mode in ('RGBA', 'P', 'LA'):
-                        img_crop = img_crop.convert('RGB')
+                    # Clamp
+                    left = max(0, left)
+                    top = max(0, top)
+                    right = min(img_pil.width, right)
+                    bottom = min(img_pil.height, bottom)
                     
-                    temp_filename = f"crop_{uuid.uuid4().hex[:8]}.jpg"
-                    temp_path = os.path.join(os.path.dirname(image_path), temp_filename)
-                    img_crop.save(temp_path)
+                    if right > left and bottom > top:
+                        img_crop = img_pil.crop((left, top, right, bottom))
+                        
+                        # Convertir RGBA → RGB si nécessaire (JPEG ne supporte pas la transparence)
+                        if img_crop.mode in ('RGBA', 'P', 'LA'):
+                            img_crop = img_crop.convert('RGB')
+                        
+                        temp_filename = f"crop_{uuid.uuid4().hex[:8]}.jpg"
+                        temp_path = os.path.join(os.path.dirname(image_path), temp_filename)
+                        img_crop.save(temp_path)
+                        
+                        logger.info(f"✂️ Image sauvegardée: {temp_path}")
+                        
+                        image_path = temp_path
+                        temp_crop_path = temp_path
+                    else:
+                        logger.error(f"❌ Crop invalide: L={left}, T={top}, R={right}, B={bottom}")
                     
-                    logger.info(f"✂️ Image sauvegardée: {temp_path}")
+            except Exception as e:
+                logger.error(f"❌ Erreur lors du rognage: {e}")
+                
+        logger.info(f"✅ Coordonnées ajustées selon cadre de référence")
+    
+        
+        # 1. Détection QR codes/codes-barres pour les zones marquées
+        zones_qr = {k: v for k, v in zones_config.items() if v.get('type') == 'qrcode' or v.get('type') == 'barcode'}
+        for nom_zone, config in zones_qr.items():
+            try:
+                qr_result = decoder_code_hybride(image_path, config['coords'])
+                if qr_result['success']:
+                    # Extraire les séquences séparées par des astérisques
+                    qr_data = qr_result['data']
+                    sequences = [s for s in qr_data.split('*') if s]  # Filtrer les chaînes vides
                     
-                    image_path = temp_path
-                    temp_crop_path = temp_path
+                    resultats[nom_zone] = {
+                        'texte_auto': qr_data,
+                        'confiance_auto': 1.0,  # QR code = 100% confiance si décodé
+                        'statut': 'ok',
+                        'moteur': f"qrcode_{qr_result.get('moteur', 'pyzbar')}",
+                        'coords': config['coords'],
+                        'texte_final': qr_data,
+                        'code_type': qr_result['type'],
+                        'code_count': qr_result['count'],
+                        'sequences': sequences  # Liste des séquences extraites
+                    }
+    
                 else:
-                    logger.error(f"❌ Crop invalide: L={left}, T={top}, R={right}, B={bottom}")
-                
-        except Exception as e:
-            logger.error(f"❌ Erreur lors du rognage: {e}")
-            
-    logger.info(f"✅ Coordonnées ajustées selon cadre de référence")
-
-    
-    # 1. Détection QR codes/codes-barres pour les zones marquées
-    zones_qr = {k: v for k, v in zones_config.items() if v.get('type') == 'qrcode' or v.get('type') == 'barcode'}
-    for nom_zone, config in zones_qr.items():
-        try:
-            qr_result = decoder_code_hybride(image_path, config['coords'])
-            if qr_result['success']:
-                # Extraire les séquences séparées par des astérisques
-                qr_data = qr_result['data']
-                sequences = [s for s in qr_data.split('*') if s]  # Filtrer les chaînes vides
-                
-                resultats[nom_zone] = {
-                    'texte_auto': qr_data,
-                    'confiance_auto': 1.0,  # QR code = 100% confiance si décodé
-                    'statut': 'ok',
-                    'moteur': f"qrcode_{qr_result.get('moteur', 'pyzbar')}",
-                    'coords': config['coords'],
-                    'texte_final': qr_data,
-                    'code_type': qr_result['type'],
-                    'code_count': qr_result['count'],
-                    'sequences': sequences  # Liste des séquences extraites
-                }
-
-            else:
-                # QR code non détecté, on laissera l'OCR essayer
-                logger.warning(f"QR code non détecté dans zone {nom_zone}: {qr_result.get('error')}")
-        except Exception as e:
-            logger.error(f"Erreur détection QR code zone {nom_zone}: {e}")
-    
-    # 2. Zones OCR classiques (exclure les zones QR déjà traitées)
-    zones_ocr = {k: v for k, v in zones_config.items() if k not in resultats}
-    
-    # 3. Essai Tesseract sur zones OCR
-    if zones_ocr and TESSERACT_DISPONIBLE:
-        try:
-            logger.info(f"🔤 Tesseract: analyse de {len(zones_ocr)} zone(s)")
-            resultats_ocr = analyser_avec_tesseract(image_path, zones_ocr)
-            resultats.update(resultats_ocr)
-        except Exception as e:
-            logger.error(f"Erreur Tesseract global: {e}")
-    
-    # 4. Identification des zones à refaire (échec ou faible confiance)
-    zones_a_refaire = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < 0.6}
-    
-    # 5. Essai EasyOCR sur les zones difficiles
-    if zones_a_refaire and EASYOCR_DISPONIBLE:
-        try:
-            logger.info(f"🔤 EasyOCR: analyse de {len(zones_a_refaire)} zone(s) à améliorer")
-            res_easy = analyser_avec_easyocr(image_path, zones_a_refaire)
-            for k, v in res_easy.items():
-                # Garder le meilleur résultat entre Tesseract et EasyOCR
-                if k in resultats:
-                    tesseract_conf = resultats[k]['confiance_auto']
-                    easyocr_conf = v['confiance_auto']
-                    if easyocr_conf > tesseract_conf:
-                        logger.info(f"✨ Zone {k}: EasyOCR meilleur ({easyocr_conf:.0%}) que Tesseract ({tesseract_conf:.0%})")
+                    # QR code non détecté, on laissera l'OCR essayer
+                    logger.warning(f"QR code non détecté dans zone {nom_zone}: {qr_result.get('error')}")
+            except Exception as e:
+                logger.error(f"Erreur détection QR code zone {nom_zone}: {e}")
+        
+        # 2. Zones OCR classiques (exclure les zones QR déjà traitées)
+        zones_ocr = {k: v for k, v in zones_config.items() if k not in resultats}
+        
+        # 3. Essai Tesseract sur zones OCR
+        if zones_ocr and TESSERACT_DISPONIBLE:
+            try:
+                logger.info(f"🔤 Tesseract: analyse de {len(zones_ocr)} zone(s)")
+                resultats_ocr = analyser_avec_tesseract(image_path, zones_ocr)
+                resultats.update(resultats_ocr)
+            except Exception as e:
+                logger.error(f"Erreur Tesseract global: {e}")
+        
+        # 4. Identification des zones à refaire (échec ou faible confiance)
+        zones_a_refaire = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < 0.6}
+        
+        # 5. Essai EasyOCR sur les zones difficiles
+        if zones_a_refaire and EASYOCR_DISPONIBLE:
+            try:
+                logger.info(f"🔤 EasyOCR: analyse de {len(zones_a_refaire)} zone(s) à améliorer")
+                res_easy = analyser_avec_easyocr(image_path, zones_a_refaire)
+                for k, v in res_easy.items():
+                    # Garder le meilleur résultat entre Tesseract et EasyOCR
+                    if k in resultats:
+                        tesseract_conf = resultats[k]['confiance_auto']
+                        easyocr_conf = v['confiance_auto']
+                        if easyocr_conf > tesseract_conf:
+                            logger.info(f"✨ Zone {k}: EasyOCR meilleur ({easyocr_conf:.0%}) que Tesseract ({tesseract_conf:.0%})")
+                            resultats[k] = v
+                            resultats[k]['ameliore_par'] = 'easyocr'
+                        else:
+                            logger.info(f"✨ Zone {k}: on garde Tesseract ({tesseract_conf:.0%}) meilleur que EasyOCR ({easyocr_conf:.0%})")
+                    else:
                         resultats[k] = v
                         resultats[k]['ameliore_par'] = 'easyocr'
-                    else:
-                        logger.info(f"✨ Zone {k}: on garde Tesseract ({tesseract_conf:.0%}) meilleur que EasyOCR ({easyocr_conf:.0%})")
-                else:
-                    resultats[k] = v
-                    resultats[k]['ameliore_par'] = 'easyocr'
-        except Exception as e:
-            logger.error(f"Erreur EasyOCR global: {e}")
-    
-    # 6. Correction avec valeurs attendues (si définies)
-    for nom_zone, config in zones_config.items():
-        if nom_zone in resultats and 'valeurs_attendues' in config:
-            valeurs = config.get('valeurs_attendues', [])
-            if valeurs and resultats[nom_zone].get('texte_auto'):
-                texte_original = resultats[nom_zone]['texte_auto']
-                texte_corrige, score = corriger_avec_valeurs_connues(texte_original, valeurs)
-                
-                if score > 0:
-                    resultats[nom_zone]['texte_final'] = texte_corrige
-                    resultats[nom_zone]['correction_appliquee'] = True
-                    resultats[nom_zone]['valeur_originale'] = texte_original
-                    resultats[nom_zone]['score_correction'] = score
-                    
-                    # Améliorer le statut si la correction a un bon score
-                    if score >= 0.8:
-                        resultats[nom_zone]['statut'] = 'ok'
-                        resultats[nom_zone]['confiance_auto'] = max(
-                            resultats[nom_zone]['confiance_auto'], 
-                            score
-                        )
+            except Exception as e:
+                logger.error(f"Erreur EasyOCR global: {e}")
         
-    # 7. Remplissage des échecs complets
-    for k in zones_config:
-        if k not in resultats:
-            resultats[k] = {
-                'texte_auto': '', 
-                'confiance_auto': 0, 
-                'statut': 'echec', 
-                'moteur': 'aucun',
-                'coords': zones_config[k]['coords'],
-                'texte_final': ''
-            }
+        # 6. Correction avec valeurs attendues (si définies)
+        for nom_zone, config in zones_config.items():
+            if nom_zone in resultats and 'valeurs_attendues' in config:
+                valeurs = config.get('valeurs_attendues', [])
+                if valeurs and resultats[nom_zone].get('texte_auto'):
+                    texte_original = resultats[nom_zone]['texte_auto']
+                    texte_corrige, score = corriger_avec_valeurs_connues(texte_original, valeurs)
+                    
+                    if score > 0:
+                        resultats[nom_zone]['texte_final'] = texte_corrige
+                        resultats[nom_zone]['correction_appliquee'] = True
+                        resultats[nom_zone]['valeur_originale'] = texte_original
+                        resultats[nom_zone]['score_correction'] = score
+                        
+                        # Améliorer le statut si la correction a un bon score
+                        if score >= 0.8:
+                            resultats[nom_zone]['statut'] = 'ok'
+                            resultats[nom_zone]['confiance_auto'] = max(
+                                resultats[nom_zone]['confiance_auto'], 
+                                score
+                            )
             
-    # NORMALISATION FINALE DES COORDONNÉES: Relatives au CADRE DÉTECTÉ!
-    # L'utilisateur souhaite que les zones soient toujours calculées et retournées
-    # par rapport au cadre courant (origine 0,0 en haut à gauche du cadre, dimensions de 0 à 1).
-    if temp_crop_path and x_ref_px is not None and y_ref_px is not None:
-        logger.info(f"🔄 NORMALISATION des coordonnées de {len(resultats)} zone(s) par rapport au CADRE DÉTECTÉ...")
-        crop_w = detected_w_px
-        crop_h = detected_h_px
-    else:
-        # Si on n'a pas rogné, on utilise l'image d'origine
-        if not img_dims:
+        # 7. Remplissage des échecs complets
+        for k in zones_config:
+            if k not in resultats:
+                resultats[k] = {
+                    'texte_auto': '', 
+                    'confiance_auto': 0, 
+                    'statut': 'echec', 
+                    'moteur': 'aucun',
+                    'coords': zones_config[k]['coords'],
+                    'texte_final': ''
+                }
+                
+        # NORMALISATION FINALE DES COORDONNÉES: Relatives au CADRE DÉTECTÉ!
+        # L'utilisateur souhaite que les zones soient toujours calculées et retournées
+        # par rapport au cadre courant (origine 0,0 en haut à gauche du cadre, dimensions de 0 à 1).
+        if temp_crop_path and x_ref_px is not None and y_ref_px is not None:
+            logger.info(f"🔄 NORMALISATION des coordonnées de {len(resultats)} zone(s) par rapport au CADRE DÉTECTÉ...")
+            crop_w = detected_w_px
+            crop_h = detected_h_px
+        else:
+            # Si on n'a pas rogné, on utilise l'image d'origine
+            if not img_dims:
+                try:
+                    with Image.open(image_path) as img:
+                        img_dims = img.size
+                except:
+                    img_dims = (1, 1)
+            crop_w, crop_h = img_dims
+    
+        for k, v in resultats.items():
+            if 'coords' in v and v['coords']:
+                c = v['coords']
+                # Tesseract/EasyOCR renvoient parfois des valeurs relatives (0-1) sur le crop,
+                # parfois des pixels absolus sur le crop.
+                if all(val <= 1.0 for val in c):
+                    # Vraisemblablement déjà relatives au crop, on les laisse telles quelles
+                    pass
+                else:
+                    # Pixels absolus -> conversion en relatif par rapport au crop/cadre courant
+                    v['coords'] = [
+                        c[0] / crop_w if crop_w else 0,
+                        c[1] / crop_h if crop_h else 0,
+                        c[2] / crop_w if crop_w else 0,
+                        c[3] / crop_h if crop_h else 0
+                    ]
+                    # Clamp au cas où Tesseract déborde très légèrement
+                    v['coords'] = [max(0, min(1, val)) for val in v['coords']]
+                    logger.debug(f"📏 Normalisation coords zone '{k}' par rapport au cadre: {c} -> {v['coords']}")
+    
+        # NETTOYAGE DU CROP TEMPORAIRE
+        if temp_crop_path and os.path.exists(temp_crop_path):
             try:
-                with Image.open(image_path) as img:
-                    img_dims = img.size
-            except:
-                img_dims = (1, 1)
-        crop_w, crop_h = img_dims
-
-    for k, v in resultats.items():
-        if 'coords' in v and v['coords']:
-            c = v['coords']
-            # Tesseract/EasyOCR renvoient parfois des valeurs relatives (0-1) sur le crop,
-            # parfois des pixels absolus sur le crop.
-            if all(val <= 1.0 for val in c):
-                # Vraisemblablement déjà relatives au crop, on les laisse telles quelles
-                pass
-            else:
-                # Pixels absolus -> conversion en relatif par rapport au crop/cadre courant
-                v['coords'] = [
-                    c[0] / crop_w if crop_w else 0,
-                    c[1] / crop_h if crop_h else 0,
-                    c[2] / crop_w if crop_w else 0,
-                    c[3] / crop_h if crop_h else 0
-                ]
-                # Clamp au cas où Tesseract déborde très légèrement
-                v['coords'] = [max(0, min(1, val)) for val in v['coords']]
-                logger.debug(f"📏 Normalisation coords zone '{k}' par rapport au cadre: {c} -> {v['coords']}")
-
-    # NETTOYAGE DU CROP TEMPORAIRE
-    if temp_crop_path and os.path.exists(temp_crop_path):
-        try:
-            os.remove(temp_crop_path)
-            logger.info(f"🗑️ Fichier temporaire supprimé: {temp_crop_path}")
-        except Exception as e:
-            logger.warning(f"⚠️ Nettoyage impossible: {e}")
-
-    # Pour que le frontend puisse dessiner les résultats en surimpression sur l'image Oiginale,
-    # on doit lui retourner la position du cadre sur l'image originale.
-    cadre_detecte = None
-    if x_ref_px is not None and y_ref_px is not None and img_dims:
-        orig_w, orig_h = img_dims
-        if orig_w and orig_h:
-            cadre_detecte = {
-                'x': x_ref_px / orig_w,
-                'y': y_ref_px / orig_h,
-                'width': detected_w_px / orig_w,
-                'height': detected_h_px / orig_h
-            }
-
-    alertes = [k for k, v in resultats.items() if v['statut'] != 'ok']
-    return resultats, alertes, cadre_detecte
+                os.remove(temp_crop_path)
+                logger.info(f"🗑️ Fichier temporaire supprimé: {temp_crop_path}")
+            except Exception as e:
+                logger.warning(f"⚠️ Nettoyage impossible: {e}")
+    
+        # Pour que le frontend puisse dessiner les résultats en surimpression sur l'image Oiginale,
+        # on doit lui retourner la position du cadre sur l'image originale.
+        cadre_detecte = None
+        if x_ref_px is not None and y_ref_px is not None and img_dims:
+            orig_w, orig_h = img_dims
+            if orig_w and orig_h:
+                cadre_detecte = {
+                    'x': x_ref_px / orig_w,
+                    'y': y_ref_px / orig_h,
+                    'width': detected_w_px / orig_w,
+                    'height': detected_h_px / orig_h
+                }
+    
+        alertes = [k for k, v in resultats.items() if v['statut'] != 'ok']
+        return resultats, alertes, cadre_detecte
 
 def get_absolute_coords(coords, img_w, img_h):
     """

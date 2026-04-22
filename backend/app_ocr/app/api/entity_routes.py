@@ -406,6 +406,12 @@ def sauvegarder_entite():
         get_manager().sauvegarder_entite(nom, zones, image_path=image_path, description=description, cadre_reference=cadre_reference)
         session.pop('temp_zones', None)
         session.pop('temp_image_path', None)
+        
+        # Mettre à jour la session si c'est l'entité active
+        if session.get('entite_active') and session['entite_active']['nom'] == nom:
+            session['entite_active'] = get_manager().charger_entite(nom)
+            session.modified = True
+            
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -428,6 +434,12 @@ def modifier_zone_existante(nom, zid):
             
     if found:
         manager.sauvegarder_entite(entite['nom'], zones, image_path=entite.get('image_reference'), description=entite.get('description', ''))
+        
+        # Mettre à jour la session si c'est l'entité active
+        if session.get('entite_active') and session['entite_active']['nom'] == nom:
+            session['entite_active'] = manager.charger_entite(nom)
+            session.modified = True
+            
         return jsonify({'success': True})
     return jsonify({'error': 'Zone not found'}), 404
 
@@ -439,6 +451,12 @@ def supprimer_zone_existante(nom, zid):
     
     zones = [z for z in entite.get('zones', []) if z.get('id') != zid]
     manager.sauvegarder_entite(entite['nom'], zones, image_path=entite.get('image_reference'), description=entite.get('description', ''))
+    
+    # Mettre à jour la session si c'est l'entité active
+    if session.get('entite_active') and session['entite_active']['nom'] == nom:
+        session['entite_active'] = manager.charger_entite(nom)
+        session.modified = True
+        
     return jsonify({'success': True})
 
 @entity_bp.route('/api/entite/<nom>', methods=['DELETE'])
@@ -471,6 +489,11 @@ def supprimer_entite(nom):
             image_path = entite['image_reference']
             if os.path.exists(image_path):
                 os.remove(image_path)
+                
+        # Retirer de la session si c'est l'entité active
+        if session.get('entite_active') and session['entite_active']['nom'] == nom:
+            session.pop('entite_active', None)
+            session.modified = True
         
         return jsonify({'success': True})
     except Exception as e:
