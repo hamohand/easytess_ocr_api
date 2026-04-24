@@ -5,7 +5,7 @@ import logging
 from config import Config
 
 # Logging setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', force=True)
 
 def create_app(config_class=Config):
     app = Flask(__name__)
