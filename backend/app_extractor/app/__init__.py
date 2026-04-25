@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
+from flasgger import Swagger
 import os
 import logging
 from config import Config
@@ -7,12 +8,48 @@ from config import Config
 # Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+SWAGGER_CONFIG = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": "apispec",
+            "route": "/apispec.json",
+            "rule_filter": lambda rule: True,
+            "model_filter": lambda tag: True,
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/apidocs/",
+}
+
+SWAGGER_TEMPLATE = {
+    "info": {
+        "title": "EasyTess — Document Extractor API",
+        "description": "API d'extraction structurée de documents PDF et Word (.docx).\n\n"
+                       "Fonctionnalités : extraction de texte et tableaux, conversion PDF→Word, "
+                       "extraction de codes tarifaires, normalisation des étiquettes.",
+        "version": "3.2.0",
+        "contact": {
+            "name": "EasyTess"
+        },
+        "license": {
+            "name": "Propriétaire"
+        }
+    },
+    "basePath": "/",
+    "schemes": ["http"],
+    "consumes": ["multipart/form-data", "application/json"],
+    "produces": ["application/json"],
+}
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     
     # Extensions
     CORS(app, resources={r"/*": {"origins": "*"}})
+    Swagger(app, config=SWAGGER_CONFIG, template=SWAGGER_TEMPLATE)
     
     # Ensure directories exist
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

@@ -81,18 +81,41 @@ def _cleanup(filepath):
 def api_extract_pdf():
     """
     Extrait le contenu (texte + tableaux) d'un fichier PDF.
-
-    Form data:
-        file: fichier .pdf (obligatoire)
-        table_columns: JSON array d'indices de colonnes (optionnel)
-                       Ex: "[0, 2]" pour les colonnes 1 et 3
-        pages: JSON array de numéros de pages 1-based (optionnel)
-               Ex: "[1, 3]" pour pages 1 et 3
-        strategy: Stratégie de détection des tableaux (optionnel)
-                  "standard" | "text" | "lines_strict" | "auto" (défaut)
-
-    Returns:
-        JSON avec le contenu extrait structuré
+    ---
+    tags:
+      - Extraction
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: Fichier PDF à analyser
+      - name: table_columns
+        in: formData
+        type: string
+        required: false
+        description: 'JSON array d''indices de colonnes. Ex: "[0, 2]"'
+      - name: pages
+        in: formData
+        type: string
+        required: false
+        description: 'JSON array de numéros de pages (1-based). Ex: "[1, 3]"'
+      - name: strategy
+        in: formData
+        type: string
+        required: false
+        enum: [auto, standard, text, lines_strict]
+        default: auto
+        description: Stratégie de détection des tableaux
+    responses:
+      200:
+        description: Contenu extrait avec succès
+      400:
+        description: Fichier manquant ou format non supporté
+      500:
+        description: Erreur interne
     """
     if 'file' not in request.files:
         return jsonify({'error': 'Aucun fichier fourni (champ "file" requis)'}), 400
@@ -146,17 +169,40 @@ def api_extract_pdf():
 @document_bp.route('/api/extract-document', methods=['POST'])
 def api_extract_document():
     """
-    Extrait le contenu (texte + tableaux) d'un fichier PDF ou Word.
-    Détecte automatiquement le format et utilise le bon extracteur.
-
-    Form data:
-        file: fichier .pdf ou .docx (obligatoire)
-        table_columns: JSON array d'indices de colonnes (optionnel)
-        pages: JSON array de pages (optionnel, PDF uniquement)
-        strategy: Stratégie de détection tableaux (optionnel, PDF uniquement)
-
-    Returns:
-        JSON avec le contenu extrait structuré
+    Extraction unifiée — détecte automatiquement PDF ou DOCX.
+    ---
+    tags:
+      - Extraction
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: Fichier PDF ou DOCX à analyser
+      - name: table_columns
+        in: formData
+        type: string
+        required: false
+        description: 'JSON array d''indices de colonnes. Ex: "[0, 2]"'
+      - name: pages
+        in: formData
+        type: string
+        required: false
+        description: 'Pages à traiter (PDF uniquement). Ex: "[1, 3]"'
+      - name: strategy
+        in: formData
+        type: string
+        required: false
+        enum: [auto, standard, text, lines_strict]
+        default: auto
+        description: Stratégie de détection (PDF uniquement)
+    responses:
+      200:
+        description: Contenu extrait avec format détecté (pdf ou docx)
+      400:
+        description: Fichier manquant ou format non supporté
     """
     if 'file' not in request.files:
         return jsonify({'error': 'Aucun fichier fourni (champ "file" requis)'}), 400
@@ -467,12 +513,36 @@ def api_extract_tariff_codes():
 @document_bp.route('/api/normalize-labels', methods=['POST'])
 def api_normalize_labels():
     """
-    Prend en entrée un tableau JSON d'objets (lignes extraites) et
-    retourne ce même tableau avec les clés renommées selon le mapping.
-
-    Query params:
-        mapping: Nom du fichier de config (sans .json) dans config_labels/.
-                 Défaut: "default".
+    Normalise les étiquettes d'un tableau de lignes extraites.
+    ---
+    tags:
+      - Normalisation
+    consumes:
+      - application/json
+    parameters:
+      - name: mapping
+        in: query
+        type: string
+        required: false
+        default: default
+        description: 'Nom du fichier de config (sans .json) dans config_labels/. Ex: "default", "chapitre_84"'
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: array
+          items:
+            type: object
+          example:
+            - col_04: "Tracteurs agricoles"
+              col_05: "D.D 30%"
+    responses:
+      200:
+        description: Lignes avec clés renommées selon le mapping
+      400:
+        description: Corps de requête invalide
+      500:
+        description: Erreur de normalisation
     """
     try:
         data = request.get_json()
