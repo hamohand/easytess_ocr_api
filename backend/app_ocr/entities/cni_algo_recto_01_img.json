@@ -1,0 +1,87 @@
+{
+  "nom": "cni_algo_recto_01_img",
+  "description": "Avec image en haut à droite",
+  "date_creation": "2026-04-24T16:22:00.619315",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_algo_recto_01_img\\reference.jpeg",
+  "zones": [
+    {
+      "coords": [
+        0.6159007252243469,
+        0.6774919015716824,
+        0.9099104034193825,
+        0.7771194504700749
+      ],
+      "id": 1777039589757,
+      "lang": "ara",
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 663,
+      "height": 433,
+      "dpi_x": 200.0,
+      "dpi_y": 200.0
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.9513,
+        0.0474
+      ],
+      "template_coords": [
+        0.9241,
+        0.0474,
+        0.9784,
+        0.089
+      ],
+      "template_path": "templates/cni_algo_recto_01_img/haut_template.png"
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        0.9754,
+        0.0693
+      ],
+      "template_coords": [
+        0.9241,
+        0.0497,
+        0.9754,
+        0.089
+      ],
+      "template_path": "templates/cni_algo_recto_01_img/droite_template.png"
+    },
+    "gauche": {
+      "labels": [
+        "regex:Rh"
+      ],
+      "position_base": [
+        0.3393665158371041,
+        0.8452655889145496
+      ]
+    },
+    "bas": {
+      "labels": [
+        "regex:Rh"
+      ],
+      "position_base": [
+        0.35671191553544496,
+        0.8614318706697459
+      ]
+    },
+    "dimensions_absolues": {
+      "largeur": 468,
+      "hauteur": 392,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 1,
+    "image_dimensions": {
+      "width": 663,
+      "height": 433
+    }
+  }
+}
