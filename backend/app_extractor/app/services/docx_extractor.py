@@ -4,6 +4,7 @@ Extrait le texte et les tableaux dans l'ordre d'apparition.
 Supporte:
   - Les vrais tableaux Word (w:tbl)
   - Les pseudo-tableaux (paragraphes avec tabulations)
+  - La détection des sauts de page (numéro de page estimé)
 """
 from docx import Document
 from docx.table import Table
@@ -31,12 +32,26 @@ def _iter_block_items(parent):
             yield Table(child, parent)
 
 
+def _has_page_break(paragraph):
+    """
+    Détecte si un paragraphe contient un saut de page Word.
+    Vérifie les éléments w:br type="page" et w:lastRenderedPageBreak.
+    """
+    for run in paragraph._element.findall(qn('w:r')):
+        for br in run.findall(qn('w:br')):
+            if br.get(qn('w:type')) == 'page':
+                return True
+        if run.find(qn('w:lastRenderedPageBreak')) is not None:
+            return True
+    return False
+
+
 def _is_tab_row(text):
     """Vérifie si un paragraphe ressemble à une ligne de tableau tabulé."""
     return text.count('\t') >= MIN_TABS_FOR_TABLE
 
 
-def _build_tab_table_block(tab_lines, table_counter, table_columns):
+def _build_tab_table_block(tab_lines, table_counter, table_columns, page_num):
     """
     Construit un bloc 'tableau' à partir de lignes tabulées.
     Chaque ligne est découpée sur les tabulations.
@@ -60,6 +75,7 @@ def _build_tab_table_block(tab_lines, table_counter, table_columns):
     return {
         "type": "tableau",
         "numero": table_counter,
+        "page": page_num,
         "lignes": lignes
     }
 
@@ -77,12 +93,13 @@ def extract_document(docx_path, table_columns=None):
 
     Returns:
         Liste de blocs ordonnés :
-        - {"type": "texte", "contenu": "..."}
-        - {"type": "tableau", "numero": N, "lignes": [...]}
+        - {"type": "texte", "contenu": "...", "page": N}
+        - {"type": "tableau", "numero": N, "page": N, "lignes": [...]}
     """
     doc = Document(docx_path)
     content = []
     table_counter = 0
+    current_page = 1
 
     # Buffer pour accumuler les lignes tabulées consécutives
     tab_buffer = []
@@ -92,13 +109,18 @@ def extract_document(docx_path, table_columns=None):
         nonlocal table_counter
         if tab_buffer:
             table_counter += 1
-            block = _build_tab_table_block(tab_buffer, table_counter, table_columns)
+            block = _build_tab_table_block(tab_buffer, table_counter, table_columns, current_page)
             if block:
                 content.append(block)
             tab_buffer.clear()
 
     for block in _iter_block_items(doc):
         if isinstance(block, Paragraph):
+            # Détecter les sauts de page AVANT le contenu du paragraphe
+            if _has_page_break(block):
+                flush_tab_buffer()
+                current_page += 1
+
             text = block.text.strip()
             if not text:
                 continue
@@ -111,7 +133,8 @@ def extract_document(docx_path, table_columns=None):
                 flush_tab_buffer()
                 content.append({
                     "type": "texte",
-                    "contenu": text
+                    "contenu": text,
+                    "page": current_page
                 })
 
         elif isinstance(block, Table):
@@ -147,6 +170,7 @@ def extract_document(docx_path, table_columns=None):
             content.append({
                 "type": "tableau",
                 "numero": table_counter,
+                "page": current_page,
                 "lignes": lignes
             })
 
@@ -157,6 +181,7 @@ def extract_document(docx_path, table_columns=None):
     nb_tableaux = sum(1 for b in content if b['type'] == 'tableau')
     logger.info(
         f"Extraction terminée: {len(content)} blocs "
-        f"({nb_textes} textes, {nb_tableaux} tableaux)"
+        f"({nb_textes} textes, {nb_tableaux} tableaux, {current_page} page(s))"
     )
     return content
+

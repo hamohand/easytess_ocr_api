@@ -1,7 +1,9 @@
 Flask
 Flask-Cors
+flasgger
 Pillow
 python-dotenv
 pypdfium2
 pdfplumber
 python-docx
+pytest

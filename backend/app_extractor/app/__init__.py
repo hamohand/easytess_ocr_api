@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 import os
 import logging
@@ -27,14 +27,34 @@ def create_app(config_class=Config):
     app.register_blueprint(docx_bp)
     app.register_blueprint(document_bp)
     
+    # ─── Error handlers ───
+    @app.errorhandler(413)
+    def file_too_large(e):
+        max_mb = app.config.get('MAX_CONTENT_LENGTH', 0) // (1024 * 1024)
+        return jsonify({
+            'error': f'Fichier trop volumineux. Taille maximale: {max_mb} Mo.'
+        }), 413
+
+    @app.errorhandler(500)
+    def internal_error(e):
+        return jsonify({
+            'error': f'Erreur interne du serveur: {str(e)}'
+        }), 500
+    
     @app.route('/')
     def index():
         return {
             "message": "Document Extractor API is running",
+            "version": "3.2.0",
             "endpoints": {
-                "extract": "/api/extract-document",
-                "upload": "/api/upload"
+                "extract_document": "POST /api/extract-document",
+                "extract_pdf": "POST /api/extract-pdf",
+                "extract_docx": "POST /api/extract-docx",
+                "convert_pdf_to_docx": "POST /api/convert-pdf-to-docx",
+                "extract_tariff_codes": "POST /api/extract-tariff-codes",
+                "normalize_labels": "POST /api/normalize-labels",
             }
         }
     
     return app
+
