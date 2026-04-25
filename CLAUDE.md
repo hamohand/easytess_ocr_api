@@ -144,7 +144,7 @@ npx ng build --configuration=development
 - `auto` essaie `standard` puis fallback `text` si aucun tableau détecté
 - Les métadonnées de tableaux incluent en-têtes, bbox, dimensions
 - `pdf_to_docx.py` reconstruit un .docx à partir du contenu structuré
-- **`normalize_labels()`** : renomme les clés des lignes extraites selon un mapping fixe (ex: `"Position & Sous Position"` → `"Position"`, `"col_04"` → `"Désignation"`). La correspondance est **exacte** (pas partielle) — ajouter la variante exacte au mapping si une nouvelle forme apparaît.
+- **`normalize_labels()`** : renomme les clés des lignes extraites selon un mapping chargé depuis `config_labels/<mapping_name>.json`. Le fichier par défaut est `config_labels/default.json`. La correspondance est **exacte** (pas partielle) — ajouter la variante exacte au fichier de config si une nouvelle forme apparaît. Le paramètre `mapping_name` permet de choisir un mapping différent (ex: `chapitre_84`). Fallback vers des valeurs hardcodées si le fichier est absent.
 
 ### Frontend OCR — 2 sous-onglets
 - **Sous-onglet "Analyse OCR"** : analyse OCR (3 modes: single/multi/folder)

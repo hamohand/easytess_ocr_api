@@ -2,6 +2,7 @@
 import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { DocumentService } from '../services/document.service';
 import { DocumentBloc, ExtractDocumentResponse, ExtractionStats } from '../services/models';
 
@@ -310,13 +311,37 @@ export class DocumentExtractorComponent {
         });
     }
 
-    // ─── Generate Hscode JSON ───
+    // ─── Helpers privés ───
     private findKey(row: any, hint: string): string {
         const lower = hint.toLowerCase();
         const key = Object.keys(row).find(k => k.toLowerCase().includes(lower));
         return key ? (row[key] || '') : '';
     }
 
+    /** Télécharge un objet JSON sous forme de fichier. */
+    private downloadJsonFile(data: any, filename: string): void {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+
+    /** Transforme des lignes normalisées en données hscode [{code, description}]. */
+    private buildHscodeData(rows: any[]): { code: string; description: string }[] {
+        return rows
+            .map(row => ({
+                code: this.findKey(row, 'position').replace(/[^0-9]/g, ''),
+                description: this.findKey(row, 'désignation') || this.findKey(row, 'designation')
+            }))
+            .filter(item => item.code || item.description);
+    }
+
+    // ─── Generate Hscode JSON ───
     generateHscode() {
         const content = this.extractedContent();
         if (!content.length) return;
@@ -328,23 +353,10 @@ export class DocumentExtractorComponent {
             }
         });
 
-        const hscodeData = rows
-            .map(row => ({
-                code: this.findKey(row, 'position').replace(/[^0-9]/g, ''),
-                description: this.findKey(row, 'désignation') || this.findKey(row, 'designation')
-            }))
-            .filter(item => item.code || item.description)
+        const hscodeData = this.buildHscodeData(rows)
             .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
 
-        const blob = new Blob([JSON.stringify(hscodeData, null, 2)], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'hscode.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        this.downloadJsonFile(hscodeData, 'hscode.json');
     }
 
     // ─── Hscode10 : pipeline complet PDF → hscode.json ───
@@ -378,23 +390,8 @@ export class DocumentExtractorComponent {
                         const normalizedRows: any[] = norm.donnees || [];
 
                         // Étape 3 : génération de hscode.json
-                        const hscodeData = normalizedRows
-                            .map(row => ({
-                                code: this.findKey(row, 'position').replace(/[^0-9]/g, ''),
-                                description: this.findKey(row, 'désignation') || this.findKey(row, 'designation')
-                            }))
-                            .filter(item => item.code || item.description);
-
-                        const blob = new Blob([JSON.stringify(hscodeData, null, 2)], { type: 'application/json' });
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'hscode.json';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        window.URL.revokeObjectURL(url);
-
+                        const hscodeData = this.buildHscodeData(normalizedRows);
+                        this.downloadJsonFile(hscodeData, 'hscode.json');
                         this.loading.set(false);
                     },
                     error: (err: any) => {
@@ -450,12 +447,12 @@ export class DocumentExtractorComponent {
 
             try {
                 // Étape 1 : extraction des codes tarifaires
-                const res: any = await this.documentService.extractTariffCodes(file, options).toPromise();
+                const res: any = await firstValueFrom(this.documentService.extractTariffCodes(file, options));
                 const rows: any[] = res?.donnees || [];
                 if (!rows.length) continue;
 
                 // Étape 2 : normalisation
-                const norm: any = await this.documentService.normalizeLabels(rows).toPromise();
+                const norm: any = await firstValueFrom(this.documentService.normalizeLabels(rows));
                 allRows.push(...(norm?.donnees || []));
             } catch (err: any) {
                 this.error.set(`Erreur sur "${file.name}": ${err?.error?.error || err?.message || 'Erreur inconnue'}`);
@@ -468,22 +465,8 @@ export class DocumentExtractorComponent {
         this.folderProgress.set(`${files.length} fichier(s) traité(s) — ${allRows.length} lignes collectées.`);
 
         // Étape 3 : génération du JSON
-        const hscodeData = allRows
-            .map(row => ({
-                code: this.findKey(row, 'position').replace(/[^0-9]/g, ''),
-                description: this.findKey(row, 'désignation') || this.findKey(row, 'designation')
-            }))
-            .filter(item => item.code || item.description);
-
-        const blob = new Blob([JSON.stringify(hscodeData, null, 2)], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'hscode.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        const hscodeData = this.buildHscodeData(allRows);
+        this.downloadJsonFile(hscodeData, 'hscode.json');
 
         this.loading.set(false);
     }
@@ -540,15 +523,8 @@ export class DocumentExtractorComponent {
             contenu: content
         };
 
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = this.resultFilename().replace(/\.[^.]+$/, '_extraction.json');
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        const downloadName = this.resultFilename().replace(/\.[^.]+$/, '_extraction.json');
+        this.downloadJsonFile(data, downloadName);
     }
 
     // ─── Table expansion ───

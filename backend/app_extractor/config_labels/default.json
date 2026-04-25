@@ -1,0 +1,30 @@
+{
+    "_description": "Mapping de normalisation des étiquettes de colonnes pour les tarifs douaniers.",
+    "_note": "La correspondance est EXACTE (pas partielle). Ajouter la variante exacte si un nouveau format apparaît.",
+
+    "mapping_etiquettes": {
+        "SECTION XVII CHAPITRE 87 DOUANES ALGERIENNES - 2024 -": "Position",
+        "Position & Sous": "Position",
+        "Position & Sous Position": "Position",
+        "Chapitre 87": "Position",
+        "col_02": "GU",
+        "Statistiques": "GU",
+        "col_03": "UQN",
+        "col_04": "Désignation",
+        "col_05": "DD",
+        "Droits et Taxes Autres": "DD",
+        "col_06": "TVA",
+        "F.A.P": "FAP",
+        "col_07": "Autres",
+        "col_08": "FAP"
+    },
+
+    "nettoyage_valeurs": {
+        "DD":       ["D.D ", "D.D"],
+        "GU":       ["G.U ", "G.U"],
+        "Position": ["Position "],
+        "TVA":      ["T.V.A ", "T.V.A"],
+        "UQN":      ["U.Q.N ", "U.Q.N"],
+        "Autres":   ["Droits et Taxes "]
+    }
+}

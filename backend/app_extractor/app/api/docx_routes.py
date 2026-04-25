@@ -1,12 +1,10 @@
 """
-Routes API pour l'extraction de contenu Word (.docx)
+Routes API pour l'extraction de contenu Word (.docx) — endpoint legacy.
+Délègue vers la logique partagée de document_routes.
 """
-from flask import Blueprint, request, jsonify, current_app
-from werkzeug.utils import secure_filename
-import os
-import uuid
-import json
+from flask import Blueprint, request, jsonify
 
+from app.api.document_routes import _save_temp_file, _parse_table_columns, _cleanup
 from app.services.docx_extractor import extract_document
 
 docx_bp = Blueprint('docx', __name__)
@@ -27,7 +25,6 @@ def api_extract_docx():
     Returns:
         JSON avec le contenu extrait dans l'ordre d'apparition
     """
-    # Validation du fichier
     if 'file' not in request.files:
         return jsonify({'error': 'Aucun fichier fourni (champ "file" requis)'}), 400
 
@@ -35,38 +32,16 @@ def api_extract_docx():
     if file.filename == '':
         return jsonify({'error': 'Aucun fichier sélectionné'}), 400
 
-    filename = secure_filename(file.filename)
-    ext = os.path.splitext(filename)[1].lower()
-
-    if ext not in DOCX_EXTENSIONS:
-        return jsonify({
-            'error': f'Format non supporté: {ext}. Seuls les fichiers .docx sont acceptés.'
-        }), 400
-
-    # Sauvegarde temporaire
-    unique_id = str(uuid.uuid4())
-    saved_filename = f"docx_{unique_id}_{filename}"
-    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], saved_filename)
-    file.save(filepath)
-
+    filepath = None
     try:
-        # Parsing des colonnes optionnelles
-        table_columns = None
-        table_columns_raw = request.form.get('table_columns')
-        if table_columns_raw:
-            try:
-                table_columns = json.loads(table_columns_raw)
-                if not isinstance(table_columns, list):
-                    return jsonify({
-                        'error': 'table_columns doit être un tableau JSON, ex: [0, 2]'
-                    }), 400
-                table_columns = [int(c) for c in table_columns]
-            except (json.JSONDecodeError, ValueError):
-                return jsonify({
-                    'error': 'table_columns invalide. Format attendu: [0, 2]'
-                }), 400
+        filepath, filename, ext = _save_temp_file(file, prefix="docx")
 
-        # Extraction
+        if ext not in DOCX_EXTENSIONS:
+            return jsonify({
+                'error': f'Format non supporté: {ext}. Seuls les fichiers .docx sont acceptés.'
+            }), 400
+
+        table_columns = _parse_table_columns(request.form)
         content = extract_document(filepath, table_columns=table_columns)
 
         return jsonify({
@@ -76,12 +51,12 @@ def api_extract_docx():
             'contenu': content
         })
 
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({
             'error': f"Erreur lors de l'extraction: {str(e)}"
         }), 500
-
     finally:
-        # Nettoyage du fichier temporaire
-        if os.path.exists(filepath):
-            os.remove(filepath)
+        _cleanup(filepath)
+

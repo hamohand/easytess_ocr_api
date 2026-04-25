@@ -469,19 +469,26 @@ def api_normalize_labels():
     """
     Prend en entrée un tableau JSON d'objets (lignes extraites) et
     retourne ce même tableau avec les clés renommées selon le mapping.
+
+    Query params:
+        mapping: Nom du fichier de config (sans .json) dans config_labels/.
+                 Défaut: "default".
     """
     try:
         data = request.get_json()
         if not data or not isinstance(data, list):
             return jsonify({'error': 'Le corps de la requête doit être un tableau JSON valide (liste de lignes).'}), 400
 
-        normalized = normalize_labels(data)
+        mapping_name = request.args.get('mapping', 'default')
+        normalized = normalize_labels(data, mapping_name=mapping_name)
 
         return jsonify({
             'success': True,
+            'mapping_utilise': mapping_name,
             'nb_lignes_normalisees': len(normalized),
             'donnees': normalized
         })
     except Exception as e:
         return jsonify({'error': f"Erreur de normalisation: {str(e)}"}), 500
+
 

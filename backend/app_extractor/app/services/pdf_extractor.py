@@ -394,21 +394,37 @@ def extract_rows_with_single_tariff_code(content):
     return results
 
 
-def normalize_labels(lignes):
+def _load_label_config(mapping_name="default"):
     """
-    Renomme les étiquettes (clés) d'une liste de dictionnaires selon un dictionnaire préétabli.
+    Charge un fichier de configuration de normalisation des étiquettes.
     
-    Args:
-        lignes: Liste de dictionnaires (lignes de tableaux extraites et filtrées)
-        
-    Returns:
-        Nouvelle liste de dictionnaires avec les clés renommées.
+    Cherche dans le dossier config_labels/ au même niveau que le package app/.
+    Retourne (mapping_etiquettes, nettoyage_valeurs) ou les valeurs par défaut
+    si le fichier n'existe pas.
     """
-    mapping_etiquettes = {
+    import os, json
+    
+    # Chercher config_labels/ à la racine de app_extractor/
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    config_path = os.path.join(base_dir, 'config_labels', f'{mapping_name}.json')
+    
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            logger.info(f"Configuration de normalisation chargée: {config_path}")
+            return config.get('mapping_etiquettes', {}), config.get('nettoyage_valeurs', {})
+        except Exception as e:
+            logger.warning(f"Erreur de lecture du fichier de config '{config_path}': {e}. Utilisation des valeurs par défaut.")
+    else:
+        logger.debug(f"Fichier de config '{config_path}' introuvable. Utilisation des valeurs par défaut.")
+    
+    # Valeurs par défaut (fallback)
+    return {
         "SECTION XVII CHAPITRE 87 DOUANES ALGERIENNES - 2024 -": "Position",
         "Position & Sous": "Position",
         "Position & Sous Position": "Position",
-        "Chapitre 87": "Position",  # Sécurité
+        "Chapitre 87": "Position",
         "col_02": "GU",
         "Statistiques": "GU",
         "col_03": "UQN",
@@ -419,8 +435,31 @@ def normalize_labels(lignes):
         "F.A.P": "FAP",
         "col_07": "Autres",
         "col_08": "FAP"
+    }, {
+        "DD":       ["D.D ", "D.D"],
+        "GU":       ["G.U ", "G.U"],
+        "Position": ["Position "],
+        "TVA":      ["T.V.A ", "T.V.A"],
+        "UQN":      ["U.Q.N ", "U.Q.N"],
+        "Autres":   ["Droits et Taxes "]
     }
 
+
+def normalize_labels(lignes, mapping_name="default"):
+    """
+    Renomme les étiquettes (clés) d'une liste de dictionnaires selon un mapping
+    chargé depuis un fichier de configuration externe.
+    
+    Args:
+        lignes: Liste de dictionnaires (lignes de tableaux extraites et filtrées)
+        mapping_name: Nom du fichier de configuration (sans .json) dans config_labels/.
+                      Ex: "default", "chapitre_84", "facture".
+        
+    Returns:
+        Nouvelle liste de dictionnaires avec les clés renommées.
+    """
+    mapping_etiquettes, nettoyage_valeurs = _load_label_config(mapping_name)
+    
     resultats_normalises = []
 
     for ligne in lignes:
@@ -430,25 +469,14 @@ def normalize_labels(lignes):
             # sinon on garde la clé originale
             nouvelle_cle = mapping_etiquettes.get(cle_originale, cle_originale)
             
-            # Suppression de sous-chaînes spécifiques pour certaines étiquettes
-            if isinstance(valeur, str):
-                if nouvelle_cle == "DD":
-                    valeur = valeur.replace("D.D ", "").replace("D.D", "").strip()
-                elif nouvelle_cle == "GU":
-                    valeur = valeur.replace("G.U ", "").replace("G.U", "").strip()
-                elif nouvelle_cle == "Position":
-                    valeur = valeur.replace("Position ", "").strip()
-                elif nouvelle_cle == "TVA":
-                    valeur = valeur.replace("T.V.A ", "").replace("T.V.A", "").strip()
-                elif nouvelle_cle == "UQN":
-                    valeur = valeur.replace("U.Q.N ", "").replace("U.Q.N", "").strip()
-                elif nouvelle_cle == "Autres":
-                    valeur = valeur.replace("Droits et Taxes ", "").strip()
+            # Nettoyage dynamique des valeurs selon la config
+            if isinstance(valeur, str) and nouvelle_cle in nettoyage_valeurs:
+                for pattern in nettoyage_valeurs[nouvelle_cle]:
+                    valeur = valeur.replace(pattern, "")
+                valeur = valeur.strip()
             
-            # Gestion des collisions si deux colonnes différentes se retrouvent avec le même nom (ex: col_08 -> FAP et F.A.P -> FAP)
+            # Gestion des collisions si deux colonnes différentes se retrouvent avec le même nom
             if nouvelle_cle in nouvelle_ligne:
-                # Si la clé existe déjà, on concatène s'il y a des valeurs, 
-                # ou on privilégie celle qui n'est pas vide
                 if valeur and str(valeur).strip():
                     if not nouvelle_ligne[nouvelle_cle]:
                         nouvelle_ligne[nouvelle_cle] = valeur
@@ -460,4 +488,5 @@ def normalize_labels(lignes):
         resultats_normalises.append(nouvelle_ligne)
 
     return resultats_normalises
+
 
