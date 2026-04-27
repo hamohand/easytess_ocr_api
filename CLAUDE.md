@@ -38,14 +38,20 @@ easytess_ocr_api/
 │   │
 │   └── app_extractor/             # API Flask Extraction (port 8083)
 │       ├── run.py                 # Point d'entrée
+│       ├── config.py              # Configuration (MAX_CONTENT_LENGTH=50Mo)
+│       ├── config_labels/         # Mappings de normalisation des étiquettes
+│       │   └── default.json       # Mapping par défaut (col_XX → noms lisibles)
+│       ├── tests/
+│       │   └── test_extractor.py  # 29 tests (pytest)
 │       └── app/
-│           ├── __init__.py        # create_app(), CORS, blueprints
+│           ├── __init__.py        # create_app(), CORS, Swagger (Flasgger), error handlers
 │           ├── api/
-│           │   ├── document_routes.py  # Extraction unifiée PDF/DOCX + conversion PDF→Word
-│           │   └── docx_routes.py      # Extraction DOCX (legacy)
+│           │   ├── document_routes.py  # Extraction unifiée PDF/DOCX + conversion + normalisation
+│           │   ├── docx_routes.py      # Extraction DOCX (thin wrapper → document_routes)
+│           │   └── file_routes.py      # Serving fichiers uploadés uniquement
 │           └── services/
-│               ├── pdf_extractor.py    # Extraction contenu PDF — pdfplumber
-│               ├── docx_extractor.py   # Extraction contenu Word — python-docx
+│               ├── pdf_extractor.py    # Extraction contenu PDF — pdfplumber + normalisation
+│               ├── docx_extractor.py   # Extraction contenu Word — python-docx (avec pages)
 │               └── pdf_to_docx.py      # Conversion PDF → Word (.docx)
 │
 ├── frontend_ocr/                  # Angular 18+ dédié OCR (port 4100)
@@ -64,10 +70,11 @@ easytess_ocr_api/
 │   └── src/app/
 │       ├── app.component.*               # Layout principal Extraction
 │       ├── components/
-│       │   └── document-extractor.component.*  # Extraction PDF/DOCX + conversion
+│       │   └── document-extractor.component.*  # Extraction PDF/DOCX + conversion + pipeline tarif
 │       └── services/
-│           ├── document.service.ts   # Extraction de documents + conversion PDF→DOCX
-│           └── models.ts             # Interfaces TypeScript Extraction
+│           ├── document.service.ts   # Extraction + conversion + normalisation + tariff codes
+│           ├── models.ts             # Interfaces TypeScript Extraction (8 interfaces)
+│           └── index.ts              # Barrel exports
 │
 └── docs/                          # Documentation
 ```
@@ -88,6 +95,11 @@ python run.py                    # → http://localhost:8082
 cd backend/app_extractor
 pip install -r requirements.txt
 python run.py                    # → http://localhost:8083
+                                 # Swagger UI → http://localhost:8083/apidocs/
+
+# Tests Extractor
+cd backend/app_extractor
+python -m pytest tests/ -v       # 29 tests
 
 # Frontend OCR
 cd frontend_ocr
@@ -153,8 +165,10 @@ npx ng build --configuration=development
 
 ### Frontend Extraction — Interface dédiée
 - **Extraction** : 3 modes (`unified`, `pdf`, `convert`)
-- **Code** : 4 modes (`position` → `etiquettes` → `hscode` → `hscode10`)
+- **Code** : 6 modes (`position` → `etiquettes` → `hscode` → `hscode10` → `hscode10all` → `hscode10folder`)
 - Le composant `document-extractor` utilise des **signals Angular** et `FormsModule` pour les options
+- **Swagger UI** disponible à `http://localhost:8083/apidocs/`
+- **Limite upload** : 50 Mo max (`MAX_CONTENT_LENGTH`), handler 413 JSON
 
 ### Frontend — Flux onglet Code (Tarif douanier)
 Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF :
@@ -163,14 +177,17 @@ Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF
 3. **Hscode** — génère `hscode.json` côté client (pas d'appel API) à partir des données d'Étiquettes :
    - `code` ← clé contenant `"position"` (recherche partielle insensible à la casse), **chiffres uniquement** (`replace(/[^0-9]/g, '')`)
    - `description` ← clé contenant `"désignation"` ou `"designation"`
-- Les résultats sont **partagés** entre les 3 modes (pas de reset lors du switch entre eux)
+- **Hscode10** — pipeline tout-en-un : extraction des codes tarifaires + normalisation + génération `hscode.json` (même résultat que les 3 étapes manuelles)
+- **Hscode10All** — identique à Hscode10 mais exporte **tous les champs normalisés** (`hscode_all.json`) au lieu de seulement `{code, description}`
+- **Hscode10-Dossier** — même pipeline Hscode10 mais appliqué à un dossier entier de PDFs
+- Les résultats sont **partagés** entre les modes (pas de reset lors du switch entre eux)
 - Le mode `hscode` n'a pas de dropzone ni de panneau options (traitement purement client)
 
 ### Frontend — Signaux Angular
 - Tous les composants utilisent des **signals Angular** (pas de BehaviorSubject)
 - OCR : 3 modes : `single`, `multi`, `folder` (toggle via `activeMode` signal)
 - Extraction (onglet **Extraction**) : 3 modes : `unified`, `pdf`, `convert`
-- Extraction (onglet **Code**) : 5 modes : `position`, `etiquettes`, `hscode`, `hscode10`, `hscode10folder`
+- Extraction (onglet **Code**) : 6 modes : `position`, `etiquettes`, `hscode`, `hscode10`, `hscode10all`, `hscode10folder`
 - SSE via `EventSource` natif avec `NgZone.run()` pour la détection de changements
 - Cleanup du `EventSource` dans `ngOnDestroy()`
 
@@ -205,6 +222,8 @@ Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF
 | POST | `/api/extract-docx` | Extraction contenu Word (.docx) |
 | POST | `/api/extract-document` | Extraction unifiée (PDF ou DOCX, auto-détection) |
 | POST | `/api/convert-pdf-to-docx` | Conversion PDF → Word (.docx) avec téléchargement |
+| POST | `/api/extract-tariff-codes` | Extraction des lignes avec un code tarifaire unique |
+| POST | `/api/normalize-labels` | Normalisation des étiquettes (mapping configurable) |
 
 #### Paramètres communs (`extract-*` et `convert-*`)
 - `file` : fichier PDF ou DOCX (obligatoire)
@@ -216,9 +235,11 @@ Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF
 ## Conventions
 
 - **CSS Budget** : `entity-creator.component.css` dépasse le budget production (~12 kB). Le build `--configuration=development` fonctionne toujours.
-- **Pas de tests automatisés** : Tester manuellement via le navigateur.
+- **Tests automatisés** : `python -m pytest tests/ -v` depuis `backend/app_extractor/` (29 tests).
+- **Swagger UI** : Disponible à `http://localhost:8083/apidocs/` (Flasgger). Spec JSON à `/apispec.json`.
 - **Stockage** : Entités en JSON dans `entities/`, uploads dans `uploads/`.
 - **Pas d'auth** : L'API est ouverte (usage interne).
+- **Limite upload** : 50 Mo par fichier (`MAX_CONTENT_LENGTH` dans `config.py`).
 
 ## ⚠️ Principe fondamental : Repérage ↔ OCR
 

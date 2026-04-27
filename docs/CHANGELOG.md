@@ -2,6 +2,51 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [3.2.0] - 2026-04-25
+
+### 🎉 Refactorisation complète du micro-service Extractor
+
+#### Backend — Nettoyage architectural
+- **Suppression de 6 routes OCR obsolètes** dans `file_routes.py` (155 → 21 lignes)
+- **Refactorisation de `docx_routes.py`** en thin wrapper délégant à `document_routes.py`
+- **Externalisation du mapping de labels** : `config_labels/default.json` remplace le dictionnaire hardcodé dans `pdf_extractor.py`
+- **Endpoint `normalize-labels`** : nouveau paramètre `?mapping=<nom>` pour choisir un fichier de config alternatif
+- **Limite de taille fichier** : `MAX_CONTENT_LENGTH = 50 Mo` dans `config.py` avec handler d'erreur 413 JSON structuré
+- **Détection de sauts de page DOCX** : support de `w:br type="page"` et `w:lastRenderedPageBreak` pour la parité PDF/DOCX
+- **Nettoyage de `requirements.txt`** : suppression des dépendances OCR-specific copiées par erreur
+
+#### Backend — Documentation API (Swagger)
+- **Intégration Flasgger** : Swagger UI accessible à `http://localhost:8083/apidocs/`
+- **Documentation YAML** dans les docstrings des endpoints `extract-pdf`, `extract-document`, `normalize-labels`
+- **Spec JSON** disponible à `/apispec.json`
+
+#### Backend — Tests automatisés
+- **29 tests pytest** dans `tests/test_extractor.py` couvrant 5 catégories :
+  - Extraction DOCX (8 tests)
+  - Normalisation des labels (7 tests)
+  - Extraction de codes tarifaires (2 tests)
+  - Configuration des labels (3 tests)
+  - Endpoints API Flask (9 tests)
+
+#### Frontend — Nettoyage massif
+- **Suppression de 10 composants/services orphelins** hérités du module OCR (~150 kB de code mort)
+- **Réduction de `models.ts`** : 13 → 8 interfaces (suppression des interfaces OCR inutilisées)
+- **Extraction de helpers** dans le composant : `buildFormData()`, `downloadJsonFile()`, `buildHscodeData()`
+- **Migration vers `firstValueFrom()`** pour les observables one-shot
+- **Correction du port API** dans `document.service.ts` : 8082 → 8083
+
+#### Frontend — Nouveau mode Hscode10All
+- **Bouton `Hscode10All`** (📋) dans l'onglet Code
+- **Pipeline identique à Hscode10** (extraction tarif → normalisation → téléchargement)
+- **Exporte TOUS les champs normalisés** dans `hscode_all.json` (au lieu de seulement `{code, description}`)
+- **Exclut les métadonnées internes** (`_page`, `_tableau`)
+
+### 📚 Documentation
+- **CLAUDE.md** : Arbre mis à jour, 6 modes Code, endpoints `extract-tariff-codes` et `normalize-labels`, conventions Swagger/tests/limite
+- **CHANGELOG.md** : Entrée v3.2.0
+
+---
+
 ## [3.1.0] - 2026-04-18
 
 ### 🎉 Outil d'optimisation des zones OCR
@@ -455,19 +500,19 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 
 ## Versions futures prévues
 
-### [3.2.0] - À venir
+### [3.2.0] - ✅ Fait
+- [x] API REST documentée (Swagger / Flasgger)
+- [x] Tests automatisés (29 tests pytest)
+
+### [4.0.0] - À venir
 - [ ] Support complet de zbar pour tous les types de codes-barres
 - [ ] Support multi-pages pour PDF (OCR)
 - [ ] Paramétrage de la résolution dans l'interface
 - [ ] Interface de correction manuelle des résultats
-
-### [4.0.0] - À venir
-- [ ] API REST complète et documentée (Swagger)
 - [ ] Authentification et gestion des utilisateurs
 - [ ] Base de données (PostgreSQL/MongoDB)
 - [ ] Déploiement Docker (un container par micro-service)
 - [ ] CI/CD
-- [ ] Tests automatisés
 
 ---
 
