@@ -65,6 +65,13 @@
                 <span class="mode-desc">Générer hscode.json directement depuis un PDF</span>
             </span>
         </button>
+        <button class="mode-btn" [class.active]="activeMode() === 'hscode10all'" (click)="setMode('hscode10all')">
+            <span class="mode-icon">📋</span>
+            <span class="mode-info">
+                <span class="mode-title">Hscode10All</span>
+                <span class="mode-desc">Extraire tous les champs normalisés depuis un PDF</span>
+            </span>
+        </button>
         <button class="mode-btn" [class.active]="activeMode() === 'hscode10folder'" (click)="setMode('hscode10folder')">
             <span class="mode-icon">📁</span>
             <span class="mode-info">
@@ -193,8 +200,8 @@
     </div>
     }
 
-    <!-- ─── Options Panel : Hscode10 ─── -->
-    @if (selectedFile() && activeMode() === 'hscode10') {
+    <!-- ─── Options Panel : Hscode10 / Hscode10All ─── -->
+    @if (selectedFile() && (activeMode() === 'hscode10' || activeMode() === 'hscode10all')) {
     <div class="options-panel">
         <h3 class="options-title">⚙️ Options</h3>
         <div class="options-grid">
@@ -214,6 +221,7 @@
             </div>
         </div>
         <div class="action-buttons">
+            @if (activeMode() === 'hscode10') {
             <button class="btn btn-primary" (click)="generateHscode10()" [disabled]="loading()">
                 @if (loading()) {
                 <span class="spinner"></span> Traitement en cours...
@@ -221,12 +229,22 @@
                 ⚡ Générer hscode.json
                 }
             </button>
+            }
+            @if (activeMode() === 'hscode10all') {
+            <button class="btn btn-primary" (click)="generateHscode10All()" [disabled]="loading()">
+                @if (loading()) {
+                <span class="spinner"></span> Traitement en cours...
+                } @else {
+                📋 Générer hscode_all.json
+                }
+            </button>
+            }
         </div>
     </div>
     }
 
     <!-- ─── Options Panel : autres modes ─── -->
-    @if (selectedFile() && activeMode() !== 'hscode' && activeMode() !== 'hscode10' && activeMode() !== 'hscode10folder') {
+    @if (selectedFile() && activeMode() !== 'hscode' && activeMode() !== 'hscode10' && activeMode() !== 'hscode10all' && activeMode() !== 'hscode10folder') {
     <div class="options-panel">
         <h3 class="options-title">⚙️ Options</h3>
 

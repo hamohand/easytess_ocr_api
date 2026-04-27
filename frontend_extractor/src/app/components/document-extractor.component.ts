@@ -6,7 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { DocumentService } from '../services/document.service';
 import { DocumentBloc, ExtractDocumentResponse, ExtractionStats } from '../services/models';
 
-type ExtractionMode = 'unified' | 'pdf' | 'convert' | 'position' | 'etiquettes' | 'hscode' | 'hscode10' | 'hscode10folder';
+type ExtractionMode = 'unified' | 'pdf' | 'convert' | 'position' | 'etiquettes' | 'hscode' | 'hscode10' | 'hscode10all' | 'hscode10folder';
 type Strategy = 'auto' | 'standard' | 'text' | 'lines_strict';
 
 @Component({
@@ -69,6 +69,7 @@ export class DocumentExtractorComponent {
             case 'etiquettes': return '.pdf';
             case 'hscode': return '.pdf';
             case 'hscode10': return '.pdf';
+            case 'hscode10all': return '.pdf';
             case 'convert': return '.pdf';
             case 'unified': return '.pdf,.docx';
             default: return '.pdf';
@@ -93,7 +94,7 @@ export class DocumentExtractorComponent {
     setMode(mode: ExtractionMode, forceReset: boolean = true) {
         // If we are just switching between position and etiquettes, we might want to keep the results
         // so that we can normalize the existing data.
-        const codeTabModes: ExtractionMode[] = ['position', 'etiquettes', 'hscode', 'hscode10', 'hscode10folder'];
+        const codeTabModes: ExtractionMode[] = ['position', 'etiquettes', 'hscode', 'hscode10', 'hscode10all', 'hscode10folder'];
         const isCodeTabSwitch =
             codeTabModes.includes(this.activeMode()) && codeTabModes.includes(mode);
             
@@ -106,7 +107,7 @@ export class DocumentExtractorComponent {
         const file = this.selectedFile();
         if (file) {
             const ext = file.name.split('.').pop()?.toLowerCase();
-            if ((mode === 'pdf' || mode === 'convert' || mode === 'position' || mode === 'etiquettes' || mode === 'hscode' || mode === 'hscode10') && ext !== 'pdf') {
+            if ((mode === 'pdf' || mode === 'convert' || mode === 'position' || mode === 'etiquettes' || mode === 'hscode' || mode === 'hscode10' || mode === 'hscode10all') && ext !== 'pdf') {
                 this.selectedFile.set(null);
             }
         }
@@ -392,6 +393,64 @@ export class DocumentExtractorComponent {
                         // Étape 3 : génération de hscode.json
                         const hscodeData = this.buildHscodeData(normalizedRows);
                         this.downloadJsonFile(hscodeData, 'hscode.json');
+                        this.loading.set(false);
+                    },
+                    error: (err: any) => {
+                        this.error.set(err.error?.error || 'Erreur lors de la normalisation');
+                        this.loading.set(false);
+                    }
+                });
+            },
+            error: (err: any) => {
+                this.error.set(err.error?.error || 'Erreur lors de l\'extraction des codes');
+                this.loading.set(false);
+            }
+        });
+    }
+
+    // ─── Hscode10All : pipeline complet PDF → toutes les colonnes normalisées ───
+    generateHscode10All() {
+        const file = this.selectedFile();
+        if (!file) return;
+
+        this.loading.set(true);
+        this.error.set(null);
+        this.resetResults();
+
+        const options = {
+            tableColumns: this.parseColumns(),
+            pages: this.parsePages(),
+            strategy: this.strategy()
+        };
+
+        // Étape 1 : extraction des codes tarifaires
+        this.documentService.extractTariffCodes(file, options).subscribe({
+            next: (res: any) => {
+                const rows: any[] = res.donnees || [];
+                if (rows.length === 0) {
+                    this.error.set('Aucune ligne trouvée lors de l\'extraction.');
+                    this.loading.set(false);
+                    return;
+                }
+
+                // Étape 2 : normalisation des étiquettes
+                this.documentService.normalizeLabels(rows).subscribe({
+                    next: (norm: any) => {
+                        const normalizedRows: any[] = norm.donnees || [];
+
+                        // Étape 3 : téléchargement de TOUTES les colonnes
+                        const cleanedRows = normalizedRows.map(row => {
+                            const cleaned: any = {};
+                            for (const [key, value] of Object.entries(row)) {
+                                // Exclure les clés internes (_page, _tableau)
+                                if (!key.startsWith('_')) {
+                                    cleaned[key] = value;
+                                }
+                            }
+                            return cleaned;
+                        }).filter(row => Object.keys(row).length > 0);
+
+                        this.downloadJsonFile(cleanedRows, 'hscode_all.json');
                         this.loading.set(false);
                     },
                     error: (err: any) => {
