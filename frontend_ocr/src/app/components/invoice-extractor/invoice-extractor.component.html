@@ -1,0 +1,219 @@
+<!-- invoice-extractor.component.html -->
+<div class="invoice-container">
+
+    <!-- ═══ Section Header ═══ -->
+    <div class="section-header">
+        <h2>🧾 Extraction Factures</h2>
+        <p class="section-desc">Extrayez automatiquement la liste des articles depuis une image ou un PDF de facture</p>
+    </div>
+
+    <!-- ═══ Options Row ═══ -->
+    <div class="options-row">
+        <div class="option-group">
+            <label for="lang-select">🌐 Langue OCR</label>
+            <select id="lang-select" [ngModel]="lang()" (ngModelChange)="lang.set($event)">
+                <option value="fra">Français</option>
+                <option value="ara+fra">Arabe + Français</option>
+                <option value="eng">Anglais</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- ═══ Dropzone ═══ -->
+    @if (!selectedFile()) {
+        <div class="dropzone"
+             [class.drag-over]="isDragOver()"
+             (dragover)="onDragOver($event)"
+             (dragleave)="onDragLeave($event)"
+             (drop)="onDrop($event)"
+             (click)="fileInput.click()">
+            <div class="dropzone-content">
+                <div class="dropzone-icon">📄</div>
+                <p class="dropzone-title">Déposez votre facture ici</p>
+                <p class="dropzone-subtitle">ou cliquez pour sélectionner un fichier</p>
+                <p class="dropzone-formats">JPG, PNG, TIFF, PDF</p>
+            </div>
+        </div>
+        <input type="file" #fileInput
+               accept=".jpg,.jpeg,.png,.bmp,.tiff,.tif,.webp,.pdf"
+               (change)="onFileSelected($event)"
+               class="hidden-file-input" />
+    }
+
+    <!-- ═══ File Preview & Actions ═══ -->
+    @if (selectedFile()) {
+        <div class="file-section">
+            <!-- File Info Bar -->
+            <div class="file-info-bar">
+                <div class="file-details">
+                    <span class="file-ext-badge">{{ fileInfo()?.ext }}</span>
+                    <span class="file-name">{{ fileInfo()?.name }}</span>
+                    <span class="file-size">{{ fileInfo()?.size }} Mo</span>
+                </div>
+                <div class="file-actions">
+                    @if (state() !== 'processing') {
+                        <button class="btn btn-outline btn-sm" (click)="clearFile()">
+                            ✕ Retirer
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Image Preview -->
+            @if (previewUrl()) {
+                <div class="preview-wrapper">
+                    <img [src]="previewUrl()" alt="Aperçu facture" class="preview-image" />
+                </div>
+            } @else if (fileInfo()?.ext === 'PDF') {
+                <div class="pdf-placeholder">
+                    <span class="pdf-icon">📑</span>
+                    <p>Aperçu non disponible pour les fichiers PDF</p>
+                    <p class="pdf-hint">Le PDF sera converti en image pour l'analyse OCR</p>
+                </div>
+            }
+
+            <!-- Action Button -->
+            <div class="action-bar">
+                @if (state() === 'idle' || state() === 'error' || state() === 'results') {
+                    <button class="btn btn-primary btn-lg"
+                            (click)="lancerExtraction()"
+                            [disabled]="state() === 'processing'">
+                        🔍 Extraire les articles
+                    </button>
+                }
+                @if (state() === 'processing') {
+                    <div class="processing-indicator">
+                        <div class="spinner"></div>
+                        <span>Analyse OCR en cours...</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- ═══ Error Message ═══ -->
+    @if (state() === 'error' && errorMessage()) {
+        <div class="error-panel">
+            <div class="error-header">
+                <span>⚠️ Extraction incomplète</span>
+            </div>
+            <p class="error-text">{{ errorMessage() }}</p>
+
+            <!-- Debug: lignes OCR détectées -->
+            @if (response()?.debug?.lignes_ocr; as lignes) {
+                <details class="debug-details">
+                    <summary>🔎 Texte OCR détecté ({{ lignes.length }} lignes)</summary>
+                    <div class="debug-lines">
+                        @for (ligne of lignes; track $index) {
+                            <div class="debug-line">
+                                <span class="debug-line-num">{{ $index + 1 }}</span>
+                                <span class="debug-line-text">{{ ligne }}</span>
+                            </div>
+                        }
+                    </div>
+                </details>
+            }
+        </div>
+    }
+
+    <!-- ═══ Results Table ═══ -->
+    @if (hasResults()) {
+        <div class="results-section">
+            <!-- Results Header -->
+            <div class="results-header">
+                <div class="results-title">
+                    <h3>📋 Articles extraits</h3>
+                    <span class="results-count">{{ articles().length }} article(s)</span>
+                </div>
+                @if (response()?.en_tete_detecte) {
+                    <div class="header-detected">
+                        <span class="label">En-tête détecté :</span>
+                        <span class="value">{{ response()?.en_tete_detecte }}</span>
+                    </div>
+                }
+                <div class="results-actions">
+                    <button class="btn btn-outline btn-sm" (click)="exporterJson()">
+                        📥 JSON
+                    </button>
+                    <button class="btn btn-outline btn-sm" (click)="exporterCsv()">
+                        📥 CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats bar -->
+            <div class="stats-bar">
+                @if (response()?.total_mots_ocr) {
+                    <div class="stat-chip">
+                        <span class="stat-label">Mots OCR</span>
+                        <span class="stat-value">{{ response()?.total_mots_ocr }}</span>
+                    </div>
+                }
+                @if (response()?.total_lignes) {
+                    <div class="stat-chip">
+                        <span class="stat-label">Lignes</span>
+                        <span class="stat-value">{{ response()?.total_lignes }}</span>
+                    </div>
+                }
+                @if (response()?.nb_pages) {
+                    <div class="stat-chip">
+                        <span class="stat-label">Pages PDF</span>
+                        <span class="stat-value">{{ response()?.nb_pages }}</span>
+                    </div>
+                }
+            </div>
+
+            <!-- Articles Table -->
+            <div class="table-wrapper">
+                <table class="articles-table">
+                    <thead>
+                        <tr>
+                            <th class="col-num">N°</th>
+                            <th class="col-designation">Désignation</th>
+                            <th class="col-conf">Confiance</th>
+                            @if (response()?.nb_pages && response()!.nb_pages! > 1) {
+                                <th class="col-page">Page</th>
+                            }
+                            <th class="col-actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (article of articles(); track $index) {
+                            <tr class="article-row">
+                                <td class="col-num">{{ $index + 1 }}</td>
+                                <td class="col-designation">
+                                    <input type="text"
+                                           class="inline-edit"
+                                           [value]="article.designation"
+                                           placeholder="Désignation de l'article"
+                                           aria-label="Modifier la désignation"
+                                           (blur)="updateArticle($index, $any($event.target).value)"
+                                           (keyup.enter)="$any($event.target).blur()" />
+                                </td>
+                                <td class="col-conf">
+                                    <span class="conf-badge"
+                                          [class.conf-high]="article.confiance >= 80"
+                                          [class.conf-mid]="article.confiance >= 50 && article.confiance < 80"
+                                          [class.conf-low]="article.confiance < 50">
+                                        {{ article.confiance }}%
+                                    </span>
+                                </td>
+                                @if (response()?.nb_pages && response()!.nb_pages! > 1) {
+                                    <td class="col-page">{{ article.page }}</td>
+                                }
+                                <td class="col-actions">
+                                    <button class="btn-icon btn-delete"
+                                            title="Supprimer cet article"
+                                            (click)="supprimerArticle($index)">
+                                        🗑️
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+</div>

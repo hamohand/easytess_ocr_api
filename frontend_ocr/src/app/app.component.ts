@@ -5,13 +5,15 @@ import { OcrUploadComponent } from './components/ocr-upload.component';
 import { EntityCreatorComponent } from './components/entity-creator.component';
 import { CompositeCreatorComponent } from './components/composite-creator/composite-creator.component';
 import { MatchingComponent } from './components/matching/matching.component';
+import { InvoiceExtractorComponent } from './components/invoice-extractor/invoice-extractor.component';
+import { ImageCropperComponent } from './components/image-cropper/image-cropper.component';
 
-type OcrTab = 'analyse' | 'entity' | 'composite' | 'matching';
+type OcrTab = 'analyse' | 'entity' | 'composite' | 'matching' | 'facture' | 'crop';
 
 @Component({
     selector: 'app-root',
     standalone: true,
-    imports: [CommonModule, OcrUploadComponent, EntityCreatorComponent, CompositeCreatorComponent, MatchingComponent],
+    imports: [CommonModule, OcrUploadComponent, EntityCreatorComponent, CompositeCreatorComponent, MatchingComponent, InvoiceExtractorComponent, ImageCropperComponent],
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.css']
 })

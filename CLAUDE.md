@@ -33,7 +33,8 @@ easytess_ocr_api/
 │   │       ├── services/
 │   │       │   ├── ocr_engine.py      # Moteurs OCR (Tesseract + EasyOCR), analyse hybride, AABB
 │   │       │   ├── entity_manager.py  # CRUD fichiers JSON entités
-│   │       │   └── image_matcher.py   # Template matching ORB
+│   │       │   ├── image_matcher.py   # Template matching ORB
+│   │       │   └── invoice_extractor.py # Extraction articles de factures par OCR
 │   │       └── utils/                 # Utilitaires spécifiques OCR
 │   │
 │   └── app_extractor/             # API Flask Extraction (port 8083)
@@ -56,15 +57,17 @@ easytess_ocr_api/
 │
 ├── frontend_ocr/                  # Angular 18+ dédié OCR (port 4100)
 │   └── src/app/
-│       ├── app.component.*               # Layout principal OCR (2 sous-onglets)
+│       ├── app.component.*               # Layout principal OCR (5 sous-onglets)
 │       ├── components/
 │       │   ├── ocr-upload.component.*         # Analyse OCR (3 modes: single/multi/folder)
-│       │   └── entity-creator.component.*     # Création/gestion des entités
+│       │   ├── entity-creator.component.*     # Création/gestion des entités
+│       │   └── invoice-extractor/             # Extraction d'articles de factures
 │       └── services/
 │           ├── file.service.ts       # Upload simple/batch, export JSON
 │           ├── ocr.service.ts        # Analyse simple/batch/async, SSE progress
 │           ├── entity.service.ts     # CRUD entités
-│           └── models.ts             # Interfaces TypeScript OCR
+│           ├── invoice.service.ts    # Extraction factures
+│           └── models.ts             # Interfaces TypeScript OCR + Factures
 │
 ├── frontend_extractor/            # Angular 18+ dédié Extraction (port 4200 ou conf)
 │   └── src/app/
@@ -158,10 +161,20 @@ npx ng build --configuration=development
 - `pdf_to_docx.py` reconstruit un .docx à partir du contenu structuré
 - **`normalize_labels()`** : renomme les clés des lignes extraites selon un mapping chargé depuis `config_labels/<mapping_name>.json`. Le fichier par défaut est `config_labels/default.json`. La correspondance est **exacte** (pas partielle) — ajouter la variante exacte au fichier de config si une nouvelle forme apparaît. Le paramètre `mapping_name` permet de choisir un mapping différent (ex: `chapitre_84`). Fallback vers des valeurs hardcodées si le fichier est absent.
 
-### Frontend OCR — 2 sous-onglets
+### Frontend OCR — 5 sous-onglets
 - **Sous-onglet "Analyse OCR"** : analyse OCR (3 modes: single/multi/folder)
 - **Sous-onglet "Gestion des Entités"** : création/édition des entités
+- **Sous-onglet "Entités Composites"** : composition d'entités
+- **Sous-onglet "Appariement"** : appariement recto/verso
+- **Sous-onglet "Extraction Factures"** : extraction des articles (désignations) d'une image/PDF de facture
 - **Visualisation post-analyse** : cadre de l'entité tracé en **vert pointillé** + zones OCR en **bleu plein** sur le canvas
+
+### Backend — Extraction de factures (invoice_extractor)
+- **Algorithme** : OCR global (Tesseract image_to_data) → regroupement en lignes par proximité Y → détection en-tête par mots-clés → identification bornes colonne "Désignation" → extraction articles → arrêt aux mots-clés de fin
+- **Mots-clés en-tête** : `désignation`, `intitulé`, `description`, `article`, `libellé`, `produit`, `service`, `prestation`
+- **Mots-clés fin tableau** : `total`, `sous-total`, `montant ht/ttc`, `net à payer`, `المجموع`
+- **Support PDF** : conversion page par page via `pypdfium2` → image JPEG → OCR
+- **Endpoint** : `POST /api/extraire-facture` (image ou PDF, paramètre `lang`)
 
 ### Frontend Extraction — Interface dédiée
 - **Extraction** : 3 modes (`unified`, `pdf`, `convert`)
@@ -213,6 +226,9 @@ Les 3 modes de l'onglet **Code** sont conçus pour s'enchaîner sur le même PDF
 | POST | `/api/export-json-batch` | Export JSON batch |
 | GET/POST | `/api/entites` | Lister / créer entités |
 | GET/PUT/DELETE | `/api/entites/<nom>` | CRUD entité |
+| POST | `/api/extraire-facture` | Extraction articles d'une facture (image/PDF) |
+| POST | `/api/extraire-facture-batch` | Extraction batch de factures |
+| POST | `/api/export-facture-json` | Export JSON des articles extraits |
 
 ### Extraction & Conversion de documents (app_extractor — port 8083)
 

@@ -1,0 +1,272 @@
+<!-- image-cropper.component.html -->
+<div class="cropper-container">
+
+    <!-- ═══ Section Header ═══ -->
+    <div class="section-header">
+        <h2>✂️ Rognage d'images</h2>
+        <p class="section-desc">Rognez une zone rectangulaire d'une ou plusieurs images en précisant les coordonnées</p>
+    </div>
+
+    <!-- ═══ Mode Toggle ═══ -->
+    <div class="mode-toggle">
+        <button class="mode-btn" [class.active]="activeMode() === 'single'" (click)="setMode('single')">
+            <span class="mode-icon">🖼️</span>
+            Image unique
+        </button>
+        <button class="mode-btn" [class.active]="activeMode() === 'folder'" (click)="setMode('folder')">
+            <span class="mode-icon">📁</span>
+            Dossier d'images
+        </button>
+    </div>
+
+    <!-- ═══ Crop Parameters ═══ -->
+    <div class="params-panel">
+        <h3 class="params-title">📐 Paramètres du cadre</h3>
+        <div class="params-grid">
+            <div class="param-group">
+                <label for="crop-x">X (gauche)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="crop-x" [value]="cropX()" (input)="updateCropParam('x', $event)" min="0" />
+                    <span class="input-unit">px</span>
+                </div>
+            </div>
+            <div class="param-group">
+                <label for="crop-y">Y (haut)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="crop-y" [value]="cropY()" (input)="updateCropParam('y', $event)" min="0" />
+                    <span class="input-unit">px</span>
+                </div>
+            </div>
+            <div class="param-group">
+                <label for="crop-w">Largeur</label>
+                <div class="input-wrapper">
+                    <input type="number" id="crop-w" [value]="cropW()" (input)="updateCropParam('width', $event)" min="1" />
+                    <span class="input-unit">px</span>
+                </div>
+            </div>
+            <div class="param-group">
+                <label for="crop-h">Hauteur</label>
+                <div class="input-wrapper">
+                    <input type="number" id="crop-h" [value]="cropH()" (input)="updateCropParam('height', $event)" min="1" />
+                    <span class="input-unit">px</span>
+                </div>
+            </div>
+            <div class="param-group">
+                <label for="crop-format">Format</label>
+                <select id="crop-format" [ngModel]="outputFormat()" (ngModelChange)="outputFormat.set($event)">
+                    <option value="jpg">JPEG</option>
+                    <option value="png">PNG</option>
+                </select>
+            </div>
+        </div>
+
+        @if (imageDimensions()) {
+            <div class="image-dims-info">
+                📏 Image : {{ imageDimensions()!.width }} × {{ imageDimensions()!.height }} px
+            </div>
+        }
+        @if (paramsWarning()) {
+            <div class="params-warning">
+                ⚠️ {{ paramsWarning() }}
+            </div>
+        }
+    </div>
+
+    <!-- ═══ Dropzone — Single Mode ═══ -->
+    @if (activeMode() === 'single' && !selectedFile()) {
+        <div class="dropzone"
+             [class.drag-over]="isDragOver()"
+             (dragover)="onDragOver($event)"
+             (dragleave)="onDragLeave($event)"
+             (drop)="onDrop($event)"
+             (click)="fileInput.click()">
+            <div class="dropzone-content">
+                <div class="dropzone-icon">🖼️</div>
+                <p class="dropzone-title">Déposez votre image ici</p>
+                <p class="dropzone-subtitle">ou cliquez pour sélectionner un fichier</p>
+                <p class="dropzone-formats">JPG, PNG, BMP, TIFF, WebP</p>
+            </div>
+        </div>
+        <input type="file" #fileInput
+               accept=".jpg,.jpeg,.png,.bmp,.tiff,.tif,.webp"
+               (change)="onFileSelected($event)"
+               aria-label="Sélectionner une image"
+               class="hidden-file-input" />
+    }
+
+    <!-- ═══ Dropzone — Folder Mode ═══ -->
+    @if (activeMode() === 'folder' && !hasFiles()) {
+        <div class="dropzone"
+             [class.drag-over]="isDragOver()"
+             (dragover)="onDragOver($event)"
+             (dragleave)="onDragLeave($event)"
+             (drop)="onDrop($event)"
+             (click)="folderInput.click()">
+            <div class="dropzone-content">
+                <div class="dropzone-icon">📁</div>
+                <p class="dropzone-title">Déposez vos images ici</p>
+                <p class="dropzone-subtitle">ou cliquez pour sélectionner plusieurs fichiers</p>
+                <p class="dropzone-formats">JPG, PNG, BMP, TIFF, WebP — Mêmes coordonnées appliquées à toutes</p>
+            </div>
+        </div>
+        <input type="file" #folderInput
+               accept=".jpg,.jpeg,.png,.bmp,.tiff,.tif,.webp"
+               multiple
+               (change)="onFolderSelected($event)"
+               aria-label="Sélectionner plusieurs images"
+               class="hidden-file-input" />
+    }
+
+    <!-- ═══ Single File Preview ═══ -->
+    @if (activeMode() === 'single' && selectedFile()) {
+        <div class="file-section">
+            <!-- File Info Bar -->
+            <div class="file-info-bar">
+                <div class="file-details">
+                    <span class="file-ext-badge">{{ fileInfo()?.ext }}</span>
+                    <span class="file-name">{{ fileInfo()?.name }}</span>
+                    <span class="file-size">{{ fileInfo()?.size }} Mo</span>
+                </div>
+                <div class="file-actions">
+                    @if (state() !== 'processing') {
+                        <button class="btn btn-outline btn-sm" (click)="clearAll()">
+                            ✕ Retirer
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Image Preview with Crop Overlay -->
+            @if (previewUrl()) {
+                <div class="preview-wrapper">
+                    <div class="preview-container">
+                        <img #previewImg [src]="previewUrl()" alt="Aperçu" class="preview-image"
+                             (load)="imageDimensions.set({ width: previewImg.naturalWidth, height: previewImg.naturalHeight })" />
+                        <!-- Crop overlay -->
+                        @if (imageDimensions() && paramsValid()) {
+                            <div class="crop-overlay" [ngStyle]="getCropOverlayStyle()"></div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Action Button -->
+            <div class="action-bar">
+                @if (state() !== 'processing') {
+                    <button class="btn btn-primary btn-lg"
+                            (click)="lancerCrop()"
+                            [disabled]="!paramsValid()">
+                        ✂️ Rogner l'image
+                    </button>
+                }
+                @if (state() === 'processing') {
+                    <div class="processing-indicator">
+                        <div class="spinner"></div>
+                        <span>Rognage en cours...</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- ═══ Folder Files Info ═══ -->
+    @if (activeMode() === 'folder' && hasFiles()) {
+        <div class="file-section">
+            <div class="file-info-bar">
+                <div class="file-details">
+                    <span class="file-ext-badge folder-badge">📁</span>
+                    <span class="file-name">{{ folderInfo()?.count }} image(s) sélectionnée(s)</span>
+                    <span class="file-size">{{ folderInfo()?.size }} Mo total</span>
+                </div>
+                <div class="file-actions">
+                    @if (state() !== 'processing') {
+                        <button class="btn btn-outline btn-sm" (click)="clearAll()">
+                            ✕ Retirer tout
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <!-- File list -->
+            <div class="folder-file-list">
+                @for (file of selectedFiles(); track $index) {
+                    <div class="folder-file-item">
+                        <span class="folder-file-index">{{ $index + 1 }}</span>
+                        <span class="folder-file-name">{{ file.name }}</span>
+                        <span class="folder-file-size">{{ (file.size / 1024).toFixed(0) }} Ko</span>
+                    </div>
+                }
+            </div>
+
+            <!-- Action Button -->
+            <div class="action-bar">
+                @if (state() !== 'processing') {
+                    <button class="btn btn-primary btn-lg"
+                            (click)="lancerCrop()"
+                            [disabled]="!paramsValid()">
+                        ✂️ Rogner {{ selectedFiles().length }} image(s)
+                    </button>
+                }
+                @if (state() === 'processing') {
+                    <div class="processing-indicator">
+                        <div class="spinner"></div>
+                        <span>Rognage batch en cours...</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- ═══ Error Message ═══ -->
+    @if (state() === 'error' && errorMessage()) {
+        <div class="error-panel">
+            <div class="error-header">
+                <span>⚠️ Erreur de rognage</span>
+            </div>
+            <p class="error-text">{{ errorMessage() }}</p>
+        </div>
+    }
+
+    <!-- ═══ Single Result ═══ -->
+    @if (activeMode() === 'single' && cropResult()) {
+        <div class="results-section">
+            <div class="results-header">
+                <div class="results-title">
+                    <h3>✅ Image rognée</h3>
+                    <span class="results-count">{{ cropResult()!.filename }}</span>
+                </div>
+                <div class="results-actions">
+                    <button class="btn btn-primary btn-sm" (click)="downloadResult()">
+                        📥 Télécharger
+                    </button>
+                </div>
+            </div>
+            <div class="result-preview">
+                <img [src]="cropResult()!.blobUrl" alt="Résultat rogné" class="result-image" />
+            </div>
+        </div>
+    }
+
+    <!-- ═══ Batch Result ═══ -->
+    @if (activeMode() === 'folder' && batchResult()) {
+        <div class="results-section">
+            <div class="results-header">
+                <div class="results-title">
+                    <h3>✅ Lot rogné</h3>
+                    <span class="results-count">{{ batchResult()!.total }} image(s)</span>
+                </div>
+                <div class="results-actions">
+                    <button class="btn btn-primary btn-sm" (click)="downloadBatchResult()">
+                        📥 Télécharger le ZIP
+                    </button>
+                </div>
+            </div>
+            <div class="batch-success-info">
+                <div class="success-icon">🎉</div>
+                <p>{{ batchResult()!.total }} image(s) rognée(s) avec succès</p>
+                <p class="success-hint">Le fichier ZIP contient toutes les images rognées + un résumé JSON.</p>
+            </div>
+        </div>
+    }
+
+</div>

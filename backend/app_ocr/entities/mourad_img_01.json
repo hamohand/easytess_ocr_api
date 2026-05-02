@@ -1,0 +1,71 @@
+{
+  "nom": "mourad_img_01",
+  "description": "",
+  "date_creation": "2026-05-02T05:04:10.715139",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\mourad_img_01\\reference.jpeg",
+  "zones": [
+    {
+      "coords": [
+        0.7144904713114754,
+        0.6480960912052117,
+        0.9397848360655737,
+        0.7234693811074919
+      ],
+      "id": 1777690289121,
+      "lang": "ara",
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 2479,
+      "height": 3506,
+      "dpi_x": 300.0,
+      "dpi_y": 300.0
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        0.3937071399757967,
+        0.5
+      ],
+      "manuel_formula": "largeur"
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0.1751283513976041
+      ],
+      "manuel_formula": "hauteur"
+    },
+    "dimensions_absolues": {
+      "largeur": 976,
+      "hauteur": 614,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 1,
+    "image_dimensions": {
+      "width": 2479,
+      "height": 3506
+    }
+  }
+}

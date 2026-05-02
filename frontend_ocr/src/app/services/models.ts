@@ -207,3 +207,42 @@ export interface NormalizeLabelsResponse {
     nb_lignes_normalisees: number;
     donnees: { [key: string]: any }[];
 }
+
+// ─── Invoice extraction models ───────────────────────────
+
+export interface InvoiceArticle {
+    designation: string;
+    confiance: number;
+    position_y: number;
+    nb_mots: number;
+    page?: number;
+}
+
+export interface InvoiceColumnBounds {
+    x_min: number;
+    x_max: number;
+}
+
+export interface InvoiceExtractionResponse {
+    success: boolean;
+    filename: string;
+    articles: InvoiceArticle[];
+    nb_articles: number;
+    en_tete_detecte: string | null;
+    colonne_designation: InvoiceColumnBounds | null;
+    total_mots_ocr: number;
+    total_lignes: number;
+    image_dimensions?: { width: number; height: number };
+    nb_pages?: number;
+    pages?: InvoicePageResult[];
+    error?: string | null;
+    debug?: { lignes_ocr?: string[] };
+}
+
+export interface InvoicePageResult {
+    page: number;
+    nb_articles: number;
+    en_tete_detecte: string | null;
+    articles: InvoiceArticle[];
+}
+

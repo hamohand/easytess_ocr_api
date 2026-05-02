@@ -26,6 +26,14 @@
             <span class="sub-tab-icon">🔗</span>
             Appariement (Recto/Verso)
         </button>
+        <button class="sub-tab-btn" [class.active]="activeOcrTab() === 'facture'" (click)="setOcrTab('facture')">
+            <span class="sub-tab-icon">🧾</span>
+            Extraction Factures
+        </button>
+        <button class="sub-tab-btn" [class.active]="activeOcrTab() === 'crop'" (click)="setOcrTab('crop')">
+            <span class="sub-tab-icon">✂️</span>
+            Rognage Images
+        </button>
     </nav>
 
     <main class="content">
@@ -37,6 +45,10 @@
             <app-composite-creator />
         } @else if (activeOcrTab() === 'matching') {
             <app-matching />
+        } @else if (activeOcrTab() === 'facture') {
+            <app-invoice-extractor />
+        } @else if (activeOcrTab() === 'crop') {
+            <app-image-cropper />
         }
     </main>
 
