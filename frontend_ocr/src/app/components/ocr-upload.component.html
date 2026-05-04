@@ -29,6 +29,26 @@
     </select>
   </div>
 
+  <!-- Mode d'analyse -->
+  <div class="analysis-mode-selector">
+    <label>Mode d'analyse :</label>
+    <div class="mode-toggle" style="margin-top: 6px;">
+      <button class="toggle-btn" [class.active]="analysisMode() === 'rapide'" (click)="analysisMode.set('rapide')">
+        ⚡ Rapide
+      </button>
+      <button class="toggle-btn" [class.active]="analysisMode() === 'approfondi'" (click)="analysisMode.set('approfondi')">
+        🔬 Approfondi
+      </button>
+    </div>
+    <small style="color: #888; font-style: italic; margin-top: 4px; display: block;">
+      @if (analysisMode() === 'rapide') {
+        1 marge, Tesseract seul — ~2-3s/image
+      } @else {
+        Multi-marge (5 variantes), précision maximale — ~20s/image
+      }
+    </small>
+  </div>
+
   <!-- ==================== SINGLE FILE MODE ==================== -->
   @if (activeMode() === 'single') {
   <div class="upload-section">
@@ -144,6 +164,26 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Bannière de calibration (mode approfondi uniquement) -->
+    @if (analysisMode() === 'approfondi' && getMargesOptimales().length > 0) {
+    <div class="calibration-banner">
+      <div class="calibration-header">
+        <span>🎯 <strong>Calibration disponible</strong></span>
+        <small>Le mode approfondi a trouvé des marges plus efficaces pour {{ getMargesOptimales().length }} zone(s)</small>
+      </div>
+      <div class="calibration-details">
+        @for (m of getMargesOptimales(); track m.zone) {
+        <span class="calibration-chip">
+          {{ m.zone }}: {{ m.ancienne }}px → <strong>{{ m.nouvelle }}px</strong>
+        </span>
+        }
+      </div>
+      <button class="btn btn-primary" (click)="appliquerMargesOptimales()">
+        ⚡ Appliquer à l'entité (pour le mode rapide)
+      </button>
+    </div>
+    }
 
     <div style="display: flex; gap: 10px; margin-top: 20px;">
       <button class="btn btn-outline" (click)="reset()">🔄 Nouvelle analyse</button>
@@ -292,6 +332,80 @@
       <div class="stat-card stat-card-error">
         <span class="stat-label">Échoués</span>
         <span class="stat-value">{{ batchResults()!.echoues }}</span>
+      </div>
+      }
+    </div>
+
+    <!-- Synthèse zones (taux de réussite par zone) -->
+    <div class="synth-dashboard">
+      <div class="synth-header">
+        <h3>🎯 Synthèse des zones</h3>
+        <div class="synth-stats-inline">
+          <span class="synth-stat synth-stat-ok">✅ {{ getBatchSynthStats().ok }} OK</span>
+          <span class="synth-stat synth-stat-warn">⚠️ {{ getBatchSynthStats().douteux }} douteux</span>
+          <span class="synth-stat synth-stat-rate">{{ getBatchSynthStats().tauxReussite }}% réussite</span>
+        </div>
+      </div>
+
+      @if (getCasDouteuxBatch().length > 0) {
+      <div class="synth-toggle">
+        <button class="btn" [class.btn-primary]="showOnlyDouteux()" [class.btn-outline]="!showOnlyDouteux()" (click)="showOnlyDouteux.set(!showOnlyDouteux())">
+          @if (showOnlyDouteux()) {
+            👁️ Masquer le tableau des cas douteux
+          } @else {
+            🔍 Voir les {{ getCasDouteuxBatch().length }} cas douteux
+          }
+        </button>
+      </div>
+
+      @if (showOnlyDouteux()) {
+      <div class="synth-table-wrapper">
+        <table class="synth-table">
+          <thead>
+            <tr>
+              <th>Fichier</th>
+              <th>Zone</th>
+              <th>Texte détecté</th>
+              <th>Confiance</th>
+              <th>Correction</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (cas of getCasDouteuxBatch(); track cas.filename + cas.zone) {
+            <tr>
+              <td class="synth-filename">{{ cas.filename }}</td>
+              <td class="zone-name">{{ cas.zone }}</td>
+              <td class="text-content">{{ cas.texte_final || '(vide)' }}</td>
+              <td class="confidence">
+                <div class="confidence-bar">
+                  <div class="confidence-fill" [style.width.%]="cas.confiance_auto * 100"
+                       [style.background]="cas.confiance_auto < 0.4 ? '#dc3545' : '#ffc107'"></div>
+                  <span class="confidence-text">{{ (cas.confiance_auto * 100).toFixed(0) }}%</span>
+                </div>
+              </td>
+              <td>
+                <input type="text"
+                       class="correction-input"
+                       title="Correction pour {{ cas.zone }}"
+                       [value]="getBatchCorrectedText(cas.filename, cas.zone, cas.texte_final)"
+                       (input)="updateBatchCorrection(cas.filename, cas.zone, $any($event.target).value)"
+                       [placeholder]="cas.texte_final || 'Corriger...'">
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (getBatchCorrectionsCount() > 0) {
+      <div class="synth-actions">
+        <span class="synth-corrections-count">{{ getBatchCorrectionsCount() }} correction(s) en attente</span>
+      </div>
+      }
+      }
+      } @else {
+      <div class="synth-all-ok">
+        <span>🎉 Toutes les zones ont été lues correctement !</span>
       </div>
       }
     </div>

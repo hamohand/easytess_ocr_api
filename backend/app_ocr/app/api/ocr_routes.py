@@ -28,10 +28,10 @@ def _resolve_image_path(filename, app=None):
         return perm_path
     return None  # introuvable
 
-def _analyser_un_fichier(image_path, filename, zones_config, cadre_reference):
+def _analyser_un_fichier(image_path, filename, zones_config, cadre_reference, mode='rapide'):
     """Analyse un seul fichier — utilisé par le ThreadPoolExecutor."""
     try:
-        resultats, alertes, cadre_detecte = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference)
+        resultats, alertes, cadre_detecte = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference, mode=mode)
         
         if resultats is None:
             return {
@@ -87,9 +87,10 @@ def api_analyser():
         zones_config = {"Test": {"coords": [100, 100, 300, 200]}}
     
     cadre_reference = data.get('cadre_reference')
+    mode = data.get('mode', 'rapide')
     
     try:
-        resultats, alertes, cadre_detecte = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference)
+        resultats, alertes, cadre_detecte = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference, mode=mode)
         
         if resultats is None:
             return jsonify({
@@ -127,6 +128,7 @@ def api_analyser_batch():
     filenames = data.get('filenames', [])
     zones_config = data.get('zones')
     cadre_reference = data.get('cadre_reference')
+    mode = data.get('mode', 'rapide')
     
     if not filenames:
         return jsonify({'error': 'No filenames provided'}), 400
@@ -148,7 +150,7 @@ def api_analyser_batch():
             echoues += 1
             continue
         
-        result = _analyser_un_fichier(image_path, filename, zones_config, cadre_reference)
+        result = _analyser_un_fichier(image_path, filename, zones_config, cadre_reference, mode=mode)
         resultats_batch.append(result)
         if result['success']:
             reussis += 1
@@ -177,6 +179,7 @@ def api_analyser_batch_async():
     filenames = data.get('filenames', [])
     zones_config = data.get('zones')
     cadre_reference = data.get('cadre_reference')
+    mode = data.get('mode', 'rapide')
     
     if not filenames:
         return jsonify({'error': 'No filenames provided'}), 400
@@ -215,7 +218,7 @@ def api_analyser_batch_async():
                         job['echoues'] += 1
                     continue
                 
-                result = _analyser_un_fichier(image_path, filename, zones_config, cadre_reference)
+                result = _analyser_un_fichier(image_path, filename, zones_config, cadre_reference, mode=mode)
                 with _batch_jobs_lock:
                     job['resultats_batch'].append(result)
                     job['completed'] += 1

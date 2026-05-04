@@ -1,29 +1,83 @@
 {
   "nom": "mourad_rogne_01",
   "description": "",
-  "date_creation": "2026-05-04T04:26:57.424448",
+  "date_creation": "2026-05-04T09:32:05.191072",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\mourad_rogne_01\\reference.jpg",
   "zones": [
     {
       "char_filter": "alpha_only",
       "coords": [
-        0.737,
-        0.63,
+        0.65,
+        0.62,
         0.9,
         0.6991
       ],
+      "expected_format": "single_line",
       "id": 1777805967101,
       "lang": "ara",
       "margin": 0,
       "nom": "nom",
       "preprocess": "arabic_textured",
-      "type": "text",
-      "expected_format": "single_line"
+      "type": "text"
+    },
+    {
+      "char_filter": "digits_only",
+      "coords": [
+        0.28,
+        0.21,
+        0.5,
+        0.3203
+      ],
+      "expected_format": "single_line",
+      "id": 1777879430483,
+      "lang": "fra",
+      "margin": 0,
+      "nom": "numero_piece",
+      "preprocess": "latin_simple",
+      "type": "text"
     }
   ],
-  "cadre_reference": null,
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 1010,
+      "height": 640
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ]
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ]
+    },
+    "dimensions_absolues": {
+      "largeur": 1010,
+      "hauteur": 640,
+      "angle": 0
+    }
+  },
   "metadata": {
-    "nombre_zones": 1,
+    "nombre_zones": 2,
     "image_dimensions": {
       "width": 1010,
       "height": 640

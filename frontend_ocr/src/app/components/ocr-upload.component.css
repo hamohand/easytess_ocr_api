@@ -646,3 +646,211 @@ tbody tr:hover {
     gap: 0.5rem;
   }
 }
+
+/* Analysis Mode Selector */
+.analysis-mode-selector {
+  background: #f0f4ff;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border: 1px solid #d0d8f0;
+}
+
+.analysis-mode-selector label {
+  font-weight: 600;
+  color: #495057;
+}
+
+.analysis-mode-selector .mode-toggle {
+  margin-bottom: 0;
+  max-width: 300px;
+  margin-left: 0;
+}
+
+/* Calibration Banner */
+.calibration-banner {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  border: 1px solid #28a745;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  animation: fadeIn 0.5s;
+}
+
+.calibration-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.calibration-header span {
+  font-size: 1.1rem;
+  color: #155724;
+}
+
+.calibration-header small {
+  color: #155724;
+  opacity: 0.8;
+}
+
+.calibration-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.calibration-chip {
+  background: white;
+  border: 1px solid #28a745;
+  padding: 0.3rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  color: #155724;
+}
+
+.calibration-chip strong {
+  color: #007bff;
+}
+
+/* ==================== SYNTHESIS DASHBOARD ==================== */
+
+.synth-dashboard {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.synth-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.synth-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.synth-stats-inline {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.synth-stat {
+  padding: 0.3rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.synth-stat-ok {
+  background: #d4edda;
+  color: #155724;
+}
+
+.synth-stat-warn {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.synth-stat-rate {
+  background: #e7f3ff;
+  color: #0066cc;
+}
+
+.synth-toggle {
+  margin-bottom: 1rem;
+}
+
+.synth-table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.synth-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.synth-table thead {
+  background: #fef3cd;
+}
+
+.synth-table th {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #856404;
+  border-bottom: 2px solid #ffc107;
+  font-size: 0.85rem;
+}
+
+.synth-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.9rem;
+}
+
+.synth-table tbody tr:hover {
+  background: #fffce6;
+}
+
+.synth-filename {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+.correction-input {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.correction-input:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+}
+
+.synth-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.synth-corrections-count {
+  font-size: 0.85rem;
+  color: #007bff;
+  font-weight: 600;
+}
+
+.synth-all-ok {
+  text-align: center;
+  padding: 1rem;
+  font-size: 1.1rem;
+  color: #155724;
+  background: #d4edda;
+  border-radius: 6px;
+}

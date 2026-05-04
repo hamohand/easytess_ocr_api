@@ -1053,7 +1053,7 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims, im
 
 _analyser_lock = threading.Lock()
 
-def analyser_hybride(image_path, zones_config, cadre_reference=None):
+def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapide'):
     """
     Analyse hybride avec support pour le cadre de référence à 3 étiquettes.
     
@@ -1375,7 +1375,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
         if zones_ocr and TESSERACT_DISPONIBLE:
             try:
                 logger.info(f"🔤 Tesseract: analyse de {len(zones_ocr)} zone(s)")
-                resultats_ocr = analyser_avec_tesseract(image_path, zones_ocr)
+                resultats_ocr = analyser_avec_tesseract(image_path, zones_ocr, mode=mode)
                 resultats.update(resultats_ocr)
             except Exception as e:
                 logger.error(f"Erreur Tesseract global: {e}")
@@ -1422,10 +1422,13 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None):
                         # Améliorer le statut si la correction a un bon score
                         if score >= 0.8:
                             resultats[nom_zone]['statut'] = 'ok'
-                            resultats[nom_zone]['confiance_auto'] = max(
-                                resultats[nom_zone]['confiance_auto'], 
-                                score
-                            )
+                        elif score >= 0.6 and resultats[nom_zone]['statut'] == 'echec':
+                            resultats[nom_zone]['statut'] = 'faible_confiance'
+                            
+                        resultats[nom_zone]['confiance_auto'] = max(
+                            resultats[nom_zone]['confiance_auto'], 
+                            score
+                        )
             
         # 7. Remplissage des échecs complets
         for k in zones_config:
@@ -1517,7 +1520,7 @@ def get_absolute_coords(coords, img_w, img_h):
         )
     return x1, y1, x2, y2
 
-def analyser_avec_tesseract(image_path, zones_config):
+def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
     if not TESSERACT_DISPONIBLE:
         return {}
         
@@ -1538,88 +1541,17 @@ def analyser_avec_tesseract(image_path, zones_config):
             else:
                 preprocess_mode = 'latin_simple'
         
-        x1, y1, x2, y2 = get_absolute_coords(config['coords'], img_w, img_h)
+        x1_base, y1_base, x2_base, y2_base = get_absolute_coords(config['coords'], img_w, img_h)
         
-        # Appliquer la marge (positif = agrandir, négatif = rétrécir la zone)
-        margin = config.get('margin', 0)
-        if margin != 0:
-            x1 -= margin
-            y1 -= margin
-            x2 += margin
-            y2 += margin
-            logger.debug(f"📏 Zone {nom_zone}: marge de {margin}px appliquée")
-        
-        # Sécurité pour ne pas sortir de l'image
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(img_w, x2), min(img_h, y2)
-        
-        if x2 <= x1 or y2 <= y1:
-            logger.warning(f"Zone {nom_zone} invalide après conversion : {x1},{y1},{x2},{y2}")
-            continue
-
-        zone_img = img.crop((x1, y1, x2, y2))
-        
-        # Upscale pour les petits textes
-        zone_img = upscale_for_ocr(zone_img)
-        
-        # Préparation des variantes selon le mode de prétraitement
-        zone_img_gray = zone_img.convert('L')
-        
-        if preprocess_mode == 'arabic_textured':
-            # Mode arabe: isolation du texte foncé + multi-variantes
-            zone_img_processed = preprocess_for_arabic_ocr(zone_img, apply_binarization=True)
-            zone_img_no_bin = preprocess_for_arabic_ocr(zone_img, apply_binarization=False)
-            zone_img_isolated_60 = isolate_dark_text(zone_img, dark_threshold=60)
-            zone_img_isolated_80 = isolate_dark_text(zone_img, dark_threshold=80)
-            zone_img_isolated_100 = isolate_dark_text(zone_img, dark_threshold=100)
-            
-            variants = [
-                (zone_img_isolated_60, "iso60"),
-                (zone_img_isolated_80, "iso80"),
-                (zone_img_isolated_100, "iso100"),
-                (zone_img_gray, "gray"),
-                (zone_img_no_bin, "nobin"),
-            ]
-            logger.info(f"� Zone {nom_zone}: mode arabic_textured (5 variantes)")
-            
-        elif preprocess_mode == 'latin_simple':
-            # Mode latin simple AMÉLIORÉ: isolation du texte foncé + suppression lignes verticales
-            import cv2
-            
-            # Binarisation Otsu classique
-            _, binary = cv2.threshold(np.array(zone_img_gray), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            zone_img_binary = Image.fromarray(binary)
-            
-            # Isolation du texte foncé AVEC suppression des lignes verticales (passeports)
-            zone_img_iso_novlines = isolate_dark_text(zone_img, dark_threshold=80, remove_vlines=True)
-            zone_img_isolated_100 = isolate_dark_text(zone_img, dark_threshold=100, remove_vlines=True)
-            
-            variants = [
-                (zone_img_iso_novlines, "iso_novlines"),  # Isolation + suppression lignes verticales
-                (zone_img_isolated_100, "iso100_novlines"),  # Isolation légère + sans lignes
-                (zone_img_gray, "gray"),                   # Grayscale simple
-                (zone_img_binary, "binary"),               # Binarisation Otsu
-            ]
-            logger.info(f"🔧 Zone {nom_zone}: mode latin_simple (4 variantes, vlines removed)")
-            
-        else:  # preprocess_mode == 'none'
-            # Pas de prétraitement: image brute upscalée
-            variants = [
-                (zone_img_gray, "raw"),
-            ]
-            logger.info(f"🔧 Zone {nom_zone}: mode none (1 variante)")
-        
-        # DEBUG: Sauvegarder les images des zones pour inspection (désactivé en production)
-        DEBUG_SAVE_IMAGES = False
-        if DEBUG_SAVE_IMAGES:
-            debug_dir = os.path.join(os.path.dirname(image_path), 'debug')
-            os.makedirs(debug_dir, exist_ok=True)
-            try:
-                zone_img.save(os.path.join(debug_dir, f'{nom_zone}_upscaled.png'))
-                zone_img_gray.save(os.path.join(debug_dir, f'{nom_zone}_gray.png'))
-                logger.info(f"🖼️ Debug: images sauvegardées dans {debug_dir}")
-            except Exception as e:
-                logger.debug(f"Debug save error: {e}")
+        # Déterminer les marges à tester selon le mode
+        margin_configuree = config.get('margin', 0)
+        if mode == 'approfondi':
+            # En mode approfondi: tester la marge configurée + variantes de rétrécissement
+            margins_to_test = sorted(set([margin_configuree, 0, -2, -4, -6, -8]))
+            logger.info(f"🔬 Zone {nom_zone}: mode APPROFONDI — test de {len(margins_to_test)} marges {margins_to_test}")
+        else:
+            # En mode rapide: une seule marge (celle configurée)
+            margins_to_test = [margin_configuree]
         
         # Stratégie multi-PSM dynamique selon le format attendu
         expected_format = config.get('expected_format', 'auto')
@@ -1632,54 +1564,128 @@ def analyser_avec_tesseract(image_path, zones_config):
         elif expected_format == 'single_word':
             psm_modes = [8, 10]
         else: # auto
-            # PSM 7 = ligne unique, PSM 6 = bloc uniforme, PSM 13 = ligne brute, PSM 8 = mot unique
             psm_modes = [7, 6, 13, 8]
-            
+        
+        # === BOUCLE MULTI-MARGE ===
         best_text = ""
         best_conf = 0.0
         best_psm = 7
         best_variant_name = ""
+        best_margin = margin_configuree
         
-        for psm in psm_modes:
-            for img_variant, variant_name in variants:
-                try:
-                    tess_config = f'--oem 3 --psm {psm}'
-                    text = pytesseract.image_to_string(img_variant, lang=zone_lang, config=tess_config).strip()
-                    
-                    if text:
-                        data = pytesseract.image_to_data(img_variant, lang=zone_lang, config=tess_config, output_type=pytesseract.Output.DICT)
-                        confs = [int(c) for c in data['conf'] if c != '-1' and str(c).isdigit()]
-                        conf = sum(confs) / len(confs) / 100 if confs else 0.0
+        for margin in margins_to_test:
+            # Appliquer la marge
+            x1 = x1_base - margin
+            y1 = y1_base - margin
+            x2 = x2_base + margin
+            y2 = y2_base + margin
+            
+            # Sécurité pour ne pas sortir de l'image
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(img_w, x2), min(img_h, y2)
+            
+            if x2 <= x1 or y2 <= y1:
+                continue
+
+            zone_img = img.crop((x1, y1, x2, y2))
+            
+            # Upscale pour les petits textes
+            zone_img = upscale_for_ocr(zone_img)
+            
+            # Préparation des variantes selon le mode de prétraitement
+            zone_img_gray = zone_img.convert('L')
+            
+            if preprocess_mode == 'arabic_textured':
+                zone_img_processed = preprocess_for_arabic_ocr(zone_img, apply_binarization=True)
+                zone_img_no_bin = preprocess_for_arabic_ocr(zone_img, apply_binarization=False)
+                zone_img_isolated_60 = isolate_dark_text(zone_img, dark_threshold=60)
+                zone_img_isolated_80 = isolate_dark_text(zone_img, dark_threshold=80)
+                zone_img_isolated_100 = isolate_dark_text(zone_img, dark_threshold=100)
+                
+                variants = [
+                    (zone_img_isolated_60, "iso60"),
+                    (zone_img_isolated_80, "iso80"),
+                    (zone_img_isolated_100, "iso100"),
+                    (zone_img_gray, "gray"),
+                    (zone_img_no_bin, "nobin"),
+                ]
+                
+            elif preprocess_mode == 'latin_simple':
+                import cv2
+                _, binary = cv2.threshold(np.array(zone_img_gray), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                zone_img_binary = Image.fromarray(binary)
+                zone_img_iso_novlines = isolate_dark_text(zone_img, dark_threshold=80, remove_vlines=True)
+                zone_img_isolated_100 = isolate_dark_text(zone_img, dark_threshold=100, remove_vlines=True)
+                
+                variants = [
+                    (zone_img_iso_novlines, "iso_novlines"),
+                    (zone_img_isolated_100, "iso100_novlines"),
+                    (zone_img_gray, "gray"),
+                    (zone_img_binary, "binary"),
+                ]
+                
+            else:  # preprocess_mode == 'none'
+                variants = [
+                    (zone_img_gray, "raw"),
+                ]
+            
+            for psm in psm_modes:
+                for img_variant, variant_name in variants:
+                    try:
+                        tess_config = f'--oem 3 --psm {psm}'
+                        text = pytesseract.image_to_string(img_variant, lang=zone_lang, config=tess_config).strip()
                         
-                        if conf > best_conf or (conf == best_conf and len(text) > len(best_text)):
-                            best_text = text
-                            best_conf = conf
-                            best_psm = psm
-                            logger.debug(f"Zone {nom_zone}: PSM {psm} ({variant_name}) -> '{text[:30]}...' conf={conf:.0%}")
-                except Exception as e:
-                    logger.debug(f"Zone {nom_zone}: PSM {psm} erreur: {e}")
+                        if text:
+                            data = pytesseract.image_to_data(img_variant, lang=zone_lang, config=tess_config, output_type=pytesseract.Output.DICT)
+                            confs = [int(c) for c in data['conf'] if c != '-1' and str(c).isdigit()]
+                            conf = sum(confs) / len(confs) / 100 if confs else 0.0
+                            
+                            if conf > best_conf or (conf == best_conf and len(text) > len(best_text)):
+                                best_text = text
+                                best_conf = conf
+                                best_psm = psm
+                                best_variant_name = variant_name
+                                best_margin = margin
+                                logger.debug(f"Zone {nom_zone}: marge={margin} PSM {psm} ({variant_name}) -> '{text[:30]}...' conf={conf:.0%}")
+                    except Exception as e:
+                        logger.debug(f"Zone {nom_zone}: marge={margin} PSM {psm} erreur: {e}")
+        
+        # === FIN BOUCLE MULTI-MARGE ===
         
         texte = best_text
         confiance = best_conf
+        
+        # Recalculer les coords absolues avec la marge gagnante
+        x1_final = max(0, x1_base - best_margin)
+        y1_final = max(0, y1_base - best_margin)
+        x2_final = min(img_w, x2_base + best_margin)
+        y2_final = min(img_h, y2_base + best_margin)
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
         if char_filter and char_filter != 'none' and texte:
             texte = appliquer_filtre_caracteres(texte, char_filter)
         
-        
         if texte:
-            logger.info(f"✅ Zone {nom_zone} [{zone_lang}]: meilleur PSM={best_psm}, conf={confiance:.0%}, texte='{texte[:30]}...'")
-        else:
+            margin_info = f", marge={best_margin}px" if mode == 'approfondi' else ""
+            logger.info(f"✅ Zone {nom_zone} [{zone_lang}]: meilleur PSM={best_psm}{margin_info}, conf={confiance:.0%}, texte='{texte[:30]}...'")
+        if not texte:
             logger.warning(f"⚠️ Zone {nom_zone}: aucun texte détecté avec tous les PSM")
-        statut = "ok" if confiance >= 0.6 and texte else "faible_confiance"
+            statut = "echec"
+        elif confiance >= 0.8:
+            statut = "ok"
+        elif confiance >= 0.6:
+            statut = "faible_confiance"
+        else:
+            statut = "echec"
         resultats[nom_zone] = {
             'texte_auto': texte, 
             'confiance_auto': confiance, 
             'statut': statut, 
             'moteur': 'tesseract',
-            'coords': [x1, y1, x2, y2], # On renvoie les coords absolues utilisées
-            'texte_final': texte
+            'coords': [x1_final, y1_final, x2_final, y2_final],
+            'texte_final': texte,
+            'marge_utilisee': best_margin
         }
     return resultats
 
@@ -1757,10 +1763,15 @@ def analyser_avec_easyocr(image_path, zones_config):
         
         if texte_final:
             logger.info(f"📖 EasyOCR Zone {nom_zone} [{zone_lang}]: {best_variant} -> conf={conf_moy:.0%}, texte='{texte_final[:30]}...'")
-        else:
+        if not texte_final:
             logger.warning(f"⚠️ EasyOCR Zone {nom_zone}: aucun texte détecté")
-        
-        statut = "ok" if conf_moy >= 0.6 and texte_final else "faible_confiance"
+            statut = "echec"
+        elif conf_moy >= 0.8:
+            statut = "ok"
+        elif conf_moy >= 0.6:
+            statut = "faible_confiance"
+        else:
+            statut = "echec"
         resultats[nom_zone] = {
             'texte_auto': texte_final, 
             'confiance_auto': conf_moy, 

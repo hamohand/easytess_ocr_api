@@ -27,7 +27,10 @@ export class FileService {
      * @param filename - Nom du fichier
      */
     getImageUrl(filename: string): string {
-        return `http://localhost:8082/uploads/${filename}`;
+        if (filename.startsWith('ocr_') || filename.startsWith('crop_') || filename.startsWith('batch_')) {
+            return `${this.apiUrl.replace('/api', '')}/uploads_temp/${filename}`;
+        }
+        return `${this.apiUrl.replace('/api', '')}/uploads/${filename}`;
     }
 
     /**

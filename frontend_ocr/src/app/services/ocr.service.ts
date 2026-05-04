@@ -18,8 +18,8 @@ export class OcrService {
      * @param zones - (Optionnel) Configuration des zones à analyser
      * @param cadre_reference - (Optionnel) Cadre de référence pour transformation des zones
      */
-    analyserImage(filename: string, zones?: any, cadre_reference?: CadreReference): Observable<AnalyseResponse> {
-        const body = { filename, zones, cadre_reference };
+    analyserImage(filename: string, zones?: any, cadre_reference?: CadreReference, mode: string = 'rapide'): Observable<AnalyseResponse> {
+        const body = { filename, zones, cadre_reference, mode };
         return this.http.post<AnalyseResponse>(`${this.apiUrl}/analyser`, body);
     }
 
@@ -48,16 +48,16 @@ export class OcrService {
     /**
      * Analyse un batch de fichiers avec OCR (synchrone)
      */
-    analyserBatch(filenames: string[], zones?: any, cadre_reference?: CadreReference): Observable<BatchAnalyseResponse> {
-        const body = { filenames, zones, cadre_reference };
+    analyserBatch(filenames: string[], zones?: any, cadre_reference?: CadreReference, mode: string = 'rapide'): Observable<BatchAnalyseResponse> {
+        const body = { filenames, zones, cadre_reference, mode };
         return this.http.post<BatchAnalyseResponse>(`${this.apiUrl}/analyser-batch`, body);
     }
 
     /**
      * Lance une analyse batch asynchrone (retourne un job_id)
      */
-    analyserBatchAsync(filenames: string[], zones?: any, cadre_reference?: CadreReference): Observable<{ success: boolean; job_id: string; total: number }> {
-        const body = { filenames, zones, cadre_reference };
+    analyserBatchAsync(filenames: string[], zones?: any, cadre_reference?: CadreReference, mode: string = 'rapide'): Observable<{ success: boolean; job_id: string; total: number }> {
+        const body = { filenames, zones, cadre_reference, mode };
         return this.http.post<{ success: boolean; job_id: string; total: number }>(`${this.apiUrl}/analyser-batch-async`, body);
     }
 

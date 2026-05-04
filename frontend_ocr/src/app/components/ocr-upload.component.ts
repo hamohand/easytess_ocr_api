@@ -53,6 +53,13 @@ export class OcrUploadComponent implements OnDestroy {
     // Signals - Async progress
     batchProgress = signal<{ completed: number; total: number; currentFile: string } | null>(null);
 
+    // Signals - Analysis mode
+    analysisMode = signal<'rapide' | 'approfondi'>('rapide');
+
+    // Signals - Synthesis dashboard
+    showOnlyDouteux = signal<boolean>(false);
+    batchCorrections = signal<Record<string, Record<string, string>>>({});
+
     // Signals - Folder mode (server-side)
     folderPath = signal<string>('');
 
@@ -109,7 +116,9 @@ export class OcrUploadComponent implements OnDestroy {
                         lang: z.lang || 'ara+fra',
                         preprocess: z.preprocess || 'auto',
                         char_filter: z.char_filter || 'none',
-                        margin: z.margin || 0
+                        margin: z.margin || 0,
+                        expected_format: z.expected_format || 'auto',
+                        valeurs_attendues: z.valeurs_attendues || []
                     };
                 });
 
@@ -199,7 +208,7 @@ export class OcrUploadComponent implements OnDestroy {
     }
 
     private performAnalyse(filename: string, zones?: any, cadre_reference?: any) {
-        this.ocrService.analyserImage(filename, zones, cadre_reference).subscribe({
+        this.ocrService.analyserImage(filename, zones, cadre_reference, this.analysisMode()).subscribe({
             next: (response: AnalyseResponse) => {
                 this.analyseResults.set(response);
                 this.isAnalyzing.set(false);
@@ -270,7 +279,7 @@ export class OcrUploadComponent implements OnDestroy {
         const { zonesConfig, cadre_reference } = this.buildZonesConfig();
 
         // Async batch with SSE progress
-        this.ocrService.analyserBatchAsync(filenames, zonesConfig, cadre_reference).subscribe({
+        this.ocrService.analyserBatchAsync(filenames, zonesConfig, cadre_reference, this.analysisMode()).subscribe({
             next: (response) => {
                 console.log('✅ Job batch lancé:', response.job_id);
                 this.listenToProgress(response.job_id);
@@ -403,6 +412,95 @@ export class OcrUploadComponent implements OnDestroy {
             ...(data as any)
         }));
     }
+
+    // =============================================
+    // TABLEAU DE SYNTHÈSE (cas douteux batch)
+    // =============================================
+
+    /**
+     * Extrait tous les cas douteux (confiance < 65% ou statut != ok) du batch.
+     */
+    getCasDouteuxBatch(): { filename: string; zone: string; texte_final: string; confiance_auto: number; statut: string; moteur: string }[] {
+        const batch = this.batchResults();
+        if (!batch || !batch.resultats_batch) return [];
+
+        const cas: { filename: string; zone: string; texte_final: string; confiance_auto: number; statut: string; moteur: string }[] = [];
+
+        for (const fileResult of batch.resultats_batch) {
+            if (!fileResult.success || !fileResult.resultats) continue;
+            for (const [zoneName, resultat] of Object.entries(fileResult.resultats)) {
+                const r = resultat as any;
+                if (r.statut !== 'ok' || r.confiance_auto < 0.65) {
+                    cas.push({
+                        filename: fileResult.filename,
+                        zone: zoneName,
+                        texte_final: r.texte_final || '',
+                        confiance_auto: r.confiance_auto || 0,
+                        statut: r.statut || 'echec',
+                        moteur: r.moteur || 'inconnu'
+                    });
+                }
+            }
+        }
+        return cas;
+    }
+
+    /**
+     * Statistiques de synthèse du batch.
+     */
+    getBatchSynthStats(): { totalZones: number; ok: number; douteux: number; tauxReussite: number } {
+        const batch = this.batchResults();
+        if (!batch || !batch.resultats_batch) return { totalZones: 0, ok: 0, douteux: 0, tauxReussite: 0 };
+
+        let totalZones = 0;
+        let ok = 0;
+
+        for (const fileResult of batch.resultats_batch) {
+            if (!fileResult.success || !fileResult.resultats) continue;
+            for (const resultat of Object.values(fileResult.resultats)) {
+                totalZones++;
+                const r = resultat as any;
+                if (r.statut === 'ok' && r.confiance_auto >= 0.65) {
+                    ok++;
+                }
+            }
+        }
+
+        const douteux = totalZones - ok;
+        const tauxReussite = totalZones > 0 ? Math.round((ok / totalZones) * 100) : 0;
+        return { totalZones, ok, douteux, tauxReussite };
+    }
+
+    /**
+     * Met à jour une correction batch (par fichier + zone).
+     */
+    updateBatchCorrection(filename: string, zone: string, text: string) {
+        this.batchCorrections.update(c => {
+            const fileCopy = { ...(c[filename] || {}) };
+            fileCopy[zone] = text;
+            return { ...c, [filename]: fileCopy };
+        });
+    }
+
+    /**
+     * Retourne le texte corrigé ou le texte original pour une zone batch.
+     */
+    getBatchCorrectedText(filename: string, zone: string, original: string): string {
+        const corr = this.batchCorrections();
+        return corr[filename]?.[zone] ?? original;
+    }
+
+    /**
+     * Nombre total de corrections batch en attente.
+     */
+    getBatchCorrectionsCount(): number {
+        let count = 0;
+        for (const file of Object.values(this.batchCorrections())) {
+            count += Object.keys(file).length;
+        }
+        return count;
+    }
+
 
     exportBatchResults() {
         const results = this.batchResults();
@@ -681,5 +779,92 @@ export class OcrUploadComponent implements OnDestroy {
         // Corrections
         this.corrections.set({});
         this.isSavingCorrections.set(false);
+        // Synthesis
+        this.showOnlyDouteux.set(false);
+        this.batchCorrections.set({});
+    }
+
+    // =============================================
+    // CALIBRATION: Appliquer les marges optimales
+    // =============================================
+
+    /**
+     * Retourne les zones dont la marge optimale (trouvée par approfondi) diffère de la config actuelle.
+     */
+    getMargesOptimales(): { zone: string; ancienne: number; nouvelle: number }[] {
+        const results = this.analyseResults();
+        if (!results || !results.resultats) return [];
+
+        const entiteNom = this.selectedEntite();
+        if (entiteNom === 'none') return [];
+
+        const entite = this.entites().find(e => e.nom === entiteNom);
+        if (!entite || !entite.zones) return [];
+
+        const suggestions: { zone: string; ancienne: number; nouvelle: number }[] = [];
+
+        for (const [zoneName, resultat] of Object.entries(results.resultats)) {
+            if (resultat.marge_utilisee === undefined) continue;
+
+            const zoneConfig = entite.zones.find(z => z.nom === zoneName);
+            const ancienneMarge = zoneConfig?.margin || 0;
+
+            if (resultat.marge_utilisee !== ancienneMarge) {
+                suggestions.push({
+                    zone: zoneName,
+                    ancienne: ancienneMarge,
+                    nouvelle: resultat.marge_utilisee
+                });
+            }
+        }
+
+        return suggestions;
+    }
+
+    /**
+     * Applique les marges optimales à l'entité et la sauvegarde.
+     */
+    appliquerMargesOptimales() {
+        const entiteNom = this.selectedEntite();
+        if (entiteNom === 'none') return;
+
+        this.entityService.getEntite(entiteNom).subscribe({
+            next: (entite) => {
+                const results = this.analyseResults();
+                if (!results || !results.resultats || !entite.zones) return;
+
+                let nbModifs = 0;
+                for (const zone of entite.zones) {
+                    const resultat = results.resultats[zone.nom];
+                    if (resultat && resultat.marge_utilisee !== undefined) {
+                        const ancienne = zone.margin || 0;
+                        if (resultat.marge_utilisee !== ancienne) {
+                            zone.margin = resultat.marge_utilisee;
+                            nbModifs++;
+                        }
+                    }
+                }
+
+                if (nbModifs === 0) return;
+
+                this.entityService.sauvegarderEntite(
+                    entite.nom,
+                    entite.zones,
+                    entite.image_reference,
+                    entite.description,
+                    entite.cadre_reference
+                ).subscribe({
+                    next: () => {
+                        this.errorMessage.set('');
+                        alert(`✅ ${nbModifs} marge(s) mise(s) à jour dans "${entiteNom}". Le mode rapide utilisera ces valeurs.`);
+                        // Recharger la liste des entités
+                        this.entityService.listerEntites().subscribe(e => this.entites.set(e));
+                    },
+                    error: (err: any) => {
+                        this.errorMessage.set('Erreur lors de la sauvegarde: ' + err.message);
+                    }
+                });
+            }
+        });
     }
 }
