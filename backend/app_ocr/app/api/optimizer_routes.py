@@ -58,8 +58,6 @@ def run_optimizer():
     target_zone = next((z for z in entity.get('zones', []) if z['nom'] == zone_name), None)
     if not target_zone:
         return jsonify({"error": f"Zone {zone_name} not found in entity {entity_name}"}), 404
-    if not target_zone:
-        return jsonify({"error": f"Zone {zone_name} not found in entity {entity_name}"}), 404
 
     coords_base = target_zone.get('coords')
     lang = target_zone.get('lang', 'ara')
