@@ -58,10 +58,15 @@ def run_optimizer():
     target_zone = next((z for z in entity.get('zones', []) if z['nom'] == zone_name), None)
     if not target_zone:
         return jsonify({"error": f"Zone {zone_name} not found in entity {entity_name}"}), 404
+    if not target_zone:
+        return jsonify({"error": f"Zone {zone_name} not found in entity {entity_name}"}), 404
 
     coords_base = target_zone.get('coords')
     lang = target_zone.get('lang', 'ara')
     preprocess = target_zone.get('preprocess', 'arabic_textured')
+    expected_format = target_zone.get('expected_format', 'auto')
+    char_filter = target_zone.get('char_filter', 'none')
+    margin = target_zone.get('margin', 0)
 
     stop_threshold = data.get('stop_threshold')
     if stop_threshold is not None:
@@ -83,6 +88,9 @@ def run_optimizer():
             texte_attendu=texte_attendu,
             lang=lang,
             preprocess=preprocess,
+            expected_format=expected_format,
+            char_filter=char_filter,
+            margin=margin,
             use_tesseract=use_tesseract,
             use_easyocr=use_easyocr,
             stop_threshold=stop_threshold

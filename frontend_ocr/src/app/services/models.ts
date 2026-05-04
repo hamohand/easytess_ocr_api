@@ -7,6 +7,9 @@ export interface Zone {
     type?: 'text' | 'qrcode' | 'barcode';
     lang?: 'fra' | 'ara' | 'ara+fra' | 'eng';  // Langue OCR pour cette zone
     preprocess?: 'auto' | 'arabic_textured' | 'latin_simple' | 'none';  // Mode prétraitement
+    char_filter?: 'none' | 'alpha_only' | 'digits_only' | 'alphanum';  // Filtre post-OCR sur les caractères
+    expected_format?: 'auto' | 'single_line' | 'raw_line' | 'block' | 'single_word'; // Stratégie PSM
+    margin?: number;  // Marge de sécurité en pixels (retrait sur chaque bord avant OCR)
     valeurs_attendues?: string[];
 }
 

@@ -1,7 +1,7 @@
 <!-- entity-creator.component.html -->
 <div class="entity-creator">
     <div class="header">
-        <h1>🎨 Gestion des Entités OCR</h1>
+        <h1>🎨 Gestion des Entités OCR <button class="btn-help-icon" (click)="showHelpModal.set(true)" title="Besoin d'aide ?">❓</button></h1>
         <p>Créez et gérez vos modèles de zones OCR</p>
     </div>
 
@@ -489,7 +489,7 @@
                     <div class="zone-config">
                         <div class="config-row">
                             <label>Type:</label>
-                            <select [(ngModel)]="zone.type" class="sm-input">
+                            <select [(ngModel)]="zone.type" class="sm-input" title="Type de zone">
                                 <option value="text">Texte OCR</option>
                                 <option value="qrcode">QR Code</option>
                                 <option value="barcode">Code Barre</option>
@@ -515,6 +515,33 @@
                                 <option value="latin_simple">Latin simple</option>
                                 <option value="none">Aucun</option>
                             </select>
+                        </div>
+
+                        <div class="config-row">
+                            <label title="Filtre les caractères parasites après OCR">Filtre caractères:</label>
+                            <select [(ngModel)]="zone.char_filter" class="sm-input">
+                                <option value="none">Aucun filtre</option>
+                                <option value="alpha_only">Lettres uniquement</option>
+                                <option value="digits_only">Chiffres uniquement</option>
+                                <option value="alphanum">Lettres + Chiffres</option>
+                            </select>
+                        </div>
+
+                        <div class="config-row">
+                            <label title="Format attendu du texte (optimise le moteur OCR)">Format attendu:</label>
+                            <select [(ngModel)]="zone.expected_format" class="sm-input">
+                                <option value="auto">Auto (Essaie tous)</option>
+                                <option value="single_line">Ligne unique (PSM 7, 13)</option>
+                                <option value="raw_line">Ligne brute (PSM 13)</option>
+                                <option value="block">Bloc de texte (PSM 6)</option>
+                                <option value="single_word">Mot unique (PSM 8)</option>
+                            </select>
+                        </div>
+
+                        <div class="config-row">
+                            <label title="Retrait en pixels sur chaque bord de la zone avant OCR (évite le débordement sur les contenus adjacents)">Marge (px):</label>
+                            <input type="number" [(ngModel)]="zone.margin" class="sm-input" style="width: 70px"
+                                min="-20" max="20" step="1" placeholder="0">
                         </div>
 
                         <div class="config-row">
@@ -567,3 +594,39 @@
     </div>
     }
 </div>
+
+<!-- MODAL AIDE -->
+@if (showHelpModal()) {
+<div class="modal-backdrop" (click)="showHelpModal.set(false)"></div>
+<div class="modal-content help-modal">
+    <div class="modal-header">
+        <h2>ℹ️ Guide de création d'entités</h2>
+        <button class="btn-close" (click)="showHelpModal.set(false)" title="Fermer">✖</button>
+    </div>
+    <div class="modal-body">
+        <div class="help-section">
+            <h3>1. Le Cadre de Référence (Ancres Rouges)</h3>
+            <p>Pour que l'OCR soit robuste, il doit retrouver sa position même si le document est scanné de travers. C'est le rôle des <strong>4 ancres (Haut, Bas, Gauche, Droite)</strong>.</p>
+            <ul>
+                <li><strong>Texte OCR</strong> : Entrez un texte unique (ex: "REPUBLIQUE") qui se trouve sur ce bord.</li>
+                <li><strong>Template (Image)</strong> : Dessinez une boîte rouge autour d'un logo ou d'un motif unique sur ce bord.</li>
+                <li>L'intersection de ces 4 repères formera le <strong>cadre vert</strong>.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h3>2. Les Zones de Texte (Bleues)</h3>
+            <p>Ce sont les champs que vous voulez extraire (ex: Nom, Prénom). Cliquez et glissez sur l'image pour les dessiner. Leurs coordonnées seront toujours calculées <strong>par rapport au cadre vert</strong>.</p>
+        </div>
+
+        <div class="help-section">
+            <h3>3. Les Options Avancées</h3>
+            <ul>
+                <li><strong>Format attendu</strong> : Indique à l'OCR comment lire la zone. "Ligne unique" est parfait pour les noms. "Bloc de texte" pour les adresses.</li>
+                <li><strong>Prétraitement</strong> : "Arabe texturé" applique un filtre pour isoler le texte foncé sur un fond complexe. "Latin simple" nettoie le fond et retire les lignes verticales (ex: MRZ de passeport).</li>
+                <li><strong>Filtre caractères</strong> : Permet de supprimer la ponctuation parasite (ex: ne garder que des chiffres pour une date).</li>
+            </ul>
+        </div>
+    </div>
+</div>
+}

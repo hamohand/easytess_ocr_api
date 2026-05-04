@@ -107,7 +107,9 @@ export class OcrUploadComponent implements OnDestroy {
                         coords: z.coords,
                         type: z.type || 'text',
                         lang: z.lang || 'ara+fra',
-                        preprocess: z.preprocess || 'auto'
+                        preprocess: z.preprocess || 'auto',
+                        char_filter: z.char_filter || 'none',
+                        margin: z.margin || 0
                     };
                 });
 

@@ -116,12 +116,12 @@
               @if (result.confiance_auto < 0.65 || corrections()[result.zone] !== undefined) {
                 <input type="text"
                        class="form-control correction-input"
-                       [ngModel]="corrections()[result.zone] || result.texte_auto"
+                       [ngModel]="corrections()[result.zone] || result.texte_final"
                        (ngModelChange)="updateCorrection(result.zone, $event)"
                        style="width: 100%; padding: 4px; box-sizing: border-box;"
-                       [placeholder]="result.texte_auto || '(vide)'">
+                       [placeholder]="result.texte_final || '(vide)'">
               } @else {
-                {{ result.texte_auto || '(vide)' }}
+                {{ result.texte_final || '(vide)' }}
               }
             </td>
             <td class="confidence">
@@ -330,7 +330,7 @@
               @for (result of getFileResultatsArray(fileResult); track result.zone) {
               <tr>
                 <td class="zone-name">{{ result.zone }}</td>
-                <td class="text-content">{{ result.texte_auto || '(vide)' }}</td>
+                <td class="text-content">{{ result.texte_final || '(vide)' }}</td>
                 <td class="confidence">
                   <div class="confidence-bar">
                     <div class="confidence-fill" [style.width.%]="result.confiance_auto * 100"></div>

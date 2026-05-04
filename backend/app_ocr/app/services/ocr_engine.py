@@ -1,4 +1,5 @@
 import os
+import re
 import ast
 import shutil
 import logging
@@ -14,6 +15,42 @@ from app.services.image_matcher import find_template_orb
 apply_pillow_patch()
 
 logger = logging.getLogger(__name__)
+
+
+def appliquer_filtre_caracteres(texte, char_filter):
+    """
+    Filtre post-OCR : ne garde que les caractères autorisés selon le type de contenu.
+    Supporte les alphabets Unicode (latin, arabe, etc.).
+    
+    Args:
+        texte: Texte brut issu de l'OCR
+        char_filter: Type de filtre ('none', 'alpha_only', 'digits_only', 'alphanum')
+    
+    Returns:
+        Texte filtré
+    """
+    if not texte or not char_filter or char_filter == 'none':
+        return texte
+    
+    original = texte
+    
+    if char_filter == 'alpha_only':
+        # Garde uniquement les lettres (Unicode : latin, arabe, etc.) et les espaces
+        texte = re.sub(r'[^\w\s]|[\d_]', '', texte)
+    elif char_filter == 'digits_only':
+        # Garde uniquement les chiffres, '/' et '-' (pour dates, numéros)
+        texte = re.sub(r'[^0-9/\-\s]', '', texte)
+    elif char_filter == 'alphanum':
+        # Garde lettres + chiffres + espaces
+        texte = re.sub(r'[^\w\s]|_', '', texte)
+    
+    # Normaliser les espaces multiples
+    texte = re.sub(r'\s+', ' ', texte).strip()
+    
+    if texte != original:
+        logger.info(f"🔤 Filtre '{char_filter}': '{original[:40]}' → '{texte[:40]}'")
+    
+    return texte
 
 
 def upscale_for_ocr(img, min_height=100, target_height=200):
@@ -1503,6 +1540,15 @@ def analyser_avec_tesseract(image_path, zones_config):
         
         x1, y1, x2, y2 = get_absolute_coords(config['coords'], img_w, img_h)
         
+        # Appliquer la marge (positif = agrandir, négatif = rétrécir la zone)
+        margin = config.get('margin', 0)
+        if margin != 0:
+            x1 -= margin
+            y1 -= margin
+            x2 += margin
+            y2 += margin
+            logger.debug(f"📏 Zone {nom_zone}: marge de {margin}px appliquée")
+        
         # Sécurité pour ne pas sortir de l'image
         x1, y1 = max(0, x1), max(0, y1)
         x2, y2 = min(img_w, x2), min(img_h, y2)
@@ -1575,9 +1621,20 @@ def analyser_avec_tesseract(image_path, zones_config):
             except Exception as e:
                 logger.debug(f"Debug save error: {e}")
         
-        # Stratégie multi-PSM: essayer plusieurs modes et garder le meilleur
-        # PSM 7 = ligne unique, PSM 6 = bloc uniforme, PSM 13 = ligne brute, PSM 8 = mot unique
-        psm_modes = [7, 6, 13, 8]
+        # Stratégie multi-PSM dynamique selon le format attendu
+        expected_format = config.get('expected_format', 'auto')
+        if expected_format == 'single_line':
+            psm_modes = [7, 13]
+        elif expected_format == 'raw_line':
+            psm_modes = [13]
+        elif expected_format == 'block':
+            psm_modes = [6]
+        elif expected_format == 'single_word':
+            psm_modes = [8, 10]
+        else: # auto
+            # PSM 7 = ligne unique, PSM 6 = bloc uniforme, PSM 13 = ligne brute, PSM 8 = mot unique
+            psm_modes = [7, 6, 13, 8]
+            
         best_text = ""
         best_conf = 0.0
         best_psm = 7
@@ -1604,6 +1661,12 @@ def analyser_avec_tesseract(image_path, zones_config):
         
         texte = best_text
         confiance = best_conf
+        
+        # POST-OCR: Appliquer le filtre de caractères si configuré
+        char_filter = config.get('char_filter', 'none')
+        if char_filter and char_filter != 'none' and texte:
+            texte = appliquer_filtre_caracteres(texte, char_filter)
+        
         
         if texte:
             logger.info(f"✅ Zone {nom_zone} [{zone_lang}]: meilleur PSM={best_psm}, conf={confiance:.0%}, texte='{texte[:30]}...'")
@@ -1636,6 +1699,14 @@ def analyser_avec_easyocr(image_path, zones_config):
             continue
             
         x1, y1, x2, y2 = get_absolute_coords(config['coords'], img_w, img_h)
+        
+        # Appliquer la marge (positif = agrandir, négatif = rétrécir la zone)
+        margin = config.get('margin', 0)
+        if margin != 0:
+            x1 -= margin
+            y1 -= margin
+            x2 += margin
+            y2 += margin
         
         # Sécurité
         x1, y1 = max(0, x1), max(0, y1)
@@ -1677,6 +1748,12 @@ def analyser_avec_easyocr(image_path, zones_config):
         
         texte_final = best_text
         conf_moy = best_conf
+        
+        # POST-OCR: Appliquer le filtre de caractères si configuré
+        char_filter = config.get('char_filter', 'none')
+        if char_filter and char_filter != 'none' and texte_final:
+            texte_final = appliquer_filtre_caracteres(texte_final, char_filter)
+        
         
         if texte_final:
             logger.info(f"📖 EasyOCR Zone {nom_zone} [{zone_lang}]: {best_variant} -> conf={conf_moy:.0%}, texte='{texte_final[:30]}...'")

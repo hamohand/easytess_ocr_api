@@ -1,0 +1,80 @@
+{
+  "nom": "wafa_rogne_01",
+  "description": "",
+  "date_creation": "2026-05-03T16:04:33.929471",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\wafa_rogne_01\\reference.jpg",
+  "zones": [
+    {
+      "coords": [
+        0.7845,
+        0.618,
+        0.9145,
+        0.7076
+      ],
+      "id": 1777806810784,
+      "lang": "ara",
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "id": 1777817035038,
+      "nom": "numero_piece",
+      "type": "text",
+      "lang": "fra",
+      "preprocess": "latin_simple",
+      "coords": [
+        0.3083,
+        0.2037,
+        0.5008,
+        0.2887
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 1010,
+      "height": 640
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ]
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ]
+    },
+    "dimensions_absolues": {
+      "largeur": 327,
+      "hauteur": 134,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 1010,
+      "height": 640
+    }
+  }
+}

@@ -5,6 +5,8 @@ export interface Zone {
     nom: string;
     coords: [number, number, number, number]; // [x1, y1, x2, y2]
     type?: 'text' | 'qrcode' | 'barcode';
+    char_filter?: 'none' | 'alpha_only' | 'digits_only' | 'alphanum';  // Filtre post-OCR sur les caractères
+    margin?: number;  // Marge de sécurité en pixels (retrait sur chaque bord avant OCR)
     valeurs_attendues?: string[];
 }
 

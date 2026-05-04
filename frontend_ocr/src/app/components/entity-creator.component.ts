@@ -49,6 +49,9 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
     errorMessage = signal<string>('');
     successMessage = signal<string>('');
 
+    // NOUVEAU: Aide
+    showHelpModal = signal<boolean>(false);
+
     // NOUVEAU: Onglets internes
     activeSubTab = signal<'gestion' | 'optimizer'>('gestion');
 
@@ -58,13 +61,13 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
 
     // NOUVEAU: Signaux pour Cadre de Référence (4 étiquettes)
     // HAUT : pour déterminer le point le plus haut (Y min)
-    cadreHaut = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0.5, 0] });
+    cadreHaut = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0.5, 0], manuel_formula: '0' });
     // DROITE : pour déterminer le point le plus à droite (X max)
-    cadreDroite = signal<EtiquetteDrawing>({ labels_str: '', position_base: [1, 0.5] });
+    cadreDroite = signal<EtiquetteDrawing>({ labels_str: '', position_base: [1, 0.5], manuel_formula: 'largeur' });
     // GAUCHE : pour déterminer le point le plus à gauche (X min)
-    cadreGauche = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0, 0.5] });
+    cadreGauche = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0, 0.5], manuel_formula: '0' });
     // BAS : pour déterminer le point le plus bas (Y max)
-    cadreBas = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0.5, 1] });
+    cadreBas = signal<EtiquetteDrawing>({ labels_str: '', position_base: [0.5, 1], manuel_formula: 'hauteur' });
 
     // Paramètres calculés du cadre de référence
     cadreParams = signal<{
@@ -176,6 +179,11 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
             // Store original image dimensions for coordinate conversion
             this.imgWidth = img.width;
             this.imgHeight = img.height;
+
+            // Par défaut, dimensions du cadre utile égales aux dimensions de l'image
+            if (this.manualContentDims().largeur === 0 && this.manualContentDims().hauteur === 0) {
+                this.manualContentDims.set({ largeur: img.width, hauteur: img.height });
+            }
 
             const canvas = this.canvasRef.nativeElement;
 
@@ -453,6 +461,9 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
                 type: 'text', // Default type
                 lang: 'ara+fra', // Default language
                 preprocess: 'auto', // Default preprocessing
+                char_filter: 'none', // Default: no char filtering
+                expected_format: 'auto', // Default PSM strategy
+                margin: 0, // Default: no margin
                 valeurs_str: '', // Init flat values
                 coords: finalCoords
             };
@@ -1026,10 +1037,10 @@ export class EntityCreatorComponent implements AfterViewInit, OnInit {
         this.imageUrl.set('');
         this.zones.set([]);
         // Réinitialiser les étiquettes du cadre de référence (4 anchors)
-        this.cadreHaut.set({ labels_str: '', position_base: [0.5, 0] });
-        this.cadreDroite.set({ labels_str: '', position_base: [1, 0.5] });
-        this.cadreGauche.set({ labels_str: '', position_base: [0, 0.5] });
-        this.cadreBas.set({ labels_str: '', position_base: [0.5, 1] });
+        this.cadreHaut.set({ labels_str: '', position_base: [0.5, 0], manuel_formula: '0' });
+        this.cadreDroite.set({ labels_str: '', position_base: [1, 0.5], manuel_formula: 'largeur' });
+        this.cadreGauche.set({ labels_str: '', position_base: [0, 0.5], manuel_formula: '0' });
+        this.cadreBas.set({ labels_str: '', position_base: [0.5, 1], manuel_formula: 'hauteur' });
         this.cadreParams.set(null);
         this.manualContentDims.set({ largeur: 0, hauteur: 0 });
         this.currentZoneName.set('');
