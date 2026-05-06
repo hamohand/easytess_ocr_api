@@ -1420,7 +1420,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                         resultats[nom_zone]['score_correction'] = score
                         
                         # Améliorer le statut si la correction a un bon score
-                        if score >= 0.8:
+                        if score >= 0.7:
                             resultats[nom_zone]['statut'] = 'ok'
                         elif score >= 0.6 and resultats[nom_zone]['statut'] == 'echec':
                             resultats[nom_zone]['statut'] = 'faible_confiance'
@@ -1544,7 +1544,10 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         x1_base, y1_base, x2_base, y2_base = get_absolute_coords(config['coords'], img_w, img_h)
         
         # Déterminer les marges à tester selon le mode
-        margin_configuree = config.get('margin', 0)
+        margin_configuree = config.get('margin')
+        if margin_configuree is None:
+            margin_configuree = 0
+            
         if mode == 'approfondi':
             # En mode approfondi: tester la marge configurée + variantes de rétrécissement
             margins_to_test = sorted(set([margin_configuree, 0, -2, -4, -6, -8]))
@@ -1672,7 +1675,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         if not texte:
             logger.warning(f"⚠️ Zone {nom_zone}: aucun texte détecté avec tous les PSM")
             statut = "echec"
-        elif confiance >= 0.8:
+        elif confiance >= 0.7:
             statut = "ok"
         elif confiance >= 0.6:
             statut = "faible_confiance"
@@ -1707,7 +1710,10 @@ def analyser_avec_easyocr(image_path, zones_config):
         x1, y1, x2, y2 = get_absolute_coords(config['coords'], img_w, img_h)
         
         # Appliquer la marge (positif = agrandir, négatif = rétrécir la zone)
-        margin = config.get('margin', 0)
+        margin = config.get('margin')
+        if margin is None:
+            margin = 0
+            
         if margin != 0:
             x1 -= margin
             y1 -= margin
@@ -1766,7 +1772,7 @@ def analyser_avec_easyocr(image_path, zones_config):
         if not texte_final:
             logger.warning(f"⚠️ EasyOCR Zone {nom_zone}: aucun texte détecté")
             statut = "echec"
-        elif conf_moy >= 0.8:
+        elif conf_moy >= 0.7:
             statut = "ok"
         elif conf_moy >= 0.6:
             statut = "faible_confiance"
