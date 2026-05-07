@@ -1,24 +1,24 @@
 {
   "nom": "cni_wafa_rogne_01",
   "description": "",
-  "date_creation": "2026-05-04T16:30:25.613666",
-  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\wafa_rogne_01\\reference.jpg",
+  "date_creation": "2026-05-07T09:47:55.610517",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_wafa_rogne_01\\reference.jpg",
   "zones": [
     {
       "char_filter": "alpha_only",
       "coords": [
-        0.7345,
+        0.7745,
         0.61,
-        0.907,
-        0.6896
+        0.912,
+        0.72
       ],
       "expected_format": "single_line",
       "id": 1777806810784,
       "lang": "ara",
+      "margin": -2,
       "nom": "nom",
       "preprocess": "arabic_textured",
-      "type": "text",
-      "margin": -8
+      "type": "text"
     },
     {
       "char_filter": "digits_only",
@@ -31,15 +31,67 @@
       "expected_format": "single_line",
       "id": 1777817035038,
       "lang": "fra",
+      "margin": -8,
       "nom": "numero_piece",
       "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "char_filter": "alpha_only",
+      "coords": [
+        0.7316,
+        0.7087,
+        0.9129,
+        0.8075
+      ],
+      "expected_format": "single_line",
+      "id": 1778137682271,
+      "lang": "ara",
+      "margin": -6,
+      "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "text"
+    },
+    {
+      "char_filter": "none",
+      "coords": [
+        0.6704,
+        0.8233,
+        0.8541,
+        0.9024
+      ],
+      "expected_format": "single_line",
+      "id": 1778137708804,
+      "lang": "fra",
+      "margin": -6,
+      "nom": "dateNaissance",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "char_filter": "alpha_only",
+      "coords": [
+        0.5079,
+        0.8357,
+        0.5766,
+        0.9161
+      ],
+      "expected_format": "single_line",
+      "id": 1778137720938,
+      "lang": "ara",
+      "margin": -6,
+      "nom": "sexe",
+      "preprocess": "arabic_textured",
       "type": "text",
-      "margin": -2
+      "valeurs_attendues": [
+        "ذكر",
+        "انثى"
+      ]
     }
   ],
   "cadre_reference": null,
   "metadata": {
-    "nombre_zones": 2,
+    "nombre_zones": 5,
     "image_dimensions": {
       "width": 1010,
       "height": 640

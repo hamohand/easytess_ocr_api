@@ -1381,7 +1381,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                 logger.error(f"Erreur Tesseract global: {e}")
         
         # 4. Identification des zones à refaire (échec ou faible confiance)
-        zones_a_refaire = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < 0.6}
+        zones_a_refaire = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < 0.70}
         
         # 5. Essai EasyOCR sur les zones difficiles
         if zones_a_refaire and EASYOCR_DISPONIBLE:
@@ -1675,9 +1675,10 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         if not texte:
             logger.warning(f"⚠️ Zone {nom_zone}: aucun texte détecté avec tous les PSM")
             statut = "echec"
-        elif confiance >= 0.7:
+            confiance = 0.0
+        elif confiance >= 0.70:
             statut = "ok"
-        elif confiance >= 0.6:
+        elif confiance >= 0.60:
             statut = "faible_confiance"
         else:
             statut = "echec"
@@ -1732,11 +1733,16 @@ def analyser_avec_easyocr(image_path, zones_config):
         # Upscale pour les petits textes
         zone_img_upscaled = upscale_for_ocr(zone_img_pil)
         
-        # Essayer avec l'image brute, upscalée ET avec prétraitement, garder le meilleur
+        # Essayer avec l'image brute, upscalée ET avec prétraitement avancé, garder le meilleur
+        zone_img_isolated_80 = isolate_dark_text(zone_img_upscaled, dark_threshold=80)
+        zone_img_isolated_100 = isolate_dark_text(zone_img_upscaled, dark_threshold=100)
+        
         variants = [
             (np.array(zone_img_pil), "brute"),  # Image originale
             (np.array(zone_img_upscaled), "upscaled"),  # Image agrandie
             (np.array(preprocess_for_arabic_ocr(zone_img_upscaled, apply_binarization=False).convert('RGB')), "upscaled+preprocess"),
+            (np.array(zone_img_isolated_80.convert('RGB')), "iso80"),
+            (np.array(zone_img_isolated_100.convert('RGB')), "iso100"),
         ]
         
         best_text = ""
@@ -1772,9 +1778,10 @@ def analyser_avec_easyocr(image_path, zones_config):
         if not texte_final:
             logger.warning(f"⚠️ EasyOCR Zone {nom_zone}: aucun texte détecté")
             statut = "echec"
-        elif conf_moy >= 0.7:
+            conf_moy = 0.0
+        elif conf_moy >= 0.70:
             statut = "ok"
-        elif conf_moy >= 0.6:
+        elif conf_moy >= 0.60:
             statut = "faible_confiance"
         else:
             statut = "echec"
