@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import logging
 from config import Config
+from flasgger import Swagger
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', force=True)
@@ -13,6 +14,33 @@ def create_app(config_class=Config):
     
     # Extensions
     CORS(app, resources={r"/*": {"origins": "*"}})
+    
+    # Swagger UI Configuration
+    swagger_config = {
+        "headers": [],
+        "specs": [
+            {
+                "endpoint": 'apispec',
+                "route": '/apispec.json',
+                "rule_filter": lambda rule: True,
+                "model_filter": lambda tag: True,
+            }
+        ],
+        "static_url_path": "/flasgger_static",
+        "swagger_ui": True,
+        "specs_route": "/swagger-ui.html"
+    }
+    
+    template = {
+        "swagger": "2.0",
+        "info": {
+            "title": "API OCR EasyTess",
+            "description": "Microservice d'analyse et d'extraction de documents OCR",
+            "version": "1.0.0"
+        }
+    }
+    
+    Swagger(app, config=swagger_config, template=template)
     
     # Ensure directories exist
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

@@ -5,6 +5,7 @@ import uuid
 import threading
 import time
 from app.services.ocr_engine import analyser_hybride
+from app.services.ocr_engine_v2 import analyser_hybride as analyser_hybride_v2
 
 ocr_bp = Blueprint('ocr', __name__)
 
@@ -20,6 +21,9 @@ def _resolve_image_path(filename, app=None):
     ctx = app or _ca
     temp_folder = ctx.config['UPLOAD_TEMP_FOLDER']
     perm_folder = ctx.config['UPLOAD_FOLDER']
+    if os.path.isabs(filename) and os.path.exists(filename):
+        return filename
+        
     temp_path = os.path.join(temp_folder, filename)
     if os.path.exists(temp_path):
         return temp_path
@@ -62,6 +66,30 @@ def _analyser_un_fichier(image_path, filename, zones_config, cadre_reference, mo
 
 @ocr_bp.route('/api/analyser', methods=['POST'])
 def api_analyser():
+    """
+    Analyse un document avec le moteur OCR (Version 01 - Stable)
+    ---
+    tags:
+      - OCR Analysis
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            filename:
+              type: string
+              example: "document_test.jpg"
+            mode:
+              type: string
+              example: "rapide"
+    responses:
+      200:
+        description: Analyse réussie
+      400:
+        description: Erreur dans les paramètres
+    """
     data = request.json or {}
     print(f"DEBUG: /api/analyser received data: {data}")
     filename = data.get('filename')
@@ -81,8 +109,16 @@ def api_analyser():
     
     if data.get('zones'):
         zones_config = data['zones']
+    elif data.get('entite'):
+        # Charger l'entité depuis le manager si demandée explicitement (très utile pour Swagger)
+        entite_nom = data['entite']
+        entite_config = current_app.entity_manager.charger_entite(entite_nom)
+        if entite_config and 'zones' in entite_config:
+            zones_config = {z['nom']: {'coords': z['coords'], 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_config['zones']}
+        else:
+            return jsonify({'error': f"Entité '{entite_nom}' introuvable ou invalide."}), 400
     elif entite_active:
-        zones_config = {z['nom']: {'coords': z['coords']} for z in entite_active['zones']}
+        zones_config = {z['nom']: {'coords': z['coords'], 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_active['zones']}
     else:
         zones_config = {"Test": {"coords": [100, 100, 300, 200]}}
     
@@ -101,6 +137,96 @@ def api_analyser():
         
         session['resultats'] = resultats
         session['alertes'] = alertes
+        
+        stats = {}
+        for r in resultats.values():
+            m = r.get('moteur', 'inconnu')
+            stats[m] = stats.get(m, 0) + 1
+            
+        return jsonify({
+            'success': True, 
+            'resultats': resultats, 
+            'alertes': alertes, 
+            'cadre_detecte': cadre_detecte,
+            'stats_moteurs': stats
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@ocr_bp.route('/api/analyser/v2', methods=['POST'])
+def api_analyser_v2():
+    """
+    Analyse un document avec le moteur OCR hybride (Version 02 - Expérimentale avec PaddleOCR)
+    ---
+    tags:
+      - OCR Analysis
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            filename:
+              type: string
+              example: "document_test.jpg"
+            mode:
+              type: string
+              example: "approfondi"
+    responses:
+      200:
+        description: Analyse réussie
+      400:
+        description: Erreur dans les paramètres
+    """
+    data = request.json or {}
+    print(f"DEBUG: /api/analyser/v2 received data: {data}")
+    filename = data.get('filename')
+    
+    # 1. Determine Image Path
+    image_path = None
+    if filename:
+        image_path = _resolve_image_path(filename)
+    elif 'image_path' in session:
+        image_path = session['image_path']
+        
+    if not image_path or not os.path.exists(image_path):
+        return jsonify({'error': 'Image not found. Please upload first or provide filename.'}), 400
+        
+    # 2. Determine Entity/Zones
+    entite_active = session.get('entite_active')
+    
+    if data.get('zones'):
+        zones_config = data['zones']
+    elif data.get('entite'):
+        # Charger l'entité depuis le manager si demandée explicitement (très utile pour Swagger)
+        entite_nom = data['entite']
+        entite_config = current_app.entity_manager.charger_entite(entite_nom)
+        if entite_config and 'zones' in entite_config:
+            zones_config = {z['nom']: {'coords': z['coords'], 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_config['zones']}
+        else:
+            return jsonify({'error': f"Entité '{entite_nom}' introuvable ou invalide."}), 400
+    elif entite_active:
+        zones_config = {z['nom']: {'coords': z['coords'], 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_active['zones']}
+    else:
+        zones_config = {"Test": {"coords": [100, 100, 300, 200]}}
+    
+    cadre_reference = data.get('cadre_reference')
+    mode = data.get('mode', 'rapide')
+    
+    try:
+        # APPEL A LA VERSION V2 (AVEC PADDLEOCR)
+        resultats, alertes, cadre_detecte = analyser_hybride_v2(image_path, zones_config, cadre_reference=cadre_reference, mode=mode)
+        
+        if resultats is None:
+            return jsonify({
+                'success': False,
+                'error': alertes,
+                'error_type': 'etiquettes_non_trouvees'
+            }), 400
+        
+        # On ne sauvegarde pas dans la session pour ne pas perturber la V1
         
         stats = {}
         for r in resultats.values():
