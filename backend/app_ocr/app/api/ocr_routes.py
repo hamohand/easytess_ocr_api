@@ -35,7 +35,7 @@ def _resolve_image_path(filename, app=None):
 def _analyser_un_fichier(image_path, filename, zones_config, cadre_reference, mode='rapide'):
     """Analyse un seul fichier — utilisé par le ThreadPoolExecutor."""
     try:
-        resultats, alertes, cadre_detecte = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference, mode=mode)
+        resultats, alertes, cadre_detecte = analyser_hybride_v2(image_path, zones_config, cadre_reference=cadre_reference, mode=mode)
         
         if resultats is None:
             return {
@@ -64,10 +64,10 @@ def _analyser_un_fichier(image_path, filename, zones_config, cadre_reference, mo
         }
 
 
-@ocr_bp.route('/api/analyser', methods=['POST'])
-def api_analyser():
+@ocr_bp.route('/api/analyser/v1', methods=['POST'])
+def api_analyser_v1():
     """
-    Analyse un document avec le moteur OCR (Version 01 - Stable)
+    Analyse un document avec l'ancien moteur OCR (Version 01 - Tesseract pur)
     ---
     tags:
       - OCR Analysis
@@ -154,10 +154,10 @@ def api_analyser():
         return jsonify({'error': str(e)}), 500
 
 
-@ocr_bp.route('/api/analyser/v2', methods=['POST'])
-def api_analyser_v2():
+@ocr_bp.route('/api/analyser', methods=['POST'])
+def api_analyser():
     """
-    Analyse un document avec le moteur OCR hybride (Version 02 - Expérimentale avec PaddleOCR)
+    Analyse un document avec le moteur OCR hybride (Version 02 - Défaut avec PaddleOCR)
     ---
     tags:
       - OCR Analysis

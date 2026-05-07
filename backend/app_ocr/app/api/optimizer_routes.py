@@ -33,6 +33,7 @@ def run_optimizer():
     zone_name = data.get('zone_name')
     texte_attendu = data.get('texte_attendu')
     use_tesseract = data.get('use_tesseract', True)
+    use_paddleocr = data.get('use_paddleocr', True)
     use_easyocr = data.get('use_easyocr', False)
 
     if not entity_name or not zone_name or not texte_attendu:
@@ -71,7 +72,9 @@ def run_optimizer():
         try:
             stop_threshold = float(stop_threshold)
         except ValueError:
-            stop_threshold = None
+            stop_threshold = 0.9
+    else:
+        stop_threshold = 0.9
 
     try:
         # Prepare image
@@ -90,6 +93,7 @@ def run_optimizer():
             char_filter=char_filter,
             margin=margin,
             use_tesseract=use_tesseract,
+            use_paddleocr=use_paddleocr,
             use_easyocr=use_easyocr,
             stop_threshold=stop_threshold
         )

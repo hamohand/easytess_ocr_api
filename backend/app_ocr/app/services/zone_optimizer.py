@@ -5,12 +5,14 @@ import numpy as np
 from difflib import SequenceMatcher
 from PIL import Image
 
-from app.services.ocr_engine import (
+from app.services.ocr_engine_v2 import (
     analyser_avec_tesseract,
     analyser_avec_easyocr,
+    analyser_avec_paddleocr,
     analyser_hybride,
     TESSERACT_DISPONIBLE,
-    EASYOCR_DISPONIBLE
+    EASYOCR_DISPONIBLE,
+    PADDLEOCR_DISPONIBLE
 )
 
 logger = logging.getLogger(__name__)
@@ -90,7 +92,7 @@ def preparer_image_de_travail(image_path, entity):
         logger.warning(f"⚠️ Erreur lors du rognage manuel: {e} → image brute")
         return image_path, None, None
 
-def ocr_zone_unique(image_path, nom_zone, coords, lang='ara', preprocess='arabic_textured', use_tesseract=True, use_easyocr=False, expected_format='auto', char_filter='none', margin=0):
+def ocr_zone_unique(image_path, nom_zone, coords, lang='ara', preprocess='arabic_textured', use_tesseract=True, use_paddleocr=True, use_easyocr=False, expected_format='auto', char_filter='none', margin=0):
     """
     Exécute l'OCR sur une seule zone et retourne le résultat.
     """
@@ -122,6 +124,21 @@ def ocr_zone_unique(image_path, nom_zone, coords, lang='ara', preprocess='arabic
         except Exception:
             pass
             
+    if use_paddleocr and PADDLEOCR_DISPONIBLE:
+        try:
+            resultats = analyser_avec_paddleocr(image_path, zones_config)
+            if nom_zone in resultats:
+                r = resultats[nom_zone]
+                if r['confiance_auto'] > best_result['confiance']:
+                    best_result = {
+                        'texte': r['texte_auto'],
+                        'confiance': r['confiance_auto'],
+                        'moteur': 'paddleocr'
+                    }
+        except Exception as e:
+            logger.error(f"PaddleOCR optimiser error: {e}")
+            pass
+
     if use_easyocr and EASYOCR_DISPONIBLE:
         try:
             resultats = analyser_avec_easyocr(image_path, zones_config)
@@ -138,13 +155,13 @@ def ocr_zone_unique(image_path, nom_zone, coords, lang='ara', preprocess='arabic
             
     return best_result
 
-def optimiser_zone(image_path, nom_zone, coords_base, texte_attendu, lang='ara', preprocess='arabic_textured', use_tesseract=True, use_easyocr=False, progress_callback=None, stop_threshold=None, expected_format='auto', char_filter='none', margin=0):
+def optimiser_zone(image_path, nom_zone, coords_base, texte_attendu, lang='ara', preprocess='arabic_textured', use_tesseract=True, use_paddleocr=True, use_easyocr=False, progress_callback=None, stop_threshold=None, expected_format='auto', char_filter='none', margin=0):
     """
     Optimise les coordonnées d'une zone pour maximiser le score OCR.
     Permet de s'arrêter tôt si stop_threshold est atteint.
     """
     # Score initial
-    result_initial = ocr_zone_unique(image_path, nom_zone, coords_base, lang, preprocess, use_tesseract, use_easyocr, expected_format, char_filter, margin)
+    result_initial = ocr_zone_unique(image_path, nom_zone, coords_base, lang, preprocess, use_tesseract, use_paddleocr, use_easyocr, expected_format, char_filter, margin)
     sim_initial = calculer_similarite(result_initial['texte'], texte_attendu)
     # Nouveau score : la similarité (0-1) est la métrique absolue (x 100). La confiance (0-1) sert de départage.
     score_initial = (sim_initial * 100) + result_initial['confiance']
@@ -203,7 +220,7 @@ def optimiser_zone(image_path, nom_zone, coords_base, texte_attendu, lang='ara',
                 if test_coords[0] >= test_coords[2] - 0.02 or test_coords[1] >= test_coords[3] - 0.02:
                     continue
                     
-                result = ocr_zone_unique(image_path, nom_zone, test_coords, lang, preprocess, use_tesseract, use_easyocr, expected_format, char_filter, margin)
+                result = ocr_zone_unique(image_path, nom_zone, test_coords, lang, preprocess, use_tesseract, use_paddleocr, use_easyocr, expected_format, char_filter, margin)
                 sim = calculer_similarite(result['texte'], texte_attendu)
                 score = (sim * 100) + result['confiance']
                 
@@ -258,7 +275,7 @@ def optimiser_zone(image_path, nom_zone, coords_base, texte_attendu, lang='ara',
                 if test_coords[0] >= test_coords[2] - 0.02 or test_coords[1] >= test_coords[3] - 0.02:
                     continue
                     
-                result = ocr_zone_unique(image_path, nom_zone, test_coords, lang, preprocess, use_tesseract, use_easyocr, expected_format, char_filter, margin)
+                result = ocr_zone_unique(image_path, nom_zone, test_coords, lang, preprocess, use_tesseract, use_paddleocr, use_easyocr, expected_format, char_filter, margin)
                 sim = calculer_similarite(result['texte'], texte_attendu)
                 score = (sim * 100) + result['confiance']
                 

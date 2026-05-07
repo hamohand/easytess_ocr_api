@@ -10,6 +10,10 @@ from PIL import Image, ImageOps
 from easy_core.image_utils import apply_pillow_patch
 from easy_core.qrcode_utils import decoder_code_hybride
 from app.services.image_matcher import find_template_orb
+try:
+    from bidi.algorithm import get_display
+except ImportError:
+    get_display = lambda x: x  # Fallback si bidi n'est pas installé
 
 # Apply patch
 apply_pillow_patch()
@@ -1406,40 +1410,42 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
         # 2. Zones OCR classiques (exclure les zones QR déjà traitées)
         zones_ocr = {k: v for k, v in zones_config.items() if k not in resultats}
         
-        # 3. Essai Tesseract sur zones OCR
-        if zones_ocr and TESSERACT_DISPONIBLE:
+        # 3. Essai PaddleOCR sur zones OCR en premier (Moteur le plus précis)
+        if zones_ocr and PADDLEOCR_DISPONIBLE:
             try:
-                logger.info(f"🔤 Tesseract: analyse de {len(zones_ocr)} zone(s)")
-                resultats_ocr = analyser_avec_tesseract(image_path, zones_ocr, mode=mode)
-                resultats.update(resultats_ocr)
-            except Exception as e:
-                logger.error(f"Erreur Tesseract global: {e}")
-        
-        # 4. Identification des zones à refaire (échec ou faible confiance)
-        zones_a_refaire = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < 0.70}
-        
-        # 5. Essai PaddleOCR sur les zones difficiles (2ème étage)
-        if zones_a_refaire and PADDLEOCR_DISPONIBLE:
-            try:
-                logger.info(f"🚣 PaddleOCR: analyse de {len(zones_a_refaire)} zone(s) à améliorer")
-                res_paddle = analyser_avec_paddleocr(image_path, zones_a_refaire)
-                for k, v in res_paddle.items():
-                    if k in resultats:
-                        current_conf = resultats[k]['confiance_auto']
-                        paddle_conf = v['confiance_auto']
-                        if paddle_conf > current_conf:
-                            logger.info(f"✨ Zone {k}: PaddleOCR meilleur ({paddle_conf:.0%}) que {resultats[k].get('moteur', 'aucun')} ({current_conf:.0%})")
-                            resultats[k] = v
-                            resultats[k]['ameliore_par'] = 'paddleocr'
-                        else:
-                            logger.info(f"✨ Zone {k}: on garde {resultats[k].get('moteur', 'aucun')} ({current_conf:.0%}) meilleur que PaddleOCR ({paddle_conf:.0%})")
-                    else:
-                        resultats[k] = v
-                        resultats[k]['ameliore_par'] = 'paddleocr'
+                logger.info(f"🚣 PaddleOCR: analyse primaire de {len(zones_ocr)} zone(s)")
+                resultats_paddle = analyser_avec_paddleocr(image_path, zones_ocr)
+                resultats.update(resultats_paddle)
             except Exception as e:
                 logger.error(f"Erreur PaddleOCR global: {e}")
+        
+        # 4. Identification des zones à refaire (échec ou faible confiance de PaddleOCR)
+        # PaddleOCR est très fiable. Si sa confiance est < 90%, on donne sa chance à Tesseract.
+        seuil_refaire_tesseract = 0.90
+        zones_a_refaire_tess = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < seuil_refaire_tesseract}
+        
+        # 5. Essai Tesseract sur les zones difficiles (2ème étage)
+        if zones_a_refaire_tess and TESSERACT_DISPONIBLE:
+            try:
+                logger.info(f"🔤 Tesseract: analyse secondaire de {len(zones_a_refaire_tess)} zone(s)")
+                res_tess = analyser_avec_tesseract(image_path, zones_a_refaire_tess, mode=mode)
+                for k, v in res_tess.items():
+                    if k in resultats:
+                        current_conf = resultats[k]['confiance_auto']
+                        tess_conf = v['confiance_auto']
+                        if tess_conf > current_conf:
+                            logger.info(f"✨ Zone {k}: Tesseract meilleur ({tess_conf:.0%}) que PaddleOCR ({current_conf:.0%})")
+                            resultats[k] = v
+                            resultats[k]['ameliore_par'] = 'tesseract'
+                        else:
+                            logger.info(f"✨ Zone {k}: on garde PaddleOCR ({current_conf:.0%}) meilleur que Tesseract ({tess_conf:.0%})")
+                    else:
+                        resultats[k] = v
+                        resultats[k]['ameliore_par'] = 'tesseract'
+            except Exception as e:
+                logger.error(f"Erreur Tesseract global: {e}")
 
-        # 6. Mise à jour des zones à refaire (au cas où PaddleOCR n'aurait pas réussi à dépasser 70%)
+        # 6. Mise à jour des zones à refaire (au cas où ni Paddle ni Tesseract n'auraient dépassé 70%)
         zones_a_refaire = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < 0.70}
 
         # 7. Essai EasyOCR sur les zones très difficiles (3ème étage)
@@ -1921,6 +1927,12 @@ def analyser_avec_paddleocr(image_path, zones_config):
                     confs = [line[1][1] for line in results[0]]
                     
                     texte = " ".join(textes)
+                    
+                    # CORRECTION ARABE : PaddleOCR retourne le texte arabe dans l'ordre visuel (gauche à droite).
+                    # On utilise bidi.get_display pour rétablir l'ordre logique (droite à gauche) tout en préservant les nombres.
+                    if 'ara' in zone_lang or zone_lang == 'ar':
+                        texte = get_display(texte)
+                        
                     conf = sum(confs) / len(confs) if confs else 0.0
                     
                     if conf > best_conf or (conf == best_conf and len(texte) > len(best_text)):
