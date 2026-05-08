@@ -8,7 +8,7 @@ Plateforme complète d'analyse OCR et d'extraction de contenu documentaire. Deux
 ## ✨ Fonctionnalités principales
 
 ### 🔍 Section EasyTess-OCR
-- **Analyse OCR hybride** : Tesseract + EasyOCR avec sélection automatique
+- **Analyse OCR hybride V2** : PaddleOCR + Tesseract + EasyOCR avec sélection automatique et early stopping
 - **Support multi-formats** : Images (JPG, PNG, TIFF…) et PDF (conversion auto 300 DPI)
 - **QR Code/Barcode** : Détection automatique avec OpenCV
 - **Gestion des entités** : Modèles d'extraction personnalisés avec zones dessinées
@@ -48,7 +48,7 @@ easytess_ocr_api/
 ## 🚀 Installation
 
 ### Prérequis
-- Python 3.8+
+- Python 3.11+ (Requis pour la compatibilité C++ de PaddlePaddle)
 - Node.js 16+
 - Tesseract OCR
 
@@ -90,7 +90,7 @@ ng serve # Tourne sur un autre port, ex: 4200
 
 ### Backend
 - **Flask** + **Flask-Cors** : Framework web avec CORS
-- **pytesseract** + **easyocr** : Moteurs OCR
+- **paddleocr** + **pytesseract** + **easyocr** : Moteurs OCR (Pipeline Hybride V2)
 - **pypdfium2** : Conversion PDF → image (pour OCR)
 - **pdfplumber** : Extraction contenu PDF (texte + tableaux)
 - **python-docx** : Extraction/génération Word
@@ -222,11 +222,12 @@ Les zones sont stockées en coordonnées relatives (0.0 à 1.0), ce qui permet :
 - Adaptation automatique à différentes tailles d'images
 - Réutilisation des entités sur des documents de résolutions variées
 
-### Analyse hybride
-Le système utilise automatiquement :
-1. **Tesseract** en premier
-2. **EasyOCR** pour les zones avec faible confiance
-3. Sélection du meilleur résultat
+### Analyse hybride V2
+Le système utilise automatiquement une architecture à 3 étages :
+1. **PaddleOCR** en premier (Le plus performant, arrêt prématuré si confiance > 90%)
+2. **Tesseract** en fallback pour les zones avec faible confiance
+3. **EasyOCR** en dernier recours
+La meilleure prédiction est sélectionnée automatiquement.
 
 ### Gestion des erreurs
 - Alertes pour les zones problématiques
@@ -276,9 +277,10 @@ python test_zone_optimizer.py -e cni_algo_recto_001 -z nom -t "حمرون" --dry
 
 1. **Passe 1** (grossière) : balaye chaque bord ±15% avec un pas de 2%
 2. **Passe 2** (fine) : affine autour du meilleur résultat ±3% avec un pas de 0.5%
-3. **Score** : `confiance_OCR × similarité_texte` (maximisé)
-4. **Application** : met à jour automatiquement le JSON de l'entité (avec backup horodaté)
-5. **Rapport** : génère un rapport HTML et JSON dans `tests_output/`
+3. **Moteur principal** : Utilise PaddleOCR par défaut, avec Early Stopping si confiance > 90%
+4. **Score** : `confiance_OCR × similarité_texte` (maximisé)
+5. **Application** : met à jour automatiquement le JSON de l'entité (avec backup horodaté)
+6. **Rapport** : génère un rapport HTML et JSON dans `tests_output/`
 
 ## 📈 Améliorations futures
 
@@ -302,5 +304,5 @@ Pour toute question ou suggestion, contactez l'équipe de développement.
 
 ---
 
-**Version** : 3.1.0 (Optimisation des zones OCR)  
-**Dernière mise à jour** : Avril 2026
+**Version** : 3.3.0 (Pipeline Hybride V2 / PaddleOCR)  
+**Dernière mise à jour** : Mai 2026

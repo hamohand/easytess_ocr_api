@@ -10,8 +10,9 @@ Le moteur utilise une approche **hybride** combinant plusieurs bibliothèques po
 
 | Technologie | Usage Principal | Pourquoi ? |
 |-------------|-----------------|------------|
-| **Tesseract** | Analyse Globale & Zones simples | Rapide, bonne détection structurelle, standard industriel. |
-| **EasyOCR** | Zones complexes, manuscrites, faible contraste | Plus lent mais beaucoup plus robuste (Deep Learning), supporte mieux les textes stylisés. |
+| **PaddleOCR** | Moteur Principal (V2) | Leader pour le texte multi-langues, particulièrement l'arabe et les dates. Précision ~99.6% et inférence très rapide. |
+| **Tesseract** | Fallback (2ème étage) | Standard industriel, rapide, mais parfois surconfiant sur les chiffres. Utilisé si PaddleOCR échoue (confiance < 90%). |
+| **EasyOCR** | 3ème recours (Zones complexes) | Plus lent mais très robuste. Utilisé uniquement si les deux premiers échouent. |
 | **ZBar (PyZbar)** | Codes-barres & QR Codes | Détection spécialisée et ultra-rapide des codes 1D/2D. |
 
 ---
@@ -108,6 +109,8 @@ Pour chaque zone à optimiser :
 ```
 
 Les bords sont optimisés **séquentiellement** : le résultat du bord précédent alimente le suivant.
+
+> **Nouveauté V2 (Early Stopping)** : Depuis l'intégration de PaddleOCR, si la confiance dépasse 90% avec une bonne similarité dès la première itération, l'optimiseur s'arrête instantanément, réduisant le temps d'attente à 0 seconde.
 
 ### Utilisation
 

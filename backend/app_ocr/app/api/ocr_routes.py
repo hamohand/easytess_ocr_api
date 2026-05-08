@@ -114,11 +114,11 @@ def api_analyser_v1():
         entite_nom = data['entite']
         entite_config = current_app.entity_manager.charger_entite(entite_nom)
         if entite_config and 'zones' in entite_config:
-            zones_config = {z['nom']: {'coords': z['coords'], 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_config['zones']}
+            zones_config = {z['nom']: {**z, 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_config['zones']}
         else:
             return jsonify({'error': f"Entité '{entite_nom}' introuvable ou invalide."}), 400
     elif entite_active:
-        zones_config = {z['nom']: {'coords': z['coords'], 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_active['zones']}
+        zones_config = {z['nom']: {**z, 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_active['zones']}
     else:
         zones_config = {"Test": {"coords": [100, 100, 300, 200]}}
     
@@ -204,11 +204,11 @@ def api_analyser():
         entite_nom = data['entite']
         entite_config = current_app.entity_manager.charger_entite(entite_nom)
         if entite_config and 'zones' in entite_config:
-            zones_config = {z['nom']: {'coords': z['coords'], 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_config['zones']}
+            zones_config = {z['nom']: {**z, 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_config['zones']}
         else:
             return jsonify({'error': f"Entité '{entite_nom}' introuvable ou invalide."}), 400
     elif entite_active:
-        zones_config = {z['nom']: {'coords': z['coords'], 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_active['zones']}
+        zones_config = {z['nom']: {**z, 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_active['zones']}
     else:
         zones_config = {"Test": {"coords": [100, 100, 300, 200]}}
     

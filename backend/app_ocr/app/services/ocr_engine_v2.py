@@ -753,7 +753,7 @@ def get_paddleocr_reader(zone_lang='ara+fra'):
     return _paddleocr_readers.get(lang_code)
 
 
-def corriger_avec_valeurs_connues(texte_ocr, valeurs_possibles, seuil=0.6):
+def corriger_avec_valeurs_connues(texte_ocr, valeurs_possibles, seuil=0.6, force_match=False):
     """
     Corrige le texte OCR en le comparant aux valeurs connues.
     Utilise la similarité fuzzy pour trouver la meilleure correspondance.
@@ -773,22 +773,34 @@ def corriger_avec_valeurs_connues(texte_ocr, valeurs_possibles, seuil=0.6):
     meilleur_score = 0.0
     
     texte_normalise = texte_ocr.strip().lower()
+    # Nettoyage agressif de la ponctuation (souvent causée par le chevauchement des bords)
+    texte_clean = re.sub(r'[^\w\s]', '', texte_normalise).strip()
     
     for valeur in valeurs_possibles:
         valeur_norm = str(valeur).strip().lower()
+        valeur_clean = re.sub(r'[^\w\s]', '', valeur_norm).strip()
         
-        # Calcul de similarité
+        # 1. Comparaison standard
         score = SequenceMatcher(None, texte_normalise, valeur_norm).ratio()
         
-        # Bonus si le texte OCR contient la valeur ou vice-versa
-        if valeur_norm in texte_normalise or texte_normalise in valeur_norm:
-            score = min(1.0, score + 0.2)
+        # 2. Comparaison sur version nettoyée (sans la ponctuation parasite)
+        if texte_clean and valeur_clean:
+            score_clean = SequenceMatcher(None, texte_clean, valeur_clean).ratio()
+            score = max(score, score_clean)
+            
+            # 3. Bonus si l'un est inclus dans l'autre (très utile pour les mots coupés)
+            if valeur_clean in texte_clean or texte_clean in valeur_clean:
+                # Bonus proportionnel (pour ne pas donner 100% à "M" s'il est trouvé dans "Masculin")
+                taille_min = min(len(texte_clean), len(valeur_clean))
+                taille_max = max(len(texte_clean), len(valeur_clean))
+                bonus = 0.2 * (taille_min / taille_max) if taille_max > 0 else 0
+                score = min(1.0, score + bonus)
         
         if score > meilleur_score:
             meilleur_score = score
-            meilleure_correspondance = valeur  # Retourne la valeur originale, pas normalisée
+            meilleure_correspondance = valeur  # Retourne la valeur originale
     
-    if meilleur_score >= seuil:
+    if meilleur_score >= seuil or (force_match and meilleur_score > 0.05):
         logger.debug(f"Correction OCR: '{texte_ocr}' -> '{meilleure_correspondance}' (score: {meilleur_score:.2f})")
         return meilleure_correspondance, meilleur_score
     
@@ -1475,7 +1487,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                 valeurs = config.get('valeurs_attendues', [])
                 if valeurs and resultats[nom_zone].get('texte_auto'):
                     texte_original = resultats[nom_zone]['texte_auto']
-                    texte_corrige, score = corriger_avec_valeurs_connues(texte_original, valeurs)
+                    texte_corrige, score = corriger_avec_valeurs_connues(texte_original, valeurs, force_match=True)
                     
                     if score > 0:
                         resultats[nom_zone]['texte_final'] = texte_corrige
