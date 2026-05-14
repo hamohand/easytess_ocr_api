@@ -743,10 +743,12 @@ def get_paddleocr_reader(zone_lang='ara+fra'):
         
     if lang_code not in _paddleocr_readers and PADDLEOCR_DISPONIBLE:
         try:
+            import logging as pp_logging
+            pp_logging.getLogger('ppocr').setLevel(pp_logging.ERROR)
             # use_angle_cls=True pour détecter l'orientation du texte
-            reader = PaddleOCR(use_angle_cls=True, lang=lang_code)
+            reader = PaddleOCR(use_angle_cls=True, lang=lang_code, show_log=False)
             _paddleocr_readers[lang_code] = reader
-            logger.info(f"Modèle PaddleOCR chargé pour la langue '{lang_code}'")
+            logger.info(f"Modèle PaddleOCR chargé pour la langue '{lang_code}' (Logs désactivés)")
         except Exception as e:
             logger.error(f"Erreur chargement modèle PaddleOCR {lang_code}: {e}")
             

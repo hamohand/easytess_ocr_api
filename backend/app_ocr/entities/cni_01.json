@@ -1,193 +1,138 @@
 {
   "nom": "cni_01",
-  "description": "essai",
-  "date_creation": "2026-04-20T21:26:54.013963",
-  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_01\\reference.jpeg",
+  "description": "cni_wafa_rogne_01",
+  "date_creation": "2026-05-07T19:31:22.891545",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_wafa_rogne_01\\reference.jpg",
   "zones": [
     {
+      "char_filter": "alpha_only",
       "coords": [
-        -0.005613999999999986,
-        -2.6000000000011098e-05,
-        0.31386000000000003,
-        0.10500000000000002
+        0.7745,
+        0.61,
+        0.912,
+        0.72
       ],
-      "id": 1776391851225,
+      "expected_format": "single_line",
+      "id": 1777806810784,
       "lang": "ara",
-      "nom": "numero_piece",
-      "preprocess": "arabic_textured",
-      "type": "text"
-    },
-    {
-      "coords": [
-        0.6267049999999998,
-        0.503473,
-        0.91108,
-        0.662700964630225
-      ],
-      "id": 1776391950194,
-      "lang": "ara",
+      "margin": -2,
       "nom": "nom",
       "preprocess": "arabic_textured",
       "type": "text"
     },
     {
+      "char_filter": "alpha_only",
       "coords": [
-        0.5067045454545454,
-        0.624306,
-        0.906107,
-        0.7950339999999998
+        0.7316,
+        0.7087,
+        0.9129,
+        0.8075
       ],
-      "id": 1776392019634,
+      "expected_format": "single_line",
+      "id": 1778137682271,
       "lang": "ara",
+      "margin": -6,
       "nom": "prenom",
       "preprocess": "arabic_textured",
       "type": "text"
     },
     {
+      "char_filter": "none",
       "coords": [
-        0.552045,
-        0.8968830000000001,
-        0.825246,
-        0.9983679999999999
+        0.6504,
+        0.8233,
+        0.8541,
+        0.9024
       ],
-      "id": 1776500407240,
-      "lang": "ara",
-      "nom": "lieu_naissance",
-      "preprocess": "arabic_textured",
-      "type": "text"
-    },
-    {
-      "coords": [
-        0.2707368181818182,
-        0.44550482315112544,
-        0.727453409090909,
-        0.5290418006430868
-      ],
-      "id": 1776518642526,
-      "lang": "ara+fra",
-      "nom": "nin",
-      "preprocess": "auto",
-      "type": "text"
-    },
-    {
-      "coords": [
-        0.5625390519187359,
-        0.8236488745980708,
-        0.8154668171557563,
-        0.9103881028938908
-      ],
-      "id": 1775656571941,
+      "expected_format": "single_line",
+      "id": 1778137708804,
       "lang": "fra",
-      "nom": "date_naissance",
+      "margin": -6,
+      "nom": "dateNaissance",
       "preprocess": "latin_simple",
       "type": "text"
     },
     {
+      "char_filter": "alpha_only",
       "coords": [
-        0.3138318181818182,
-        0.6933311897106109,
-        0.38983000000000007,
-        0.9064899999999998
+        0.5079,
+        0.8357,
+        0.5766,
+        0.9161
       ],
-      "id": 1776558672086,
+      "expected_format": "single_line",
+      "id": 1778137720938,
       "lang": "ara",
+      "margin": -6,
       "nom": "sexe",
       "preprocess": "arabic_textured",
-      "type": "text"
+      "type": "text",
+      "valeurs_attendues": [
+        "ذكر",
+        "انثى"
+      ]
     },
     {
-      "coords": [
-        0.35074886363636365,
-        0.03965434083601286,
-        0.8052052272727273,
-        0.1489485530546624
-      ],
-      "id": 1776694428708,
-      "lang": "ara",
-      "nom": "delivre_par",
-      "preprocess": "arabic_textured",
-      "type": "text"
-    },
-    {
-      "coords": [
-        0.551909090909091,
-        0.11678681672025724,
-        0.8052052272727273,
-        0.2294225080385852
-      ],
-      "id": 1776694447175,
+      "id": 1778174922500,
+      "nom": "nin",
+      "type": "text",
       "lang": "fra",
-      "nom": "delivre_le",
       "preprocess": "latin_simple",
-      "type": "text"
-    },
-    {
+      "char_filter": "digits_only",
+      "expected_format": "single_line",
+      "margin": -8,
       "coords": [
-        0.551909090909091,
-        0.20366527331189713,
-        0.8074654545454546,
-        0.3355144694533763
-      ],
-      "id": 1776694472683,
-      "lang": "fra",
-      "nom": "expire_le",
-      "preprocess": "latin_simple",
-      "type": "text"
+        0.4307,
+        0.5612,
+        0.792,
+        0.6403
+      ]
     }
   ],
   "cadre_reference": {
     "image_base_dimensions": {
-      "width": 663,
-      "height": 433,
-      "dpi_x": 200.0,
-      "dpi_y": 200.0
+      "width": 1010,
+      "height": 640
     },
     "haut": {
-      "labels": [
-        "regex:(?<!\\d)\\d{9}(?!\\d)"
-      ],
+      "labels": [],
       "position_base": [
-        0.39441930618401205,
-        0.22401847575057737
+        0.5,
+        0
       ]
     },
     "droite": {
       "labels": [],
       "position_base": [
-        0.9773755656108597,
+        1,
         0.5
-      ],
-      "manuel_formula": "G + largeur "
+      ]
     },
     "gauche": {
-      "labels": [
-        "regex:(?<!\\d)\\d{9}(?!\\d)"
-      ],
+      "labels": [],
       "position_base": [
-        0.3137254901960784,
-        0.24364896073903003
+        0,
+        0.5
       ]
     },
     "bas": {
       "labels": [],
       "position_base": [
         0.5,
-        0.9422632794457275
-      ],
-      "fallback_formula": "H + 336",
-      "manuel_formula": "H + hauteur"
+        1
+      ]
     },
     "dimensions_absolues": {
-      "largeur": 440,
-      "hauteur": 311,
+      "largeur": 1010,
+      "hauteur": 640,
       "angle": 0
     }
   },
   "metadata": {
-    "nombre_zones": 10,
+    "nombre_zones": 5,
     "image_dimensions": {
-      "width": 663,
-      "height": 433
+      "width": 1010,
+      "height": 640
     }
   }
 }

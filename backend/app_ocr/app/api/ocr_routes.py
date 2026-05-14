@@ -4,6 +4,10 @@ import json
 import uuid
 import threading
 import time
+import logging
+
+logger = logging.getLogger(__name__)
+
 from app.services.ocr_engine import analyser_hybride
 from app.services.ocr_engine_v2 import analyser_hybride as analyser_hybride_v2
 
@@ -91,7 +95,7 @@ def api_analyser_v1():
         description: Erreur dans les paramètres
     """
     data = request.json or {}
-    print(f"DEBUG: /api/analyser received data: {data}")
+    logger.info(f"Requête OCR V1 reçue: filename={data.get('filename')}, mode={data.get('mode')}")
     filename = data.get('filename')
     
     # 1. Determine Image Path
@@ -181,7 +185,7 @@ def api_analyser():
         description: Erreur dans les paramètres
     """
     data = request.json or {}
-    print(f"DEBUG: /api/analyser/v2 received data: {data}")
+    logger.info(f"Requête OCR V2 reçue: filename={data.get('filename')}, mode={data.get('mode')}")
     filename = data.get('filename')
     
     # 1. Determine Image Path
