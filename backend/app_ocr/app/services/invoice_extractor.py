@@ -307,11 +307,12 @@ def _detect_designation_bounds(header_line, designation_mot, img_width):
 # ═══════════════════════════════════════════════════════════
 
 def _extract_articles(lines, header_idx, x_min, x_max):
-    """
+    \"\"\"
     Extrait les articles des lignes sous l'en-tête.
     
     Pour chaque ligne, ne retient que les mots dont le centre X est 
-    dans la zone de la colonne "Désignation".
+    dans la zone de la colonne \"Désignation\".
+    Gère également le regroupement multi-lignes et le filtrage horizontal.
     
     Args:
         lines: Toutes les lignes OCR
@@ -320,7 +321,7 @@ def _extract_articles(lines, header_idx, x_min, x_max):
     
     Returns:
         list[dict]: Articles extraits [{designation, confiance, ligne_y, ...}]
-    """
+    \"\"\"
     articles = []
     
     for idx in range(header_idx + 1, len(lines)):
@@ -334,6 +335,7 @@ def _extract_articles(lines, header_idx, x_min, x_max):
         
         # Filtrer les mots dans la zone de la colonne Désignation
         mots_designation = []
+        mots_autres = []
         for mot in line:
             mot_center_x = mot['x'] + mot['width'] / 2
             # Le mot est dans la colonne si son centre est dans les bornes
@@ -341,14 +343,52 @@ def _extract_articles(lines, header_idx, x_min, x_max):
                 # Exclure les valeurs purement numériques/monétaires
                 if not _is_numeric_or_monetary(mot['text']):
                     mots_designation.append(mot)
+            else:
+                mots_autres.append(mot)
         
         if mots_designation:
+            # 1. Filtrage horizontal : s'assurer de ne garder qu'un seul produit sur la ligne.
+            # Si des mots sont séparés par un espace anormalement grand, on ne garde que le premier groupe.
+            mots_designation.sort(key=lambda m: m['x'])
+            groupe_principal = [mots_designation[0]]
+            for i in range(1, len(mots_designation)):
+                mot_prec = mots_designation[i-1]
+                mot_courant = mots_designation[i]
+                ecart = mot_courant['x'] - (mot_prec['x'] + mot_prec['width'])
+                
+                # Estimation de la largeur d'un caractère du mot précédent
+                largeur_char_moyenne = max(3, mot_prec['width'] / max(1, len(mot_prec['text'])))
+                
+                # Si l'écart est supérieur à 5 caractères, c'est sans doute une autre colonne/produit
+                if ecart > largeur_char_moyenne * 5:
+                    break
+                groupe_principal.append(mot_courant)
+                
+            mots_designation = groupe_principal
+            
             designation_text = ' '.join(m['text'] for m in mots_designation)
             avg_conf = np.mean([m['conf'] for m in mots_designation])
             line_y = _line_y_center(line)
             
             # Ne pas ajouter les lignes vides ou trop courtes (bruit)
             if len(designation_text.strip()) > 1:
+                has_other_columns = any(_is_numeric_or_monetary(m['text']) for m in mots_autres)
+                
+                # 2. Regroupement multi-lignes : si la ligne actuelle n'a pas de prix/quantité 
+                # ET qu'elle est proche de la ligne précédente, on la fusionne.
+                if articles:
+                    prev_article = articles[-1]
+                    dist_y = line_y - prev_article['position_y']
+                    hauteur_ligne = np.mean([m['height'] for m in mots_designation])
+                    
+                    # On fusionne si distance Y < 3.5x la hauteur d'une ligne et pas d'autres colonnes
+                    if not has_other_columns and dist_y < (hauteur_ligne * 3.5):
+                        prev_article['designation'] += ' ' + designation_text.strip()
+                        prev_article['confiance'] = round((prev_article['confiance'] + float(avg_conf)) / 2, 1)
+                        prev_article['nb_mots'] += len(mots_designation)
+                        prev_article['position_y'] = line_y  # Met à jour le Y pour la suite
+                        continue
+                
                 articles.append({
                     'designation': designation_text.strip(),
                     'confiance': round(float(avg_conf), 1),
