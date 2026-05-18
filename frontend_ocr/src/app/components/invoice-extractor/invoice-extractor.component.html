@@ -13,7 +13,7 @@
             <label for="lang-select">🌐 Langue OCR</label>
             <select id="lang-select" [ngModel]="lang()" (ngModelChange)="lang.set($event)">
                 <option value="fra">Français</option>
-                <option value="ara+fra">Arabe + Français</option>
+                <option value="ara">Arabe</option>
                 <option value="eng">Anglais</option>
             </select>
         </div>
@@ -59,10 +59,57 @@
                 </div>
             </div>
 
+            <!-- Params Panel pour valider la zone -->
+            @if (state() === 'validating_zone') {
+                <div class="params-panel">
+                    <h3 class="params-title">📐 Ajuster la zone du tableau des produits</h3>
+                    <div class="params-grid">
+                        <div class="param-group">
+                            <label for="crop-x">X (gauche)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="crop-x" [value]="cropX()" (input)="updateCropParam('x', $event)" min="0" />
+                                <span class="input-unit">px</span>
+                            </div>
+                        </div>
+                        <div class="param-group">
+                            <label for="crop-y">Y (haut)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="crop-y" [value]="cropY()" (input)="updateCropParam('y', $event)" min="0" />
+                                <span class="input-unit">px</span>
+                            </div>
+                        </div>
+                        <div class="param-group">
+                            <label for="crop-w">Largeur</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="crop-w" [value]="cropW()" (input)="updateCropParam('width', $event)" min="1" />
+                                <span class="input-unit">px</span>
+                            </div>
+                        </div>
+                        <div class="param-group">
+                            <label for="crop-h">Hauteur</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="crop-h" [value]="cropH()" (input)="updateCropParam('height', $event)" min="1" />
+                                <span class="input-unit">px</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
             <!-- Image Preview -->
             @if (previewUrl()) {
                 <div class="preview-wrapper">
-                    <img [src]="previewUrl()" alt="Aperçu facture" class="preview-image" />
+                    <div class="preview-container">
+                        <img #previewImg [src]="previewUrl()" alt="Aperçu facture" class="preview-image" />
+                        @if (state() === 'validating_zone') {
+                            <div class="crop-overlay" [ngStyle]="getCropOverlayStyle()" (mousedown)="onOverlayMouseDown($event)">
+                                <div class="resize-handle nw" (mousedown)="onResizeMouseDown($event, 'nw')"></div>
+                                <div class="resize-handle ne" (mousedown)="onResizeMouseDown($event, 'ne')"></div>
+                                <div class="resize-handle sw" (mousedown)="onResizeMouseDown($event, 'sw')"></div>
+                                <div class="resize-handle se" (mousedown)="onResizeMouseDown($event, 'se')"></div>
+                            </div>
+                        }
+                    </div>
                 </div>
             } @else if (fileInfo()?.ext === 'PDF') {
                 <div class="pdf-placeholder">
@@ -75,11 +122,29 @@
             <!-- Action Button -->
             <div class="action-bar">
                 @if (state() === 'idle' || state() === 'error' || state() === 'results') {
+                    <button class="btn btn-outline btn-lg"
+                            (click)="lancerDetection()"
+                            [disabled]="state() === 'detecting' || state() === 'processing'">
+                        🎯 1. Détecter la zone
+                    </button>
+                    
                     <button class="btn btn-primary btn-lg"
                             (click)="lancerExtraction()"
-                            [disabled]="state() === 'processing'">
-                        🔍 Extraire les articles
+                            [disabled]="state() === 'detecting' || state() === 'processing'">
+                        🔍 2. Extraire directement
                     </button>
+                } @else if (state() === 'validating_zone') {
+                    <button class="btn btn-primary btn-lg"
+                            (click)="lancerExtraction()">
+                        ✅ Valider la zone et Extraire
+                    </button>
+                }
+
+                @if (state() === 'detecting') {
+                    <div class="processing-indicator">
+                        <div class="spinner"></div>
+                        <span>Détection de la zone en cours...</span>
+                    </div>
                 }
                 @if (state() === 'processing') {
                     <div class="processing-indicator">

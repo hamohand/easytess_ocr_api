@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 from app.services.ocr_engine import analyser_hybride
 from app.services.ocr_engine_v2 import analyser_hybride as analyser_hybride_v2
+from werkzeug.utils import secure_filename
+from easy_core.pdf_utils import convert_pdf_to_image
 
 ocr_bp = Blueprint('ocr', __name__)
 
@@ -246,6 +248,89 @@ def api_analyser():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# =============================================
+# API CNI DÉDIÉE (Extraction directe depuis image)
+# =============================================
+
+@ocr_bp.route('/api/v1/extract/cni', methods=['POST'])
+def api_extract_cni():
+    """
+    Extrait les informations d'une CNI (Carte Nationale d'Identité) à partir d'une image ou d'un PDF, en une seule étape.
+    """
+    if 'image' not in request.files:
+        return jsonify({'success': False, 'error': 'Aucun fichier image/pdf fourni. Utilisez le champ "image".'}), 400
+        
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'Le fichier est vide.'}), 400
+        
+    filename = secure_filename(file.filename)
+    unique_id = str(uuid.uuid4())
+    saved_filename = f"cni_direct_{unique_id}_{filename}"
+    temp_folder = current_app.config['UPLOAD_TEMP_FOLDER']
+    
+    os.makedirs(temp_folder, exist_ok=True)
+    filepath = os.path.join(temp_folder, saved_filename)
+    file.save(filepath)
+    
+    # 1. Conversion PDF -> Image si nécessaire
+    if filename.lower().endswith('.pdf'):
+        try:
+            image_filename = f"{os.path.splitext(saved_filename)[0]}.jpg"
+            image_filepath = os.path.join(temp_folder, image_filename)
+            convert_pdf_to_image(filepath, image_filepath)
+            
+            # On bascule sur l'image pour l'analyse
+            saved_filename = image_filename
+            filepath = image_filepath
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Erreur lors de la conversion du PDF: {str(e)}'}), 500
+            
+    # 2. Charger la configuration "cni_01" ou l'entité demandée
+    entite_nom = request.form.get('entite', 'cni_01')
+    entite_config = current_app.entity_manager.charger_entite(entite_nom)
+    
+    if not entite_config or 'zones' not in entite_config:
+        return jsonify({'success': False, 'error': f"L'entité '{entite_nom}' n'est pas configurée correctement."}), 500
+        
+    zones_config = {z['nom']: {**z, 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_config['zones']}
+    
+    # 3. Lancer l'analyse OCR (mode approfondi par défaut pour les API directes)
+    mode = request.form.get('mode', 'approfondi')
+    try:
+        resultats, alertes, cadre_detecte = analyser_hybride_v2(filepath, zones_config, mode=mode)
+        
+        # 4. Formater les données de retour
+        if resultats is None:
+             return jsonify({
+                 'success': False,
+                 'error': "Impossible d'extraire les données du document.",
+                 'alertes': alertes
+             }), 400
+             
+        extracted_data = {k: v.get('texte_final', '') for k, v in resultats.items()}
+        
+        # 5. Nettoyage du fichier temporaire (Optionnel mais propre)
+        try:
+            os.remove(filepath)
+            if filename.lower().endswith('.pdf'):
+                os.remove(os.path.join(temp_folder, saved_filename.replace('.jpg', '') + filename[-4:]))
+        except Exception as cleanup_err:
+            logger.warning(f"Failed to cleanup temp file {filepath}: {cleanup_err}")
+            
+        return jsonify({
+            'success': True,
+            'document_type': 'CNI',
+            'entite_utilisee': entite_nom,
+            'data': extracted_data,
+            'alertes': alertes
+        })
+        
+    except Exception as e:
+        logger.error(f"Erreur extraction CNI: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # =============================================

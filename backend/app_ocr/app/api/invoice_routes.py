@@ -12,7 +12,7 @@ import uuid
 import json
 from datetime import datetime
 
-from app.services.invoice_extractor import extraire_facture, extraire_facture_depuis_pdf
+from app.services.invoice_extractor import extraire_facture, extraire_facture_depuis_pdf, detecter_zone_facture
 from easy_core.pdf_utils import convert_pdf_to_image
 
 invoice_bp = Blueprint('invoice', __name__)
@@ -39,6 +39,60 @@ def _cleanup(filepath):
             os.remove(filepath)
     except Exception:
         pass
+
+
+# ═════════════════════════════════════════════════════════════
+# POST /api/detecter-zone — Pré-détection de la zone des articles
+# ═════════════════════════════════════════════════════════════
+@invoice_bp.route('/api/detecter-zone', methods=['POST'])
+def api_detecter_zone():
+    """
+    Détecte la zone (x_min, y_min, x_max, y_max) du tableau des articles.
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'Aucun fichier fourni (champ "file" requis)'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Aucun fichier sélectionné'}), 400
+
+    filepath = None
+    try:
+        filepath, filename, ext = _save_temp_file(file, prefix="detect")
+        lang = request.form.get('lang', 'fra')
+
+        if ext in PDF_EXTENSIONS:
+            import pypdfium2 as pdfium
+            pdf = pdfium.PdfDocument(filepath)
+            if len(pdf) < 1:
+                return jsonify({'error': 'Le PDF est vide'}), 400
+            page = pdf[0]
+            bitmap = page.render(scale=300/72)
+            pil_image = bitmap.to_pil()
+            temp_img = os.path.join(current_app.config['UPLOAD_TEMP_FOLDER'], f"detect_{uuid.uuid4().hex[:8]}.jpg")
+            pil_image.save(temp_img, format="JPEG")
+            
+            result = detecter_zone_facture(temp_img, lang=lang)
+            _cleanup(temp_img)
+            
+            # Générer une version base64 pour l'aperçu frontend
+            import base64
+            from io import BytesIO
+            preview_bitmap = page.render(scale=150/72) # Résolution plus faible pour le web
+            preview_img = preview_bitmap.to_pil()
+            buffered = BytesIO()
+            preview_img.save(buffered, format="JPEG")
+            img_str = base64.b64encode(buffered.getvalue()).decode()
+            if isinstance(result, dict) and result.get('success'):
+                result['preview_image_base64'] = f"data:image/jpeg;base64,{img_str}"
+        else:
+            result = detecter_zone_facture(filepath, lang=lang)
+
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        _cleanup(filepath)
 
 
 # ═════════════════════════════════════════════════════════════
@@ -79,13 +133,21 @@ def api_extraire_facture():
             }), 400
 
         lang = request.form.get('lang', 'fra')
+        
+        zone_manuelle = None
+        zone_str = request.form.get('zone_manuelle')
+        if zone_str:
+            try:
+                zone_manuelle = json.loads(zone_str)
+            except Exception:
+                pass
 
         if ext in PDF_EXTENSIONS:
             # Extraction PDF multi-pages
-            result = extraire_facture_depuis_pdf(filepath, lang=lang)
+            result = extraire_facture_depuis_pdf(filepath, lang=lang, zone_manuelle=zone_manuelle)
         else:
             # Extraction image directe
-            result = extraire_facture(filepath, lang=lang)
+            result = extraire_facture(filepath, lang=lang, zone_manuelle=zone_manuelle)
 
         return jsonify({
             'success': result.get('success', False),

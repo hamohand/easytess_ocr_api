@@ -34,6 +34,7 @@ DESIGNATION_KEYWORDS = [
     'produit', 'service', 'détail', 'detail',
     'articles', 'désignations', 'libellés',
     'prestation', 'prestations',
+    'البيان', 'التعيين', 'الصنف', 'المادة', 'المنتج', 'تفاصيل'
 ]
 
 # Mots-clés qui indiquent d'autres colonnes de la facture (pas la désignation)
@@ -46,6 +47,7 @@ OTHER_COLUMN_KEYWORDS = [
     'référence', 'reference', 'réf', 'ref', 'n°', 'code',
     'unité', 'unite', 'u.m.',
     'nbre', 'nombre',
+    'الكمية', 'السعر', 'المبلغ', 'الوحدة', 'الرمز', 'قيمة'
 ]
 
 # Mots-clés qui signalent la fin du tableau d'articles
@@ -94,27 +96,64 @@ def _is_numeric_or_monetary(text):
 def _ocr_with_positions(image_path, lang='fra'):
     """
     Effectue un OCR global et retourne tous les mots avec leurs positions.
+    Utilise PaddleOCR en priorité, puis Tesseract en fallback.
     
     Returns:
-        list[dict]: Mots avec {text, x, y, width, height, conf, line_num, block_num}
+        list[dict]: Mots/Blocs avec {text, x, y, width, height, conf, line_num}
         tuple: (img_width, img_height)
     """
-    import pytesseract
-
     img = Image.open(image_path)
     img_w, img_h = img.size
+    mots = []
 
+    # 1. Tenter avec PaddleOCR (bien plus performant pour les factures)
+    try:
+        from app.services.ocr_engine_v2 import get_paddleocr_reader, PADDLEOCR_DISPONIBLE
+        if PADDLEOCR_DISPONIBLE:
+            reader = get_paddleocr_reader(lang)
+            if reader:
+                result = reader.ocr(image_path, cls=True)
+                if result and result[0]:
+                    for idx, line in enumerate(result[0]):
+                        box = line[0]
+                        text = line[1][0].strip()
+                        conf = int(line[1][1] * 100)
+                        
+                        if not text:
+                            continue
+                            
+                        x_coords = [p[0] for p in box]
+                        y_coords = [p[1] for p in box]
+                        
+                        x_min, x_max = min(x_coords), max(x_coords)
+                        y_min, y_max = min(y_coords), max(y_coords)
+                        
+                        mots.append({
+                            'text': text,
+                            'x': x_min,
+                            'y': y_min,
+                            'width': x_max - x_min,
+                            'height': y_max - y_min,
+                            'conf': conf,
+                            'line_num': idx,
+                        })
+                logger.info(f"📄 PaddleOCR facture: {len(mots)} blocs détectés ({img_w}x{img_h}px)")
+                return mots, (img_w, img_h)
+    except Exception as e:
+        logger.warning(f"Erreur PaddleOCR facture: {e}, fallback sur Tesseract...")
+
+    # 2. Fallback avec Tesseract
+    import pytesseract
     try:
         data = pytesseract.image_to_data(
             img, lang=lang, output_type=pytesseract.Output.DICT
         )
 
-        mots = []
         for i in range(len(data['text'])):
             text = data['text'][i].strip()
             conf = int(data['conf'][i]) if data['conf'][i] != '-1' else 0
 
-            if text and conf > 10:  # Seuil bas pour ne pas perdre de texte
+            if text and conf > 10:
                 mots.append({
                     'text': text,
                     'x': data['left'][i],
@@ -127,11 +166,11 @@ def _ocr_with_positions(image_path, lang='fra'):
                     'word_num': data['word_num'][i],
                 })
 
-        logger.info(f"📄 OCR facture: {len(mots)} mots détectés ({img_w}x{img_h}px)")
+        logger.info(f"📄 Tesseract facture: {len(mots)} mots détectés ({img_w}x{img_h}px)")
         return mots, (img_w, img_h)
 
     except Exception as e:
-        logger.error(f"Erreur OCR facture: {e}")
+        logger.error(f"Erreur Tesseract facture: {e}")
         return [], (img_w, img_h)
 
 
@@ -306,22 +345,23 @@ def _detect_designation_bounds(header_line, designation_mot, img_width):
 # Extraction des articles
 # ═══════════════════════════════════════════════════════════
 
-def _extract_articles(lines, header_idx, x_min, x_max):
-    \"\"\"
+def _extract_articles(lines, header_idx, x_min, x_max, ignore_footer=False):
+    """
     Extrait les articles des lignes sous l'en-tête.
     
     Pour chaque ligne, ne retient que les mots dont le centre X est 
-    dans la zone de la colonne \"Désignation\".
+    dans la zone de la colonne "Désignation".
     Gère également le regroupement multi-lignes et le filtrage horizontal.
     
     Args:
         lines: Toutes les lignes OCR
         header_idx: Index de la ligne d'en-tête
         x_min, x_max: Bornes X de la colonne désignation
+        ignore_footer: Si True, ne s'arrête pas aux mots-clés de fin de tableau
     
     Returns:
         list[dict]: Articles extraits [{designation, confiance, ligne_y, ...}]
-    \"\"\"
+    """
     articles = []
     
     for idx in range(header_idx + 1, len(lines)):
@@ -329,7 +369,7 @@ def _extract_articles(lines, header_idx, x_min, x_max):
         full_text = _line_text(line)
         
         # Vérifier si c'est une ligne de pied de tableau
-        if _is_footer_keyword(full_text):
+        if not ignore_footer and _is_footer_keyword(full_text):
             logger.info(f"🛑 Fin du tableau détectée ligne {idx}: '{full_text}'")
             break
         
@@ -372,10 +412,11 @@ def _extract_articles(lines, header_idx, x_min, x_max):
             
             # Ne pas ajouter les lignes vides ou trop courtes (bruit)
             if len(designation_text.strip()) > 1:
-                has_other_columns = any(_is_numeric_or_monetary(m['text']) for m in mots_autres)
+                # On considère qu'il y a d'autres colonnes s'il y a au moins un mot (de plus d'un caractère pour éviter le bruit)
+                has_other_columns = any(len(m['text'].strip()) > 1 for m in mots_autres)
                 
-                # 2. Regroupement multi-lignes : si la ligne actuelle n'a pas de prix/quantité 
-                # ET qu'elle est proche de la ligne précédente, on la fusionne.
+                # 2. Regroupement multi-lignes : si la ligne actuelle n'a pas de prix/quantité/référence 
+                # dans les autres colonnes ET qu'elle est proche de la ligne précédente, on la fusionne.
                 if articles:
                     prev_article = articles[-1]
                     dist_y = line_y - prev_article['position_y']
@@ -400,16 +441,76 @@ def _extract_articles(lines, header_idx, x_min, x_max):
 
 
 # ═══════════════════════════════════════════════════════════
-# Fonction principale d'extraction
+# Fonction principale d'extraction et détection
 # ═══════════════════════════════════════════════════════════
 
-def extraire_facture(image_path, lang='fra'):
+def detecter_zone_facture(image_path, lang='fra'):
+    """
+    Pré-analyse une facture pour détecter la zone du tableau des articles.
+    
+    Returns:
+        dict: {
+            'success': bool,
+            'zone': {'x_min': float, 'y_min': float, 'x_max': float, 'y_max': float},
+            'image_dimensions': {'width': int, 'height': int},
+            'error': str
+        }
+    """
+    logger.info(f"🔍 Détection de zone facture: {image_path} (lang={lang})")
+    
+    mots, img_dims = _ocr_with_positions(image_path, lang=lang)
+    img_w, img_h = img_dims
+    
+    if not mots:
+        return {'success': False, 'error': "Aucun texte détecté."}
+        
+    lines = _group_words_into_lines(mots)
+    header_idx, designation_mot = _find_header_line(lines)
+    
+    if header_idx is None:
+        return {'success': False, 'error': "En-tête du tableau non trouvé."}
+        
+    header_line = lines[header_idx]
+    x_min, x_max = _detect_designation_bounds(header_line, designation_mot, img_w)
+    
+    # Y de l'en-tête (haut du premier mot de la ligne)
+    y_min = min(m['y'] for m in header_line)
+    
+    # Y de la fin (pied de tableau)
+    y_max = img_h
+    for idx in range(header_idx + 1, len(lines)):
+        line = lines[idx]
+        full_text = _line_text(line)
+        if _is_footer_keyword(full_text):
+            y_max = min(m['y'] for m in line)
+            break
+            
+    # Marge de sécurité
+    y_min = max(0, y_min - 10)
+    y_max = min(img_h, y_max + 10)
+    
+    return {
+        'success': True,
+        'zone': {
+            'x_min': round(x_min / img_w, 4),
+            'x_max': round(x_max / img_w, 4),
+            'y_min': round(y_min / img_h, 4),
+            'y_max': round(y_max / img_h, 4),
+        },
+        'image_dimensions': {'width': img_w, 'height': img_h}
+    }
+
+
+def extraire_facture(image_path, lang='fra', fallback_bounds=None, zone_manuelle=None):
     """
     Extrait la liste des articles (désignations) d'une image de facture.
     
     Args:
         image_path: Chemin vers l'image (ou PDF converti en image)
         lang: Langue OCR (fra, ara+fra, eng)
+        fallback_bounds: Bornes {x_min, x_max} (en pourcentage) à utiliser si l'en-tête est introuvable.
+        zone_manuelle: Bornes {x_min, x_max, y_min, y_max} en pourcentage pour forcer l'extraction.
+    
     
     Returns:
         dict: {
@@ -447,45 +548,70 @@ def extraire_facture(image_path, lang='fra'):
     lines = _group_words_into_lines(mots)
     logger.info(f"📊 {len(lines)} lignes regroupées à partir de {len(mots)} mots")
     
-    # 3. Trouver l'en-tête
-    header_idx, designation_mot = _find_header_line(lines)
-    
-    if header_idx is None:
-        # Pas d'en-tête trouvé — retourner toutes les lignes OCR brutes pour debug
-        all_lines_text = [_line_text(line) for line in lines]
-        return {
-            'success': False,
-            'error': (
-                "En-tête de tableau non trouvé. "
-                "Aucun mot-clé de désignation détecté "
-                f"(cherché: {', '.join(DESIGNATION_KEYWORDS[:5])}...)."
-            ),
-            'articles': [],
-            'nb_articles': 0,
-            'en_tete_detecte': None,
-            'colonne_designation': None,
-            'total_mots_ocr': len(mots),
-            'total_lignes': len(lines),
-            'image_dimensions': {'width': img_w, 'height': img_h},
-            'debug': {
-                'lignes_ocr': all_lines_text[:30],  # Max 30 lignes pour le debug
-            }
-        }
-    
-    # 4. Détecter les bornes de la colonne
-    header_line = lines[header_idx]
-    x_min, x_max = _detect_designation_bounds(header_line, designation_mot, img_w)
-    
-    # 5. Extraire les articles
-    articles = _extract_articles(lines, header_idx, x_min, x_max)
-    
+    if zone_manuelle:
+        x_min = zone_manuelle['x_min'] * img_w
+        x_max = zone_manuelle['x_max'] * img_w
+        y_min = zone_manuelle['y_min'] * img_h
+        y_max = zone_manuelle['y_max'] * img_h
+        
+        lignes_filtrees = []
+        for line in lines:
+            line_y = _line_y_center(line)
+            if y_min <= line_y <= y_max:
+                lignes_filtrees.append(line)
+                
+        articles = _extract_articles(lignes_filtrees, -1, x_min, x_max, ignore_footer=True)
+        en_tete_detecte = "Zone manuelle"
+        
+    else:
+        # 3. Trouver l'en-tête
+        header_idx, designation_mot = _find_header_line(lines)
+        
+        if header_idx is None:
+            if fallback_bounds:
+                logger.info("En-tête non trouvé, utilisation des bornes de la page précédente.")
+                header_idx = -1
+                x_min = fallback_bounds['x_min'] * img_w
+                x_max = fallback_bounds['x_max'] * img_w
+                designation_mot = None
+                header_line = None
+            else:
+                # Pas d'en-tête trouvé — retourner toutes les lignes OCR brutes pour debug
+                all_lines_text = [_line_text(line) for line in lines]
+                return {
+                    'success': False,
+                    'error': (
+                        "En-tête de tableau non trouvé. "
+                        "Aucun mot-clé de désignation détecté "
+                        f"(cherché: {', '.join(DESIGNATION_KEYWORDS[:5])}...)."
+                    ),
+                    'articles': [],
+                    'nb_articles': 0,
+                    'en_tete_detecte': None,
+                    'colonne_designation': None,
+                    'total_mots_ocr': len(mots),
+                    'total_lignes': len(lines),
+                    'image_dimensions': {'width': img_w, 'height': img_h},
+                    'debug': {
+                        'lignes_ocr': all_lines_text[:30],  # Max 30 lignes pour le debug
+                    }
+                }
+        else:
+            # 4. Détecter les bornes de la colonne
+            header_line = lines[header_idx]
+            x_min, x_max = _detect_designation_bounds(header_line, designation_mot, img_w)
+        
+        # 5. Extraire les articles
+        articles = _extract_articles(lines, header_idx, x_min, x_max)
+        en_tete_detecte = _line_text(header_line) if header_line else None
+
     logger.info(f"✅ {len(articles)} articles extraits de la facture")
     
     return {
         'success': True,
         'articles': articles,
         'nb_articles': len(articles),
-        'en_tete_detecte': _line_text(header_line),
+        'en_tete_detecte': en_tete_detecte,
         'colonne_designation': {
             'x_min': round(x_min / img_w, 4),
             'x_max': round(x_max / img_w, 4),
@@ -496,7 +622,7 @@ def extraire_facture(image_path, lang='fra'):
     }
 
 
-def extraire_facture_depuis_pdf(pdf_path, lang='fra', dpi=300):
+def extraire_facture_depuis_pdf(pdf_path, lang='fra', dpi=300, zone_manuelle=None):
     """
     Extrait les articles d'une facture PDF.
     Convertit chaque page en image puis applique l'extraction OCR.
@@ -505,6 +631,7 @@ def extraire_facture_depuis_pdf(pdf_path, lang='fra', dpi=300):
         pdf_path: Chemin vers le fichier PDF
         lang: Langue OCR
         dpi: Résolution pour la conversion PDF → image
+        zone_manuelle: Bornes forcées
     
     Returns:
         dict: Même structure que extraire_facture() avec champ 'pages' supplémentaire
@@ -529,6 +656,7 @@ def extraire_facture_depuis_pdf(pdf_path, lang='fra', dpi=300):
         pages_results = []
         en_tete_global = None
         colonne_global = None
+        last_bounds = None
         
         temp_dir = os.path.dirname(pdf_path)
         temp_images = []
@@ -547,7 +675,7 @@ def extraire_facture_depuis_pdf(pdf_path, lang='fra', dpi=300):
             temp_images.append(temp_path)
             
             # Extraire
-            result = extraire_facture(temp_path, lang=lang)
+            result = extraire_facture(temp_path, lang=lang, fallback_bounds=last_bounds, zone_manuelle=zone_manuelle)
             
             page_result = {
                 'page': page_num + 1,
@@ -565,7 +693,11 @@ def extraire_facture_depuis_pdf(pdf_path, lang='fra', dpi=300):
             # Garder le premier en-tête trouvé
             if en_tete_global is None and result.get('en_tete_detecte'):
                 en_tete_global = result['en_tete_detecte']
+                
+            # Mettre à jour les bounds de colonne pour la page suivante
+            if result.get('colonne_designation'):
                 colonne_global = result.get('colonne_designation')
+                last_bounds = colonne_global
         
         # Nettoyage des images temporaires
         for temp_path in temp_images:
