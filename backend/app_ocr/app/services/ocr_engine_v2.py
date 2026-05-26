@@ -28,15 +28,16 @@ def appliquer_filtre_caracteres(texte, char_filter):
     
     Args:
         texte: Texte brut issu de l'OCR
-        char_filter: Type de filtre ('none', 'alpha_only', 'digits_only', 'alphanum')
+        char_filter: Type de filtre ('none', 'alpha_only', 'digits_only', 'alphanum', 'digits_and_dot', 'custom:...')
     
     Returns:
-        Texte filtré
+        tuple: (Texte filtré, format_respecte (bool))
     """
     if not texte or not char_filter or char_filter == 'none':
-        return texte
+        return texte, True
     
     original = texte
+    format_respecte = True
     
     if char_filter == 'alpha_only':
         # Garde uniquement les lettres (Unicode : latin, arabe, etc.) et les espaces
@@ -44,17 +45,50 @@ def appliquer_filtre_caracteres(texte, char_filter):
     elif char_filter == 'digits_only':
         # Garde uniquement les chiffres, '/' et '-' (pour dates, numéros)
         texte = re.sub(r'[^0-9/\-\s]', '', texte)
+    elif char_filter == 'digits_and_dot':
+        # Garde uniquement les chiffres et les points (pour nombres décimaux)
+        texte = re.sub(r'[^0-9\.\s]', '', texte)
     elif char_filter == 'alphanum':
         # Garde lettres + chiffres + espaces
         texte = re.sub(r'[^\w\s]|_', '', texte)
+    elif char_filter.startswith('custom:'):
+        # Garde uniquement les caractères spécifiés après 'custom:' et les espaces
+        allowed_chars = char_filter[7:]
+        escaped_chars = re.escape(allowed_chars)
+        texte = re.sub(f'[^{escaped_chars}\\s]', '', texte)
+    elif char_filter.startswith('regex:'):
+        # Extraction précise basée sur une expression régulière (ex: regex:\d{2}\.\d{2}\.\d{4})
+        pattern = char_filter[6:]
+        try:
+            # On cherche le motif qui correspond
+            match = re.search(pattern, texte)
+            if match:
+                extracted = match.group(0)
+                # Si le regex n'a pas matché l'intégralité du texte (ex: du bruit avant/après)
+                if len(extracted) < len(texte.strip()):
+                    format_respecte = False
+                texte = extracted
+            else:
+                logger.warning(f"Le texte OCR '{texte}' ne correspond pas au motif '{pattern}'")
+                texte = ""
+                format_respecte = False
+        except re.error as e:
+            logger.error(f"Erreur regex '{pattern}': {e}")
+            format_respecte = False
     
     # Normaliser les espaces multiples
     texte = re.sub(r'\s+', ' ', texte).strip()
+    original_clean = re.sub(r'\s+', ' ', original).strip()
+    
+    # Si le filtre classique a dû enlever des caractères, le format d'origine n'était pas respecté
+    if not char_filter.startswith('regex:'):
+        if len(texte) < len(original_clean):
+            format_respecte = False
     
     if texte != original:
-        logger.info(f"🔤 Filtre '{char_filter}': '{original[:40]}' → '{texte[:40]}'")
+        logger.info(f"🔤 Filtre '{char_filter}': '{original[:40]}' → '{texte[:40]}' (Format respecté: {format_respecte})")
     
-    return texte
+    return texte, format_respecte
 
 
 def upscale_for_ocr(img, min_height=100, target_height=200):
@@ -769,6 +803,7 @@ def corriger_avec_valeurs_connues(texte_ocr, valeurs_possibles, seuil=0.6, force
         tuple: (texte_corrigé, score_de_correspondance)
     """
     if not texte_ocr or not valeurs_possibles:
+        logger.warning(f"CORRECTION DEBUG: SKIP: texte_ocr='{texte_ocr}', valeurs_possibles={valeurs_possibles}")
         return texte_ocr, 0.0
     
     meilleure_correspondance = texte_ocr
@@ -777,6 +812,8 @@ def corriger_avec_valeurs_connues(texte_ocr, valeurs_possibles, seuil=0.6, force
     texte_normalise = texte_ocr.strip().lower()
     # Nettoyage agressif de la ponctuation (souvent causée par le chevauchement des bords)
     texte_clean = re.sub(r'[^\w\s]', '', texte_normalise).strip()
+    
+    logger.warning(f"CORRECTION DEBUG: texte_ocr='{texte_ocr}' -> texte_clean='{texte_clean}'")
     
     for valeur in valeurs_possibles:
         valeur_norm = str(valeur).strip().lower()
@@ -798,14 +835,19 @@ def corriger_avec_valeurs_connues(texte_ocr, valeurs_possibles, seuil=0.6, force
                 bonus = 0.2 * (taille_min / taille_max) if taille_max > 0 else 0
                 score = min(1.0, score + bonus)
         
+        logger.warning(f"CORRECTION DEBUG: valeur='{valeur}' -> valeur_clean='{valeur_clean}', score={score}")
+        
         if score > meilleur_score:
             meilleur_score = score
             meilleure_correspondance = valeur  # Retourne la valeur originale
     
+    logger.warning(f"CORRECTION DEBUG: meilleur_score={meilleur_score}, force_match={force_match}, seuil={seuil}")
+    
     if meilleur_score >= seuil or (force_match and meilleur_score > 0.05):
-        logger.debug(f"Correction OCR: '{texte_ocr}' -> '{meilleure_correspondance}' (score: {meilleur_score:.2f})")
+        logger.warning(f"CORRECTION DEBUG: ACCEPTED: '{texte_ocr}' -> '{meilleure_correspondance}' (score: {meilleur_score:.2f})")
         return meilleure_correspondance, meilleur_score
     
+    logger.warning(f"CORRECTION DEBUG: REJECTED: '{texte_ocr}'")
     return texte_ocr, 0.0
 
 
@@ -1484,14 +1526,19 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                 logger.error(f"Erreur EasyOCR global: {e}")
         
         # 6. Correction avec valeurs attendues (si définies)
+        logger.warning("CORRECTION DEBUG: Debut section 6 (Correction)")
         for nom_zone, config in zones_config.items():
+            logger.warning(f"CORRECTION DEBUG: Checking zone {nom_zone}, has valeurs_attendues: {'valeurs_attendues' in config}")
             if nom_zone in resultats and 'valeurs_attendues' in config:
                 valeurs = config.get('valeurs_attendues', [])
+                logger.warning(f"CORRECTION DEBUG: Zone {nom_zone}, valeurs={valeurs}")
                 if valeurs and resultats[nom_zone].get('texte_auto'):
                     texte_original = resultats[nom_zone]['texte_auto']
+                    logger.warning(f"CORRECTION DEBUG: Calling corriger for zone {nom_zone} with texte='{texte_original}'")
                     texte_corrige, score = corriger_avec_valeurs_connues(texte_original, valeurs, force_match=True)
                     
                     if score > 0:
+                        logger.warning(f"CORRECTION DEBUG: Applying correction for {nom_zone}, score={score}")
                         resultats[nom_zone]['texte_final'] = texte_corrige
                         resultats[nom_zone]['correction_appliquee'] = True
                         resultats[nom_zone]['valeur_originale'] = texte_original
@@ -1507,6 +1554,8 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             resultats[nom_zone]['confiance_auto'], 
                             score
                         )
+                    else:
+                        logger.warning(f"CORRECTION DEBUG: No score improvement for {nom_zone}")
             
         # 7. Remplissage des échecs complets
         for k in zones_config:
@@ -1745,7 +1794,10 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
         if char_filter and char_filter != 'none' and texte:
-            texte = appliquer_filtre_caracteres(texte, char_filter)
+            texte, format_respecte = appliquer_filtre_caracteres(texte, char_filter)
+            if not format_respecte:
+                confiance *= 0.5  # Pénalité de confiance car le texte lu contenait des parasites
+                logger.warning(f"⚠️ Zone {nom_zone}: Format non respecté, confiance réduite à {confiance:.0%}")
         
         if texte:
             margin_info = f", marge={best_margin}px" if mode == 'approfondi' else ""
@@ -1848,7 +1900,10 @@ def analyser_avec_easyocr(image_path, zones_config):
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
         if char_filter and char_filter != 'none' and texte_final:
-            texte_final = appliquer_filtre_caracteres(texte_final, char_filter)
+            texte_final, format_respecte = appliquer_filtre_caracteres(texte_final, char_filter)
+            if not format_respecte:
+                conf_moy *= 0.5
+                logger.warning(f"⚠️ EasyOCR Zone {nom_zone}: Format non respecté, confiance réduite à {conf_moy:.0%}")
         
         
         if texte_final:
@@ -1962,7 +2017,10 @@ def analyser_avec_paddleocr(image_path, zones_config):
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
         if char_filter and char_filter != 'none' and texte_final:
-            texte_final = appliquer_filtre_caracteres(texte_final, char_filter)
+            texte_final, format_respecte = appliquer_filtre_caracteres(texte_final, char_filter)
+            if not format_respecte:
+                conf_moy *= 0.5
+                logger.warning(f"⚠️ PaddleOCR Zone {nom_zone}: Format non respecté, confiance réduite à {conf_moy:.0%}")
         
         
         if texte_final:

@@ -1380,8 +1380,8 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
             except Exception as e:
                 logger.error(f"Erreur Tesseract global: {e}")
         
-        # 4. Identification des zones à refaire (échec ou faible confiance)
-        zones_a_refaire = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < 0.70}
+        # 4. Identification des zones à refaire (échec ou très faible confiance)
+        zones_a_refaire = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < 0.40}
         
         # 5. Essai EasyOCR sur les zones difficiles
         if zones_a_refaire and EASYOCR_DISPONIBLE:

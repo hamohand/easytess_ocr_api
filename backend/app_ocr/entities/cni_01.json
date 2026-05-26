@@ -1,15 +1,15 @@
 {
   "nom": "cni_01",
   "description": "cni_wafa_rogne_01",
-  "date_creation": "2026-05-07T19:31:22.891545",
-  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_wafa_rogne_01\\reference.jpg",
+  "date_creation": "2026-05-26T03:38:09.315345",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_01\\reference.jpg",
   "zones": [
     {
       "char_filter": "alpha_only",
       "coords": [
         0.7745,
         0.61,
-        0.912,
+        0.915,
         0.72
       ],
       "expected_format": "single_line",
@@ -25,7 +25,7 @@
       "coords": [
         0.7316,
         0.7087,
-        0.9129,
+        0.915,
         0.8075
       ],
       "expected_format": "single_line",
@@ -37,14 +37,14 @@
       "type": "text"
     },
     {
-      "char_filter": "none",
+      "char_filter": "regex:\\d{4}\\.\\d{2}\\.\\d{2}",
       "coords": [
         0.6504,
         0.8233,
         0.8541,
         0.9024
       ],
-      "expected_format": "single_line",
+      "expected_format": "single_word",
       "id": 1778137708804,
       "lang": "fra",
       "margin": -6,
@@ -55,12 +55,12 @@
     {
       "char_filter": "alpha_only",
       "coords": [
-        0.5079,
-        0.8357,
-        0.5766,
+        0.495,
+        0.82,
+        0.572,
         0.9161
       ],
-      "expected_format": "single_line",
+      "expected_format": "single_word",
       "id": 1778137720938,
       "lang": "ara",
       "margin": -6,
@@ -69,24 +69,41 @@
       "type": "text",
       "valeurs_attendues": [
         "ذكر",
+        "أنثى",
         "انثى"
       ]
     },
     {
-      "id": 1778174922500,
-      "nom": "nin",
-      "type": "text",
-      "lang": "fra",
-      "preprocess": "latin_simple",
-      "char_filter": "digits_only",
-      "expected_format": "single_line",
-      "margin": -8,
+      "char_filter": "regex:\\d{18}",
       "coords": [
         0.4307,
         0.5612,
         0.792,
         0.6403
-      ]
+      ],
+      "expected_format": "single_word",
+      "id": 1778174922500,
+      "lang": "fra",
+      "margin": -8,
+      "nom": "nin",
+      "preprocess": "latin_simple",
+      "type": "text"
+    },
+    {
+      "char_filter": "regex:\\d{9}",
+      "coords": [
+        0.3036,
+        0.2106,
+        0.5061,
+        0.2975
+      ],
+      "expected_format": "single_word",
+      "id": 1779694531990,
+      "lang": "fra",
+      "margin": 0,
+      "nom": "numeroPiece",
+      "preprocess": "latin_simple",
+      "type": "text"
     }
   ],
   "cadre_reference": {
@@ -129,7 +146,7 @@
     }
   },
   "metadata": {
-    "nombre_zones": 5,
+    "nombre_zones": 6,
     "image_dimensions": {
       "width": 1010,
       "height": 640
