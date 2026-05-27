@@ -126,6 +126,14 @@ def extraire_valeur_champ(texte, separator=':'):
     if not texte:
         return texte, False
     
+    # Diagnostic: quels séparateurs sont présents dans le texte brut ?
+    seps_trouves = []
+    if ':' in texte: seps_trouves.append(':')
+    if '.' in texte: seps_trouves.append(f'.×{texte.count(".")}')
+    if '؛' in texte: seps_trouves.append('؛')
+    if '٫' in texte: seps_trouves.append('٫')
+    logger.warning(f"🔍 Champ diagnostic: '{texte[:50]}' → séparateurs={seps_trouves or 'AUCUN'}")
+    
     texte_normalise = texte
     
     # Normaliser les séparateurs équivalents vers ":"
@@ -1791,10 +1799,15 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
             psm_modes = [8, 10]
         else: # auto
             psm_modes = [7, 6, 13, 8]
+            
+        # CHAMP: Ajouter PSM 11 (Sparse text) qui détecte mieux les ponctuations éloignées
+        if config.get('type') == 'champ' and 11 not in psm_modes:
+            psm_modes.append(11)
         
         # === BOUCLE MULTI-MARGE ===
         best_text = ""
-        best_conf = 0.0
+        best_effective_conf = -1.0
+        best_real_conf = 0.0
         best_psm = 7
         best_variant_name = ""
         best_margin = margin_configuree
@@ -1866,9 +1879,18 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
                             confs = [int(c) for c in data['conf'] if c != '-1' and str(c).isdigit()]
                             conf = sum(confs) / len(confs) / 100 if confs else 0.0
                             
-                            if conf > best_conf or (conf == best_conf and len(text) > len(best_text)):
+                            effective_conf = conf
+                            
+                            # CHAMP: Bonus massif si le paramètre permet de trouver le ':'
+                            if config.get('type') == 'champ':
+                                _, champ_ok_tmp = extraire_valeur_champ(text)
+                                if champ_ok_tmp:
+                                    effective_conf += 10.0
+                            
+                            if effective_conf > best_effective_conf or (effective_conf == best_effective_conf and len(text) > len(best_text)):
                                 best_text = text
-                                best_conf = conf
+                                best_effective_conf = effective_conf
+                                best_real_conf = conf
                                 best_psm = psm
                                 best_variant_name = variant_name
                                 best_margin = margin
@@ -1879,7 +1901,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         # === FIN BOUCLE MULTI-MARGE ===
         
         texte = best_text
-        confiance = best_conf
+        confiance = best_real_conf
         
         # Recalculer les coords absolues avec la marge gagnante
         x1_final = max(0, x1_base - best_margin)
@@ -1978,7 +2000,8 @@ def analyser_avec_easyocr(image_path, zones_config):
         ]
         
         best_text = ""
-        best_conf = 0.0
+        best_effective_conf = -1.0
+        best_real_conf = 0.0
         best_variant = "brute"
         
         for zone_img, variant_name in variants:
@@ -1989,15 +2012,24 @@ def analyser_avec_easyocr(image_path, zones_config):
                 texte = " ".join(textes)
                 conf = sum(confs) / len(confs) if confs else 0.0
                 
-                if conf > best_conf or (conf == best_conf and len(texte) > len(best_text)):
+                effective_conf = conf
+                
+                # CHAMP: Bonus massif si le paramètre permet de trouver le ':'
+                if config.get('type') == 'champ':
+                    _, champ_ok_tmp = extraire_valeur_champ(texte)
+                    if champ_ok_tmp:
+                        effective_conf += 10.0
+                
+                if effective_conf > best_effective_conf or (effective_conf == best_effective_conf and len(texte) > len(best_text)):
                     best_text = texte
-                    best_conf = conf
+                    best_effective_conf = effective_conf
+                    best_real_conf = conf
                     best_variant = variant_name
             except Exception as e:
                 logger.debug(f"EasyOCR {variant_name} erreur: {e}")
         
         texte_final = best_text
-        conf_moy = best_conf
+        conf_moy = best_real_conf
         
         # POST-OCR: Extraction "champ" (étiquette : valeur → valeur seule)
         champ_ok = False
@@ -2090,7 +2122,8 @@ def analyser_avec_paddleocr(image_path, zones_config):
         ]
         
         best_text = ""
-        best_conf = 0.0
+        best_effective_conf = -1.0
+        best_real_conf = 0.0
         best_variant = "brute"
         
         for zone_img, variant_name in variants:
@@ -2112,15 +2145,24 @@ def analyser_avec_paddleocr(image_path, zones_config):
                         
                     conf = sum(confs) / len(confs) if confs else 0.0
                     
-                    if conf > best_conf or (conf == best_conf and len(texte) > len(best_text)):
+                    effective_conf = conf
+                    
+                    # CHAMP: Bonus massif si le paramètre permet de trouver le ':'
+                    if config.get('type') == 'champ':
+                        _, champ_ok_tmp = extraire_valeur_champ(texte)
+                        if champ_ok_tmp:
+                            effective_conf += 10.0
+                    
+                    if effective_conf > best_effective_conf or (effective_conf == best_effective_conf and len(texte) > len(best_text)):
                         best_text = texte
-                        best_conf = conf
+                        best_effective_conf = effective_conf
+                        best_real_conf = conf
                         best_variant = variant_name
             except Exception as e:
                 logger.debug(f"PaddleOCR {variant_name} erreur: {e}")
         
         texte_final = best_text
-        conf_moy = best_conf
+        conf_moy = best_real_conf
         
         # POST-OCR: Extraction "champ" (étiquette : valeur → valeur seule)
         champ_ok = False
