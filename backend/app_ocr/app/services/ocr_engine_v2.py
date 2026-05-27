@@ -135,7 +135,7 @@ def extraire_valeur_champ(texte, separator=':'):
     
     # Chercher le séparateur
     if separator not in texte_normalise:
-        logger.debug(f"🏷️ Champ: pas de '{separator}' trouvé dans '{texte[:40]}' → fallback texte brut")
+        logger.warning(f"🏷️ Champ: pas de '{separator}' trouvé dans '{texte[:40]}' → fallback texte brut")
         return texte.strip(), False
     
     # Prendre tout après le DERNIER séparateur (= la valeur en ordre logique Unicode)
@@ -148,9 +148,9 @@ def extraire_valeur_champ(texte, separator=':'):
         # Essayer la partie avant le premier ":"
         valeur = parties[0].strip()
         etiquette = separator.join(parties[1:]).strip()
-        logger.info(f"🏷️ Champ (inversé): '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
+        logger.warning(f"🏷️ Champ (inversé): '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
     else:
-        logger.info(f"🏷️ Champ: '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
+        logger.warning(f"🏷️ Champ: '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
     
     return valeur, True
 
@@ -1541,8 +1541,13 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
         
         # 4. Identification des zones à refaire (échec ou faible confiance de PaddleOCR)
         # PaddleOCR est très fiable. Si sa confiance est < 90%, on donne sa chance à Tesseract.
+        # CHAMP: Forcer Tesseract sur les zones "champ" (PaddleOCR rate souvent le ":")
         seuil_refaire_tesseract = 0.90
-        zones_a_refaire_tess = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < seuil_refaire_tesseract}
+        zones_a_refaire_tess = {k: v for k, v in zones_config.items() 
+            if k not in resultats 
+            or resultats[k]['confiance_auto'] < seuil_refaire_tesseract
+            or (v.get('type') == 'champ' and not resultats.get(k, {}).get('champ_ok', False))
+        }
         
         # 5. Essai Tesseract sur les zones difficiles (2ème étage)
         if zones_a_refaire_tess and TESSERACT_DISPONIBLE:
@@ -1553,7 +1558,15 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                     if k in resultats:
                         current_conf = resultats[k]['confiance_auto']
                         tess_conf = v['confiance_auto']
-                        if tess_conf > current_conf:
+                        current_champ_ok = resultats[k].get('champ_ok', False)
+                        tess_champ_ok = v.get('champ_ok', False)
+                        
+                        # CHAMP: Préférer le moteur qui a trouvé le ":" (extraction réussie)
+                        if zones_config[k].get('type') == 'champ' and tess_champ_ok and not current_champ_ok:
+                            logger.warning(f"🏷️ Zone {k}: Tesseract a trouvé le ':' → priorité sur {resultats[k].get('moteur', 'aucun')}")
+                            resultats[k] = v
+                            resultats[k]['ameliore_par'] = 'tesseract_champ'
+                        elif tess_conf > current_conf:
                             logger.info(f"✨ Zone {k}: Tesseract meilleur ({tess_conf:.0%}) que PaddleOCR ({current_conf:.0%})")
                             resultats[k] = v
                             resultats[k]['ameliore_par'] = 'tesseract'
@@ -1566,7 +1579,12 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                 logger.error(f"Erreur Tesseract global: {e}")
 
         # 6. Mise à jour des zones à refaire (au cas où ni Paddle ni Tesseract n'auraient dépassé 70%)
-        zones_a_refaire = {k: v for k, v in zones_config.items() if k not in resultats or resultats[k]['confiance_auto'] < 0.70}
+        # CHAMP: Forcer EasyOCR sur les zones "champ" où aucun moteur n'a trouvé le ":"
+        zones_a_refaire = {k: v for k, v in zones_config.items() 
+            if k not in resultats 
+            or resultats[k]['confiance_auto'] < 0.70
+            or (v.get('type') == 'champ' and not resultats.get(k, {}).get('champ_ok', False))
+        }
 
         # 7. Essai EasyOCR sur les zones très difficiles (3ème étage)
         if zones_a_refaire and EASYOCR_DISPONIBLE:
@@ -1577,7 +1595,15 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                     if k in resultats:
                         current_conf = resultats[k]['confiance_auto']
                         easyocr_conf = v['confiance_auto']
-                        if easyocr_conf > current_conf:
+                        current_champ_ok = resultats[k].get('champ_ok', False)
+                        easy_champ_ok = v.get('champ_ok', False)
+                        
+                        # CHAMP: Préférer le moteur qui a trouvé le ":"
+                        if zones_config[k].get('type') == 'champ' and easy_champ_ok and not current_champ_ok:
+                            logger.warning(f"🏷️ Zone {k}: EasyOCR a trouvé le ':' → priorité sur {resultats[k].get('moteur', 'aucun')}")
+                            resultats[k] = v
+                            resultats[k]['ameliore_par'] = 'easyocr_champ'
+                        elif easyocr_conf > current_conf:
                             logger.info(f"✨ Zone {k}: EasyOCR meilleur ({easyocr_conf:.0%}) que {resultats[k].get('moteur', 'aucun')} ({current_conf:.0%})")
                             resultats[k] = v
                             resultats[k]['ameliore_par'] = 'easyocr'
@@ -1856,8 +1882,9 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         y2_final = min(img_h, y2_base + best_margin)
         
         # POST-OCR: Extraction "champ" (étiquette : valeur → valeur seule)
+        champ_ok = False
         if config.get('type') == 'champ' and texte:
-            texte, _ = extraire_valeur_champ(texte)
+            texte, champ_ok = extraire_valeur_champ(texte)
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
@@ -1887,7 +1914,8 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
             'moteur': 'tesseract',
             'coords': [x1_final, y1_final, x2_final, y2_final],
             'texte_final': texte,
-            'marge_utilisee': best_margin
+            'marge_utilisee': best_margin,
+            'champ_ok': champ_ok
         }
     return resultats
 
@@ -1966,8 +1994,9 @@ def analyser_avec_easyocr(image_path, zones_config):
         conf_moy = best_conf
         
         # POST-OCR: Extraction "champ" (étiquette : valeur → valeur seule)
+        champ_ok = False
         if config.get('type') == 'champ' and texte_final:
-            texte_final, _ = extraire_valeur_champ(texte_final)
+            texte_final, champ_ok = extraire_valeur_champ(texte_final)
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
@@ -1996,7 +2025,8 @@ def analyser_avec_easyocr(image_path, zones_config):
             'statut': statut, 
             'moteur': 'easyocr',
             'coords': [x1, y1, x2, y2],
-            'texte_final': texte_final
+            'texte_final': texte_final,
+            'champ_ok': champ_ok
         }
             
     return resultats
@@ -2087,8 +2117,9 @@ def analyser_avec_paddleocr(image_path, zones_config):
         conf_moy = best_conf
         
         # POST-OCR: Extraction "champ" (étiquette : valeur → valeur seule)
+        champ_ok = False
         if config.get('type') == 'champ' and texte_final:
-            texte_final, _ = extraire_valeur_champ(texte_final)
+            texte_final, champ_ok = extraire_valeur_champ(texte_final)
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
@@ -2118,7 +2149,8 @@ def analyser_avec_paddleocr(image_path, zones_config):
             'statut': statut, 
             'moteur': 'paddleocr',
             'coords': [x1, y1, x2, y2],
-            'texte_final': texte_final
+            'texte_final': texte_final,
+            'champ_ok': champ_ok
         }
             
     return resultats

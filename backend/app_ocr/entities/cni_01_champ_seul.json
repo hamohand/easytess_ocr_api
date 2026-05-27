@@ -1,0 +1,70 @@
+{
+  "nom": "cni_01_champ_seul",
+  "description": "cni_wafa_rogne_01",
+  "date_creation": "2026-05-27T13:11:24.602968",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_01_champ_seul\\reference.jpg",
+  "zones": [
+    {
+      "char_filter": "",
+      "coords": [
+        0.55,
+        0.61,
+        0.97,
+        0.72
+      ],
+      "expected_format": "single_line",
+      "id": 1777806810784,
+      "lang": "ara",
+      "margin": -2,
+      "nom": "nom_champ",
+      "preprocess": "arabic_textured",
+      "type": "champ"
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 1010,
+      "height": 640
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ]
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ]
+    },
+    "dimensions_absolues": {
+      "largeur": 1010,
+      "hauteur": 640,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 1,
+    "image_dimensions": {
+      "width": 1010,
+      "height": 640
+    }
+  }
+}

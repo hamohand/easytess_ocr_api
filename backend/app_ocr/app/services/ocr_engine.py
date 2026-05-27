@@ -92,7 +92,7 @@ def extraire_valeur_champ(texte, separator=':'):
     
     # Chercher le séparateur
     if separator not in texte_normalise:
-        logger.debug(f"🏷️ Champ: pas de '{separator}' trouvé dans '{texte[:40]}' → fallback texte brut")
+        logger.warning(f"🏷️ Champ: pas de '{separator}' trouvé dans '{texte[:40]}' → fallback texte brut")
         return texte.strip(), False
     
     # Prendre tout après le DERNIER séparateur (= la valeur en ordre logique Unicode)
@@ -104,9 +104,9 @@ def extraire_valeur_champ(texte, separator=':'):
         # Valeur vide après le ":" → peut-être que le texte est en ordre visuel inversé
         valeur = parties[0].strip()
         etiquette = separator.join(parties[1:]).strip()
-        logger.info(f"🏷️ Champ (inversé): '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
+        logger.warning(f"🏷️ Champ (inversé): '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
     else:
-        logger.info(f"🏷️ Champ: '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
+        logger.warning(f"🏷️ Champ: '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
     
     return valeur, True
 
