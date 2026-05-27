@@ -4,7 +4,7 @@ export interface Zone {
     id?: number;
     nom: string;
     coords: [number, number, number, number]; // [x1, y1, x2, y2]
-    type?: 'text' | 'qrcode' | 'barcode';
+    type?: 'text' | 'champ' | 'qrcode' | 'barcode';
     lang?: 'fra' | 'ara' | 'ara+fra' | 'eng';  // Langue OCR pour cette zone
     preprocess?: 'auto' | 'arabic_textured' | 'latin_simple' | 'none';  // Mode prétraitement
     char_filter?: 'none' | 'alpha_only' | 'digits_only' | 'alphanum' | 'digits_and_dot' | string;  // Filtre post-OCR sur les caractères
