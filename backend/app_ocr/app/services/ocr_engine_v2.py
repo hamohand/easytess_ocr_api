@@ -135,8 +135,14 @@ def extraire_valeur_champ(texte, separator=':'):
     
     # Chercher le séparateur
     if separator not in texte_normalise:
-        logger.warning(f"🏷️ Champ: pas de '{separator}' trouvé dans '{texte[:40]}' → fallback texte brut")
-        return texte.strip(), False
+        # Fallback: le ":" peut être lu comme "." (un seul point au lieu de deux)
+        # On n'utilise "." que s'il y en a exactement UN (sinon trop de faux positifs)
+        if '.' in texte_normalise and texte_normalise.count('.') == 1:
+            logger.warning(f"🏷️ Champ: pas de '{separator}' mais '.' trouvé → tentative avec '.'")
+            texte_normalise = texte_normalise.replace('.', separator)
+        else:
+            logger.warning(f"🏷️ Champ: pas de '{separator}' trouvé dans '{texte[:40]}' → fallback texte brut")
+            return texte.strip(), False
     
     # Prendre tout après le DERNIER séparateur (= la valeur en ordre logique Unicode)
     parties = texte_normalise.split(separator)
