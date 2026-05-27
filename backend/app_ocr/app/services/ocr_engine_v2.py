@@ -91,6 +91,70 @@ def appliquer_filtre_caracteres(texte, char_filter):
     return texte, format_respecte
 
 
+# =============================================================================
+# EXTRACTION "CHAMP" — Séparation étiquette / valeur par le caractère ":"
+# =============================================================================
+
+# Caractères que l'OCR peut reconnaître à la place de ":"
+SEPARATEURS_EQUIVALENTS = [':', '؛', '٫', '‫:‬']
+
+def extraire_valeur_champ(texte, separator=':'):
+    """
+    Extrait la valeur d'un champ structuré "étiquette : valeur".
+    
+    Sur les documents arabes (RTL), la disposition visuelle est :
+        بوضياف : اللقب
+        (valeur)  (étiquette)
+    
+    Dans la chaîne OCR (ordre logique Unicode), cela donne :
+        "اللقب : بوضياف"
+    
+    La valeur est donc APRÈS le dernier séparateur ":" dans la chaîne.
+    
+    Cas spéciaux gérés :
+        - Pas de ":" trouvé → retourne le texte brut (fallback)
+        - Plusieurs ":" → prend tout après le DERNIER ":"
+        - Séparateurs équivalents (OCR confond : avec ؛ etc.)
+    
+    Args:
+        texte: Texte brut issu de l'OCR (ex: "اللقب : بوضياف")
+        separator: Caractère séparateur principal (défaut: ':')
+    
+    Returns:
+        tuple: (valeur_extraite, extraction_reussie)
+    """
+    if not texte:
+        return texte, False
+    
+    texte_normalise = texte
+    
+    # Normaliser les séparateurs équivalents vers ":"
+    for sep in SEPARATEURS_EQUIVALENTS:
+        if sep != separator:
+            texte_normalise = texte_normalise.replace(sep, separator)
+    
+    # Chercher le séparateur
+    if separator not in texte_normalise:
+        logger.debug(f"🏷️ Champ: pas de '{separator}' trouvé dans '{texte[:40]}' → fallback texte brut")
+        return texte.strip(), False
+    
+    # Prendre tout après le DERNIER séparateur (= la valeur en ordre logique Unicode)
+    parties = texte_normalise.split(separator)
+    valeur = parties[-1].strip()
+    etiquette = separator.join(parties[:-1]).strip()
+    
+    if not valeur:
+        # Valeur vide après le ":" → peut-être que le texte est en ordre visuel inversé
+        # Essayer la partie avant le premier ":"
+        valeur = parties[0].strip()
+        etiquette = separator.join(parties[1:]).strip()
+        logger.info(f"🏷️ Champ (inversé): '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
+    else:
+        logger.info(f"🏷️ Champ: '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
+    
+    return valeur, True
+
+
 def upscale_for_ocr(img, min_height=100, target_height=200):
     """
     Agrandit les petites images pour améliorer la reconnaissance OCR.
@@ -1791,6 +1855,10 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         x2_final = min(img_w, x2_base + best_margin)
         y2_final = min(img_h, y2_base + best_margin)
         
+        # POST-OCR: Extraction "champ" (étiquette : valeur → valeur seule)
+        if config.get('type') == 'champ' and texte:
+            texte, _ = extraire_valeur_champ(texte)
+        
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
         if char_filter and char_filter != 'none' and texte:
@@ -1896,6 +1964,10 @@ def analyser_avec_easyocr(image_path, zones_config):
         
         texte_final = best_text
         conf_moy = best_conf
+        
+        # POST-OCR: Extraction "champ" (étiquette : valeur → valeur seule)
+        if config.get('type') == 'champ' and texte_final:
+            texte_final, _ = extraire_valeur_champ(texte_final)
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
@@ -2013,6 +2085,10 @@ def analyser_avec_paddleocr(image_path, zones_config):
         
         texte_final = best_text
         conf_moy = best_conf
+        
+        # POST-OCR: Extraction "champ" (étiquette : valeur → valeur seule)
+        if config.get('type') == 'champ' and texte_final:
+            texte_final, _ = extraire_valeur_champ(texte_final)
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
