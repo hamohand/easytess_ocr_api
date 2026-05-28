@@ -158,11 +158,12 @@ def extraire_valeur_champ(texte, separator=':'):
     etiquette = separator.join(parties[:-1]).strip()
     
     if not valeur:
-        # Valeur vide après le ":" → peut-être que le texte est en ordre visuel inversé
-        # Essayer la partie avant le premier ":"
-        valeur = parties[0].strip()
-        etiquette = separator.join(parties[1:]).strip()
-        logger.warning(f"🏷️ Champ (inversé): '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
+        # Valeur vide après le ":" → le séparateur est à la fin du texte.
+        # Cela signifie que l'OCR a inversé l'ordre ou fusionné la valeur et l'étiquette avant le ":".
+        # Ex: "حسان الإسم :" au lieu de "الإسم : حسان"
+        # On ne peut pas les séparer de manière fiable sans connaître l'étiquette.
+        logger.warning(f"🏷️ Champ: Valeur vide après séparateur dans '{texte[:40]}' → Extraction échouée")
+        return texte.strip(), False
     else:
         logger.warning(f"🏷️ Champ: '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
     
@@ -2007,6 +2008,9 @@ def analyser_avec_easyocr(image_path, zones_config):
         for zone_img, variant_name in variants:
             try:
                 results = reader.readtext(zone_img)
+                if 'ara' in zone_lang or zone_lang == 'ar':
+                    results = sorted(results, key=lambda x: max([pt[0] for pt in x[0]]), reverse=True)
+                
                 textes = [text for _, text, _ in results]
                 confs = [conf for _, _, conf in results]
                 texte = " ".join(textes)
@@ -2132,16 +2136,17 @@ def analyser_avec_paddleocr(image_path, zones_config):
                 results = reader.ocr(zone_img)
                 
                 if results and results[0]:
-                    # Extraire textes et confiances
-                    textes = [line[1][0] for line in results[0]]
-                    confs = [line[1][1] for line in results[0]]
+                    lignes = results[0]
+                    if 'ara' in zone_lang or zone_lang == 'ar':
+                        # Pour l'arabe, trier les boîtes de Droite à Gauche (RTL) selon l'ordre logique
+                        # On prend le X max de la bounding box pour le tri
+                        lignes = sorted(lignes, key=lambda x: max([pt[0] for pt in x[0]]), reverse=True)
+                        
+                    # Extraire textes et confiances dans le bon ordre
+                    textes = [line[1][0] for line in lignes]
+                    confs = [line[1][1] for line in lignes]
                     
                     texte = " ".join(textes)
-                    
-                    # CORRECTION ARABE : PaddleOCR retourne le texte arabe dans l'ordre visuel (gauche à droite).
-                    # On utilise bidi.get_display pour rétablir l'ordre logique (droite à gauche) tout en préservant les nombres.
-                    if 'ara' in zone_lang or zone_lang == 'ar':
-                        texte = get_display(texte)
                         
                     conf = sum(confs) / len(confs) if confs else 0.0
                     
