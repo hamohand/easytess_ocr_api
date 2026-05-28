@@ -51,6 +51,10 @@ def appliquer_filtre_caracteres(texte, char_filter):
     elif char_filter == 'alphanum':
         # Garde lettres + chiffres + espaces
         texte = re.sub(r'[^\w\s]|_', '', texte)
+    elif char_filter == 'strip_separators':
+        # Supprime la ponctuation et les espaces collés au tout début du texte
+        # Utile si l'utilisateur encadre "[Value]" mais que le ":" déborde dans la boîte
+        texte = texte.lstrip(" :.؛٫-")
     elif char_filter.startswith('custom:'):
         # Garde uniquement les caractères spécifiés après 'custom:' et les espaces
         allowed_chars = char_filter[7:]

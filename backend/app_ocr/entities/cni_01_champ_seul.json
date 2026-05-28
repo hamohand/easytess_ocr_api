@@ -1,7 +1,7 @@
 {
   "nom": "cni_01_champ_seul",
   "description": "cni_wafa_rogne_01",
-  "date_creation": "2026-05-28T04:33:35.237419",
+  "date_creation": "2026-05-28T05:54:13.124694",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_01_champ_seul\\reference.jpg",
   "zones": [
     {
@@ -14,27 +14,27 @@
       ],
       "expected_format": "single_line",
       "id": 1777806810784,
-      "lang": "ara+fra",
+      "lang": "ara",
       "margin": -2,
       "nom": "nom",
-      "preprocess": "auto",
+      "preprocess": "arabic_textured",
       "type": "champ"
     },
     {
-      "id": 1779935533534,
-      "nom": "prenom",
-      "type": "champ",
-      "lang": "ara+fra",
-      "preprocess": "auto",
       "char_filter": "none",
-      "expected_format": "single_line",
-      "margin": -2,
       "coords": [
         0.5503,
         0.7032,
         0.9703,
         0.8079
-      ]
+      ],
+      "expected_format": "single_line",
+      "id": 1779935533534,
+      "lang": "ara",
+      "margin": -2,
+      "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "champ"
     }
   ],
   "cadre_reference": {

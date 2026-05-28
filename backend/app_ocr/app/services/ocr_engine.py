@@ -41,8 +41,12 @@ def appliquer_filtre_caracteres(texte, char_filter):
         # Garde uniquement les chiffres, '/' et '-' (pour dates, numéros)
         texte = re.sub(r'[^0-9/\-\s]', '', texte)
     elif char_filter == 'alphanum':
-        # Garde lettres + chiffres + espaces
-        texte = re.sub(r'[^\w\s]|_', '', texte)
+        # On garde lettres et chiffres, on supprime tout le reste (sauf les espaces)
+        texte = re.sub(r'[^\w\s]', '', texte, flags=re.UNICODE)
+    elif char_filter == 'strip_separators':
+        texte = texte.lstrip(" :.؛٫-")
+    else:
+        logger.warning(f"⚠️ Filtre inconnu: {char_filter}")
     
     # Normaliser les espaces multiples
     texte = re.sub(r'\s+', ' ', texte).strip()
