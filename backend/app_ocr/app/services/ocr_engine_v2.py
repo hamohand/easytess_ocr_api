@@ -161,8 +161,14 @@ def extraire_valeur_champ(texte, separator=':'):
         # Valeur vide après le ":" → le séparateur est à la fin du texte.
         # Cela signifie que l'OCR a inversé l'ordre ou fusionné la valeur et l'étiquette avant le ":".
         # Ex: "حسان الإسم :" au lieu de "الإسم : حسان"
-        # On ne peut pas les séparer de manière fiable sans connaître l'étiquette.
         logger.warning(f"🏷️ Champ: Valeur vide après séparateur dans '{texte[:40]}' → Extraction échouée")
+        return texte.strip(), False
+        
+    if not etiquette:
+        # Étiquette vide avant le ":" → le séparateur est au début du texte.
+        # Cela signifie souvent que le texte est en ordre visuel inversé (ex: Tesseract PSM 11).
+        # Ex: ":مسإلا ءافو" au lieu de "الإسم : وفاء"
+        logger.warning(f"🏷️ Champ: Étiquette vide avant séparateur dans '{texte[:40]}' → Extraction échouée")
         return texte.strip(), False
     else:
         logger.warning(f"🏷️ Champ: '{texte[:40]}' → valeur='{valeur[:30]}' (étiquette='{etiquette[:20]}')")
