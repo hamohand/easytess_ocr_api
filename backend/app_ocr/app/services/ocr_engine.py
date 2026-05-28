@@ -44,7 +44,7 @@ def appliquer_filtre_caracteres(texte, char_filter):
         # On garde lettres et chiffres, on supprime tout le reste (sauf les espaces)
         texte = re.sub(r'[^\w\s]', '', texte, flags=re.UNICODE)
     elif char_filter == 'strip_separators':
-        texte = texte.lstrip(" :.؛٫-")
+        texte = texte.strip(" :.؛٫-")
     else:
         logger.warning(f"⚠️ Filtre inconnu: {char_filter}")
     
