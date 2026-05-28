@@ -2020,8 +2020,9 @@ def analyser_avec_easyocr(image_path, zones_config):
                 results = reader.readtext(zone_img)
                 if 'ara' in zone_lang or zone_lang == 'ar':
                     results = sorted(results, key=lambda x: max([pt[0] for pt in x[0]]), reverse=True)
-                
-                textes = [text for _, text, _ in results]
+                    textes = [get_display(text) for _, text, _ in results]
+                else:
+                    textes = [text for _, text, _ in results]
                 confs = [conf for _, _, conf in results]
                 texte = " ".join(textes)
                 conf = sum(confs) / len(confs) if confs else 0.0
@@ -2151,9 +2152,11 @@ def analyser_avec_paddleocr(image_path, zones_config):
                         # Pour l'arabe, trier les boîtes de Droite à Gauche (RTL) selon l'ordre logique
                         # On prend le X max de la bounding box pour le tri
                         lignes = sorted(lignes, key=lambda x: max([pt[0] for pt in x[0]]), reverse=True)
+                        # Appliquer get_display INDIVIDUELLEMENT sur chaque boîte pour remettre les lettres à l'endroit
+                        textes = [get_display(line[1][0]) for line in lignes]
+                    else:
+                        textes = [line[1][0] for line in lignes]
                         
-                    # Extraire textes et confiances dans le bon ordre
-                    textes = [line[1][0] for line in lignes]
                     confs = [line[1][1] for line in lignes]
                     
                     texte = " ".join(textes)
