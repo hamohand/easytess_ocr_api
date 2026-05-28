@@ -2008,12 +2008,13 @@ def analyser_avec_easyocr(image_path, zones_config):
         for zone_img, variant_name in variants:
             try:
                 results = reader.readtext(zone_img)
-                if 'ara' in zone_lang or zone_lang == 'ar':
-                    results = sorted(results, key=lambda x: max([pt[0] for pt in x[0]]), reverse=True)
-                
                 textes = [text for _, text, _ in results]
                 confs = [conf for _, _, conf in results]
                 texte = " ".join(textes)
+                
+                if 'ara' in zone_lang or zone_lang == 'ar':
+                    from bidi.algorithm import get_display
+                    texte = get_display(texte)
                 conf = sum(confs) / len(confs) if confs else 0.0
                 
                 effective_conf = conf
@@ -2136,17 +2137,17 @@ def analyser_avec_paddleocr(image_path, zones_config):
                 results = reader.ocr(zone_img)
                 
                 if results and results[0]:
-                    lignes = results[0]
-                    if 'ara' in zone_lang or zone_lang == 'ar':
-                        # Pour l'arabe, trier les boîtes de Droite à Gauche (RTL) selon l'ordre logique
-                        # On prend le X max de la bounding box pour le tri
-                        lignes = sorted(lignes, key=lambda x: max([pt[0] for pt in x[0]]), reverse=True)
-                        
-                    # Extraire textes et confiances dans le bon ordre
-                    textes = [line[1][0] for line in lignes]
-                    confs = [line[1][1] for line in lignes]
+                    # Extraire textes et confiances
+                    textes = [line[1][0] for line in results[0]]
+                    confs = [line[1][1] for line in results[0]]
                     
                     texte = " ".join(textes)
+                    
+                    # CORRECTION ARABE : PaddleOCR retourne le texte arabe dans l'ordre visuel (gauche à droite).
+                    # On utilise bidi.get_display pour rétablir l'ordre logique (droite à gauche) tout en préservant les nombres.
+                    if 'ara' in zone_lang or zone_lang == 'ar':
+                        from bidi.algorithm import get_display
+                        texte = get_display(texte)
                         
                     conf = sum(confs) / len(confs) if confs else 0.0
                     
