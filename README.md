@@ -234,7 +234,16 @@ La meilleure prédiction est sélectionnée automatiquement.
 - Statistiques par moteur
 - Possibilité de correction manuelle
 
-## 🎯 Optimisation des zones OCR
+## 🎯 Optimisation et Spécificités Arabe
+
+### Spécificités de l'OCR Arabe & "Zone 2 points"
+L'extraction de données structurées en arabe présente des défis uniques (texte RTL, lettres fusionnées, ponctuation collée). Pour garantir une fiabilité maximale, le système intègre des techniques de pointe :
+- **Correction Bidi intelligente** : Le texte brut issu des moteurs CNN (comme PaddleOCR) est souvent lu visuellement (de gauche à droite). Le système applique l'algorithme `bidi` boîte par boîte *avant* de recoller les mots, préservant ainsi l'ordre logique RTL tout en remettant parfaitement les lettres à l'endroit, sans corrompre les dates ni les nombres.
+- **Le type "Zone 2 points"** : Un nouveau type de zone conçu spécifiquement pour les documents où un séparateur (ex: `:`) est collé à la valeur (ex: `:راشدي`).
+  - *Fonctionnement* : L'utilisateur dessine une zone modèle suffisamment large qui inclut volontairement le séparateur. Le système lit l'intégralité du texte puis applique automatiquement le filtre `strip_separators` pour nettoyer la ponctuation parasite aux extrémités de la chaîne.
+  - *Marge dynamique* : L'outil permet d'ajouter une marge (ex: 3 pixels) avant OCR pour donner de l'espace au moteur CNN, ce qui résout le problème des lettres ignorées car écrasées contre la bordure.
+
+### Optimisation auto des zones OCR (CLI)
 
 Un outil CLI permet de trouver automatiquement la **taille optimale** d'une zone d'entité pour maximiser la confiance OCR.
 
