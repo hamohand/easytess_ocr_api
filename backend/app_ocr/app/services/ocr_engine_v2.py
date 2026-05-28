@@ -1927,6 +1927,9 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
+        if config.get('type') == 'zone_2_points' and (not char_filter or char_filter == 'none'):
+            char_filter = 'strip_separators'
+            
         if char_filter and char_filter != 'none' and texte:
             texte, format_respecte = appliquer_filtre_caracteres(texte, char_filter)
             if not format_respecte:
@@ -2053,6 +2056,9 @@ def analyser_avec_easyocr(image_path, zones_config):
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
+        if config.get('type') == 'zone_2_points' and (not char_filter or char_filter == 'none'):
+            char_filter = 'strip_separators'
+            
         if char_filter and char_filter != 'none' and texte_final:
             texte_final, format_respecte = appliquer_filtre_caracteres(texte_final, char_filter)
             if not format_respecte:
@@ -2189,6 +2195,9 @@ def analyser_avec_paddleocr(image_path, zones_config):
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
+        if config.get('type') == 'zone_2_points' and (not char_filter or char_filter == 'none'):
+            char_filter = 'strip_separators'
+            
         if char_filter and char_filter != 'none' and texte_final:
             texte_final, format_respecte = appliquer_filtre_caracteres(texte_final, char_filter)
             if not format_respecte:

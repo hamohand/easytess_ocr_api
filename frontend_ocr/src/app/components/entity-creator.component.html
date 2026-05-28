@@ -491,13 +491,14 @@
                             <label>Type:</label>
                             <select [(ngModel)]="zone.type" class="sm-input" title="Type de zone">
                                 <option value="text">Texte OCR</option>
+                                <option value="zone_2_points">Zone 2 points (ex: :Valeur)</option>
                                 <option value="champ">Champ (étiquette : valeur)</option>
                                 <option value="qrcode">QR Code</option>
                                 <option value="barcode">Code Barre</option>
                             </select>
                         </div>
 
-                        @if (!zone.type || zone.type === 'text' || zone.type === 'champ') {
+                        @if (!zone.type || zone.type === 'text' || zone.type === 'champ' || zone.type === 'zone_2_points') {
                         <div class="config-row">
                             <label>Langue OCR:</label>
                             <select [(ngModel)]="zone.lang" class="sm-input">
