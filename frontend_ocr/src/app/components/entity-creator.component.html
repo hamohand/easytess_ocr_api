@@ -520,8 +520,8 @@
 
                         <div class="config-row" style="flex-wrap: wrap;">
                             <label title="Filtre les caractères parasites après OCR">Filtre caractères:</label>
-                            <input type="text" [(ngModel)]="zone.char_filter" list="charFiltersList" class="sm-input" placeholder="Ex: none, custom:0-9.">
-                            <datalist id="charFiltersList">
+                            <input type="text" [(ngModel)]="zone.char_filter" [attr.list]="'charFiltersList-' + zone.id" class="sm-input" placeholder="Ex: none, custom:0-9.">
+                            <datalist id="charFiltersList-{{zone.id}}">
                                 <option value="none">Aucun filtre</option>
                                 <option value="strip_separators">Nettoyer ponctuation initiale</option>
                                 <option value="alpha_only">Lettres uniquement</option>
