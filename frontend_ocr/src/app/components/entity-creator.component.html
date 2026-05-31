@@ -498,6 +498,13 @@
                             </select>
                         </div>
 
+                        @if (zone.type === 'zone_2_points') {
+                        <div class="config-row">
+                            <label title="Texte de l'étiquette servant de repère (ex: اللقب)">Ancre textuelle:</label>
+                            <input type="text" [(ngModel)]="zone.anchor_text" class="sm-input" placeholder="ex: اللقب">
+                        </div>
+                        }
+
                         @if (!zone.type || zone.type === 'text' || zone.type === 'champ' || zone.type === 'zone_2_points') {
                         <div class="config-row">
                             <label>Langue OCR:</label>

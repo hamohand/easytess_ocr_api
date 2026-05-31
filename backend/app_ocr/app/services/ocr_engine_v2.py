@@ -1523,7 +1523,70 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                 
         logger.info(f"✅ Coordonnées ajustées selon cadre de référence")
     
-        
+        # --- NOUVEAU: Ajustement dynamique par ancre locale (Zone 2 points) ---
+        zones_locales = {k: v for k, v in zones_config.items() if v.get('anchor_text')}
+        if zones_locales and PADDLEOCR_DISPONIBLE:
+            logger.info(f"⚓ {len(zones_locales)} zone(s) avec ancre locale. Recherche de l'étiquette...")
+            try:
+                reader = get_paddleocr_reader('ara+fra')
+                result_global = reader.ocr(image_path, cls=True)
+                from rapidfuzz import process, fuzz
+                
+                if result_global and result_global[0]:
+                    lignes_ocr = result_global[0]
+                    mots_dict = {}
+                    for res in lignes_ocr:
+                        box = res[0]
+                        text = res[1][0]
+                        mots_dict[text] = box
+                    
+                    with Image.open(image_path) as current_img:
+                        current_w, current_h = current_img.size
+                        
+                    for nom_zone, config in zones_locales.items():
+                        anchor = config['anchor_text']
+                        # Recherche floue (ratio > 80%)
+                        match = process.extractOne(anchor, list(mots_dict.keys()), scorer=fuzz.ratio)
+                        if match and match[1] >= 80:
+                            matched_text = match[0]
+                            score = match[1]
+                            anchor_box = mots_dict[matched_text]
+                            ax1 = min([pt[0] for pt in anchor_box])
+                            ay1 = min([pt[1] for pt in anchor_box])
+                            ax2 = max([pt[0] for pt in anchor_box])
+                            ay2 = max([pt[1] for pt in anchor_box])
+                            
+                            tpl_coords = config['coords']
+                            w_norm = tpl_coords[2] - tpl_coords[0]
+                            h_norm = tpl_coords[3] - tpl_coords[1]
+                            
+                            val_w_px = w_norm * current_w
+                            val_h_px = h_norm * current_h
+                            
+                            lang = config.get('lang', 'ara+fra')
+                            if lang == 'ara':
+                                nx2 = ax1 - 5 # 5px de marge
+                                nx1 = nx2 - val_w_px
+                            else:
+                                nx1 = ax2 + 5
+                                nx2 = nx1 + val_w_px
+                                
+                            anchor_h = ay2 - ay1
+                            ny1 = ay1 - (val_h_px - anchor_h) / 2
+                            ny2 = ny1 + val_h_px
+                            
+                            config['coords'] = [
+                                max(0, nx1 / current_w),
+                                max(0, ny1 / current_h),
+                                min(1, nx2 / current_w),
+                                min(1, ny2 / current_h)
+                            ]
+                            logger.info(f"⚓ Zone '{nom_zone}': Ancre '{anchor}' trouvée ({matched_text} - {score:.0f}%), boîte ajustée dynamiquement.")
+                        else:
+                            logger.warning(f"⚓ Zone '{nom_zone}': Ancre '{anchor}' introuvable. Repli sur la coordonnée absolue.")
+            except Exception as e:
+                logger.error(f"❌ Erreur lors de la recherche des ancres locales: {e}")
+                
         # 1. Détection QR codes/codes-barres pour les zones marquées
         zones_qr = {k: v for k, v in zones_config.items() if v.get('type') == 'qrcode' or v.get('type') == 'barcode'}
         for nom_zone, config in zones_qr.items():

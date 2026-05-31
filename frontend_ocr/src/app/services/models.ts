@@ -5,6 +5,7 @@ export interface Zone {
     nom: string;
     coords: [number, number, number, number]; // [x1, y1, x2, y2]
     type?: 'text' | 'champ' | 'zone_2_points' | 'qrcode' | 'barcode';
+    anchor_text?: string; // Ancre locale (ex: اللقب) pour les zones relatives
     lang?: 'fra' | 'ara' | 'ara+fra' | 'eng';  // Langue OCR pour cette zone
     preprocess?: 'auto' | 'arabic_textured' | 'latin_simple' | 'none';  // Mode prétraitement
     char_filter?: 'none' | 'strip_separators' | 'alpha_only' | 'digits_only' | 'alphanum' | 'digits_and_dot' | string;  // Filtre post-OCR sur les caractères
