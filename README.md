@@ -229,6 +229,11 @@ Le système utilise automatiquement une architecture à 3 étages :
 3. **EasyOCR** en dernier recours
 La meilleure prédiction est sélectionnée automatiquement.
 
+### Extraction Automatisée via QR Code
+Le système gère la détection de QR codes de manière intelligente. Si une zone est de type `qrcode` :
+- Le système décode la chaîne de caractères (incluant les retours à la ligne ou délimiteurs).
+- **Auto-population (Extraction étendue)** : Le système est capable de découper automatiquement les séquences de données contenues dans le QR code (nom, prénom, date de naissance, NIN, etc.) et de populer instantanément l'ensemble des champs virtuels correspondants, le tout avec une confiance de `1.0`. Cette approche évite totalement le recours à l'OCR sur les champs texte si un QR code valide est présent sur le document.
+
 ### Gestion des erreurs
 - Alertes pour les zones problématiques
 - Statistiques par moteur

@@ -1,0 +1,49 @@
+{
+  "filename": "ocr_094fdb39-e3e0-412b-a0f0-5368b9268c7b_moh_qrcode.jpg",
+  "date": "2026-05-30T04:47:54.761305",
+  "resultats": {
+    "Zone_qrc": {
+      "code_count": 1,
+      "code_type": "QRCODE",
+      "confiance_auto": 1,
+      "coords": [
+        0.0761789600967352,
+        0.7360319270239453,
+        0.40870616686819833,
+        0.9729190421892816
+      ],
+      "moteur": "qrcode_opencv",
+      "sequences": [
+        "1518",
+        "1956",
+        "000020",
+        "18",
+        "حمرون",
+        "محمد",
+        "03/01/1956",
+        "08:00",
+        "أيت يخلف",
+        "حمرون فرحات بن محند",
+        "راشدي",
+        "زوينة بنت محند",
+        "ذ",
+        "HAMROUN",
+        "Mohammed",
+        "أيت يخلف",
+        "03/01/1956",
+        "10:00",
+        "أب الطفل",
+        "24",
+        "حداد",
+        "أيت يخلف",
+        "شودرات رؤول جان",
+        "رئيس المركز البلدي لأيت يخلف",
+        "0",
+        "109560504000021800#VfxHM+sLxv0GMLTA11JYOdVt/lEOu8nvswFrGfBrUnvhXYI/447Te6tD5Tq3NjVBS83UsuWu8zRLjkloc6nZs+tDE5bdQ+8vF1NYtbucDWexMsGM6EB5Yc/5/+oi8432dEnU/RpUPTo+pWT70BOxQYmIyLBn2uG/rULJEdwaK+kqHyul9pYrtQRDDudOfo232GT25noUvL9ie+0wWclyA903x1ywr4xWGF7OBGgq/XK7kej40HqrWtANPotlWxt5MDU0h7CB6+mqm7SNmYQwte0/DGoZmfSQMM61WlW89vHyA4uJy4O+OlPR2Jq54zcYpJpESUXlva+CysJLDnPGow=="
+      ],
+      "statut": "ok",
+      "texte_auto": "1518*1956*000020*18*حمرون*محمد*03/01/1956*08:00*أيت يخلف*حمرون فرحات بن محند*راشدي*زوينة بنت محند*ذ*HAMROUN*Mohammed*أيت يخلف*03/01/1956*10:00*أب الطفل*24*حداد*أيت يخلف*شودرات رؤول جان*رئيس المركز البلدي لأيت يخلف*0****109560504000021800#VfxHM+sLxv0GMLTA11JYOdVt/lEOu8nvswFrGfBrUnvhXYI/447Te6tD5Tq3NjVBS83UsuWu8zRLjkloc6nZs+tDE5bdQ+8vF1NYtbucDWexMsGM6EB5Yc/5/+oi8432dEnU/RpUPTo+pWT70BOxQYmIyLBn2uG/rULJEdwaK+kqHyul9pYrtQRDDudOfo232GT25noUvL9ie+0wWclyA903x1ywr4xWGF7OBGgq/XK7kej40HqrWtANPotlWxt5MDU0h7CB6+mqm7SNmYQwte0/DGoZmfSQMM61WlW89vHyA4uJy4O+OlPR2Jq54zcYpJpESUXlva+CysJLDnPGow==",
+      "texte_final": "1518*1956*000020*18*حمرون*محمد*03/01/1956*08:00*أيت يخلف*حمرون فرحات بن محند*راشدي*زوينة بنت محند*ذ*HAMROUN*Mohammed*أيت يخلف*03/01/1956*10:00*أب الطفل*24*حداد*أيت يخلف*شودرات رؤول جان*رئيس المركز البلدي لأيت يخلف*0****109560504000021800#VfxHM+sLxv0GMLTA11JYOdVt/lEOu8nvswFrGfBrUnvhXYI/447Te6tD5Tq3NjVBS83UsuWu8zRLjkloc6nZs+tDE5bdQ+8vF1NYtbucDWexMsGM6EB5Yc/5/+oi8432dEnU/RpUPTo+pWT70BOxQYmIyLBn2uG/rULJEdwaK+kqHyul9pYrtQRDDudOfo232GT25noUvL9ie+0wWclyA903x1ywr4xWGF7OBGgq/XK7kej40HqrWtANPotlWxt5MDU0h7CB6+mqm7SNmYQwte0/DGoZmfSQMM61WlW89vHyA4uJy4O+OlPR2Jq54zcYpJpESUXlva+CysJLDnPGow=="
+    }
+  }
+}

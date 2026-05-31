@@ -1428,6 +1428,67 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                         'code_count': qr_result['count'],
                         'sequences': sequences  # Liste des séquences extraites
                     }
+
+                    # --- NOUVEAU : Transformation des séquences en champs séparés ---
+                    # Approche 1: Si un 'mapping_sequences' est défini dans la config de la zone
+                    if 'mapping_sequences' in config:
+                        for index_str, field_name in config['mapping_sequences'].items():
+                            try:
+                                idx = int(index_str)
+                                if idx < len(sequences):
+                                    resultats[field_name] = {
+                                        'texte_auto': sequences[idx],
+                                        'confiance_auto': 1.0,
+                                        'statut': 'ok',
+                                        'moteur': 'qrcode_sequence_mapping',
+                                        'coords': config['coords'],
+                                        'texte_final': sequences[idx]
+                                    }
+                            except ValueError:
+                                pass
+                    # Approche 2: Hardcodé pour votre format
+                    # S'active automatiquement si 'mapping_sequences' n'est pas fourni
+                    elif len(sequences) > 0:
+                        def add_qr_field(f_name, text_val):
+                            if text_val:
+                                resultats[f_name] = {
+                                    'texte_auto': text_val.strip(),
+                                    'confiance_auto': 1.0,
+                                    'statut': 'ok',
+                                    'moteur': 'qrcode_sequence_auto',
+                                    'coords': config['coords'],
+                                    'texte_final': text_val.strip()
+                                }
+                        
+                        def get_seq(i):
+                            return sequences[i] if i < len(sequences) else ""
+                            
+                        # Extractions de base
+                        if len(sequences) >= 6:
+                            add_qr_field('nom', get_seq(4))
+                            add_qr_field('prenom', get_seq(5))
+                            
+                        # Extractions étendues
+                        if len(sequences) >= 26:
+                            add_qr_field('numeroPiece', get_seq(2))
+                            add_qr_field('dateNaissance', get_seq(6))
+                            add_qr_field('lieuNaissance', get_seq(8))
+                            add_qr_field('pere', get_seq(9))
+                            
+                            mere_val = f"{get_seq(10)} {get_seq(11)}".strip()
+                            add_qr_field('mere', mere_val)
+                            
+                            add_qr_field('sexe', get_seq(12))
+                            add_qr_field('latines', get_seq(13))
+                            add_qr_field('prenomLatines', get_seq(14))
+                            add_qr_field('delivrePar', get_seq(15))
+                            
+                            
+                            # nin : 18 chiffres consécutifs dans la chaîne complète
+                            match_nin = re.search(r'\d{18}', qr_data)
+                            if match_nin:
+                                add_qr_field('nin', match_nin.group(0))
+                    # ----------------------------------------------------------------
     
                 else:
                     # QR code non détecté, on laissera l'OCR essayer

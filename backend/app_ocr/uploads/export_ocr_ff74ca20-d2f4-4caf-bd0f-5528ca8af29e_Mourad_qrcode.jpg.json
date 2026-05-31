@@ -1,0 +1,49 @@
+{
+  "filename": "ocr_ff74ca20-d2f4-4caf-bd0f-5528ca8af29e_Mourad_qrcode.jpg",
+  "date": "2026-05-30T04:43:08.282427",
+  "resultats": {
+    "Zone_qrc": {
+      "code_count": 1,
+      "code_type": "QRCODE",
+      "confiance_auto": 1,
+      "coords": [
+        0.0761789600967352,
+        0.7360319270239453,
+        0.40870616686819833,
+        0.9729190421892816
+      ],
+      "moteur": "qrcode_opencv",
+      "sequences": [
+        "1604",
+        "1965",
+        "012650",
+        "00",
+        "راشدي",
+        "علي مراد",
+        "15/04/1965",
+        "05:30",
+        "محمد بلوزداد",
+        "محند عراب",
+        "زهية",
+        "سعدي",
+        "ذ",
+        "RACHEDI",
+        "Ali Mourad",
+        "01 نهج ران استريد",
+        "16/04/1965",
+        "09:20",
+        "الاب",
+        "عامل",
+        "كما دكرنا اعلاه",
+        "مهني امهنة",
+        "نائب الرئيس",
+        "0",
+        "109650579012650003",
+        "2022-09-26 15:39:37.215#Hi4A16lJeOf0qQkpUL8fCLAoL+C3nkFHAMNUye344PWEHn/4Dzqj9XeucUKygFo7kFqProOEEKWr+gTJXxJST4hH3avvQ4FImiQ1gItexJ1f9FQxyaLUZIjyUO5G3+lLEkWY+ofp0UBr56LdJSZkrii1JPCCToas2uLSrRAC69E8cQjsDI4GTtHUN/v8hKHkCMMwfJ9FRM539CNW9lUcg0RPB58A23D1F1omFsauew+IyFMU7QdEY8y3V5FnMV6CArKHZWHujex/Wp5vvUGoC6iCi88qUY+lUNABI8XwcJNMWluQZBN6io5dT3oSOokvS/e+LkAdz5EYeGJ7YW5cuw=="
+      ],
+      "statut": "ok",
+      "texte_auto": "1604*1965*012650*00*راشدي*علي مراد*15/04/1965*05:30*محمد بلوزداد*محند عراب*زهية*سعدي*ذ*RACHEDI*Ali Mourad*01 نهج ران استريد*16/04/1965*09:20*الاب**عامل*كما دكرنا اعلاه*مهني امهنة*نائب الرئيس*0****109650579012650003*2022-09-26 15:39:37.215#Hi4A16lJeOf0qQkpUL8fCLAoL+C3nkFHAMNUye344PWEHn/4Dzqj9XeucUKygFo7kFqProOEEKWr+gTJXxJST4hH3avvQ4FImiQ1gItexJ1f9FQxyaLUZIjyUO5G3+lLEkWY+ofp0UBr56LdJSZkrii1JPCCToas2uLSrRAC69E8cQjsDI4GTtHUN/v8hKHkCMMwfJ9FRM539CNW9lUcg0RPB58A23D1F1omFsauew+IyFMU7QdEY8y3V5FnMV6CArKHZWHujex/Wp5vvUGoC6iCi88qUY+lUNABI8XwcJNMWluQZBN6io5dT3oSOokvS/e+LkAdz5EYeGJ7YW5cuw==",
+      "texte_final": "1604*1965*012650*00*راشدي*علي مراد*15/04/1965*05:30*محمد بلوزداد*محند عراب*زهية*سعدي*ذ*RACHEDI*Ali Mourad*01 نهج ران استريد*16/04/1965*09:20*الاب**عامل*كما دكرنا اعلاه*مهني امهنة*نائب الرئيس*0****109650579012650003*2022-09-26 15:39:37.215#Hi4A16lJeOf0qQkpUL8fCLAoL+C3nkFHAMNUye344PWEHn/4Dzqj9XeucUKygFo7kFqProOEEKWr+gTJXxJST4hH3avvQ4FImiQ1gItexJ1f9FQxyaLUZIjyUO5G3+lLEkWY+ofp0UBr56LdJSZkrii1JPCCToas2uLSrRAC69E8cQjsDI4GTtHUN/v8hKHkCMMwfJ9FRM539CNW9lUcg0RPB58A23D1F1omFsauew+IyFMU7QdEY8y3V5FnMV6CArKHZWHujex/Wp5vvUGoC6iCi88qUY+lUNABI8XwcJNMWluQZBN6io5dT3oSOokvS/e+LkAdz5EYeGJ7YW5cuw=="
+    }
+  }
+}
