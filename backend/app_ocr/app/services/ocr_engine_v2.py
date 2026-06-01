@@ -2083,7 +2083,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
                 else:
                     logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : Le ':' a été lu et correctement nettoyé ('{best_text}' -> '{texte}')")
             else:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : Le ':' n'a PAS été lu par l'OCR (texte brut: '{best_text}')")
+                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : Le ':' n'a pas été renvoyé par l'OCR (ignoré ou fusionné) (texte brut: '{best_text}')")
                 lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
                 if texte and texte[0] in lettres_suspectes:
                     avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre à point(s) suspecte. S'il était collé à la valeur, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
@@ -2228,7 +2228,7 @@ def analyser_avec_easyocr(image_path, zones_config):
                 else:
                     logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : Le ':' a été lu et correctement nettoyé ('{best_text}' -> '{texte_final}')")
             else:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : Le ':' n'a PAS été lu par l'OCR (texte brut: '{best_text}')")
+                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : Le ':' n'a pas été renvoyé par l'OCR (ignoré ou fusionné) (texte brut: '{best_text}')")
                 lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
                 if texte_final and texte_final[0] in lettres_suspectes:
                     avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre à point(s) suspecte. S'il était collé à la valeur, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
@@ -2384,7 +2384,7 @@ def analyser_avec_paddleocr(image_path, zones_config):
                 else:
                     logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : Le ':' a été lu et correctement nettoyé ('{best_text}' -> '{texte_final}')")
             else:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : Le ':' n'a PAS été lu par l'OCR (texte brut: '{best_text}')")
+                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : Le ':' n'a pas été renvoyé par l'OCR (ignoré ou fusionné) (texte brut: '{best_text}')")
                 # On ne déclenche l'avertissement que si le premier caractère est suspect
                 lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
                 if texte_final and texte_final[0] in lettres_suspectes:
