@@ -2073,15 +2073,24 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
             statut = "faible_confiance"
         else:
             statut = "echec"
+        # Avertissement pour la zone 2 points
+        avertissements = []
+        if config.get('type') == 'zone_2_points' and best_text and ":" not in best_text:
+            lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
+            if texte and texte[0] in lettres_suspectes:
+                avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre à point(s) suspecte. S'il était collé à la valeur, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
+
         resultats[nom_zone] = {
             'texte_auto': texte, 
             'confiance_auto': confiance, 
-            'statut': statut, 
+            'statut': 'warning' if avertissements and statut == 'ok' else statut, 
             'moteur': 'tesseract',
             'coords': [x1_final, y1_final, x2_final, y2_final],
             'texte_final': texte,
             'marge_utilisee': best_margin,
-            'champ_ok': champ_ok
+            'champ_ok': champ_ok,
+            'texte_brut': best_text,
+            'avertissements': avertissements
         }
     return resultats
 
@@ -2205,7 +2214,9 @@ def analyser_avec_easyocr(image_path, zones_config):
         # Avertissement pour la zone 2 points
         avertissements = []
         if config.get('type') == 'zone_2_points' and best_text and ":" not in best_text:
-            avertissements.append("Le ':' séparateur n'a pas été détecté. S'il est collé à la valeur, l'OCR l'a peut-être confondu avec la première lettre (ex: 'ن'). Vérifiez la valeur.")
+            lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
+            if texte_final and texte_final[0] in lettres_suspectes:
+                avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre à point(s) suspecte. S'il était collé à la valeur, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
 
         resultats[nom_zone] = {
             'texte_auto': texte_final, 
@@ -2352,7 +2363,11 @@ def analyser_avec_paddleocr(image_path, zones_config):
         # Avertissement pour la zone 2 points si le ':' n'a pas été lu du tout par l'OCR
         avertissements = []
         if config.get('type') == 'zone_2_points' and best_text and ":" not in best_text:
-            avertissements.append("Le ':' séparateur n'a pas été détecté. S'il est collé à la valeur, l'OCR l'a peut-être confondu avec la première lettre (ex: 'ن'). Vérifiez la valeur.")
+            # On ne déclenche l'avertissement que si le premier caractère est suspect (une lettre à points comme 'ن', 'ت', 'ث', 'ب', 'ي')
+            # Cela évite de spammer l'utilisateur quand le ":" est juste ignoré par l'OCR et que tout va bien.
+            lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
+            if texte_final and texte_final[0] in lettres_suspectes:
+                avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre à point(s) suspecte. S'il était collé à la valeur, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
             
         resultats[nom_zone] = {
             'texte_auto': texte_final, 
