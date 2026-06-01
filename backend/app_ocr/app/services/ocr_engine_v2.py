@@ -1576,11 +1576,18 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             val_h_px = max(h_dynamique, h_norm * current_h)
                             
                             lang = config.get('lang', 'ara+fra')
+                            
+                            # La "bonne méthode de mise en relation" : 
+                            # Si c'est une zone_2_points, le cadre dessiné par l'utilisateur englobe généralement l'ancre ET la valeur.
+                            # Il faut donc que notre nouvelle boîte dynamique englobe aussi l'ancre !
                             if lang == 'ara':
-                                nx2 = ax1 - 5 # 5px de marge
+                                # En arabe, l'ancre est à droite. La boîte doit s'étendre vers la gauche.
+                                # On aligne le bord droit de la boîte avec le bord droit de l'ancre (ax2).
+                                nx2 = ax2 + int(anchor_h * 0.5) # Petite marge à droite proportionnelle à la police
                                 nx1 = nx2 - val_w_px
                             else:
-                                nx1 = ax2 + 5
+                                # En latin, l'ancre est à gauche. La boîte s'étend vers la droite.
+                                nx1 = ax1 - int(anchor_h * 0.5)
                                 nx2 = nx1 + val_w_px
                                 
                             ny1 = ay1 - (val_h_px - anchor_h) / 2
