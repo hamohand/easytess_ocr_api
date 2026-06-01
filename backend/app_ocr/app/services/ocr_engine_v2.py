@@ -96,6 +96,10 @@ def appliquer_filtre_caracteres(texte, char_filter):
     return texte, format_respecte
 
 
+def est_type_2points(config):
+    """Vérifie si la zone est de type '2 points' (zone_2_points OU ancre_2points)."""
+    return config.get('type') in ('zone_2_points', 'ancre_2points')
+
 # =============================================================================
 # EXTRACTION "CHAMP" — Séparation étiquette / valeur par le caractère ":"
 # =============================================================================
@@ -1524,10 +1528,10 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                 
         logger.info(f"✅ Coordonnées ajustées selon cadre de référence")
     
-        # --- NOUVEAU: Ajustement dynamique par ancre locale (Zone 2 points) ---
-        zones_locales = {k: v for k, v in zones_config.items() if v.get('anchor_text')}
-        if zones_locales and PADDLEOCR_DISPONIBLE:
-            logger.info(f"⚓ {len(zones_locales)} zone(s) avec ancre locale. Recherche de l'étiquette...")
+        # --- Méthode Ancre_2points : L'ancre localise la Zone 2 points (: + valeur) ---
+        zones_ancre2pts = {k: v for k, v in zones_config.items() if v.get('type') == 'ancre_2points' and v.get('anchor_text')}
+        if zones_ancre2pts and PADDLEOCR_DISPONIBLE:
+            logger.info(f"⚓ Ancre_2points : {len(zones_ancre2pts)} zone(s) à localiser dynamiquement.")
             try:
                 reader = get_paddleocr_reader('ara+fra')
                 result_global = reader.ocr(image_path, cls=True)
@@ -1544,7 +1548,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                     with Image.open(image_path) as current_img:
                         current_w, current_h = current_img.size
                         
-                    for nom_zone, config in zones_locales.items():
+                    for nom_zone, config in zones_ancre2pts.items():
                         anchor = config['anchor_text']
                         # Recherche floue (ratio > 80%)
                         match = process.extractOne(anchor, list(mots_dict.keys()), scorer=fuzz.ratio)
@@ -1557,39 +1561,40 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             ax2 = max([pt[0] for pt in anchor_box])
                             ay2 = max([pt[1] for pt in anchor_box])
                             
+                            anchor_h = ay2 - ay1
+                            anchor_w = ax2 - ax1
+                            
+                            # --- Dimensionnement proportionnel à l'ancre ---
+                            # Hauteur : 2x la hauteur de l'ancre (marge pour lettres hautes/basses)
+                            val_h_px = anchor_h * 2.0
+                            
+                            # Largeur : on conserve le ratio d'aspect de la boîte dessinée par l'utilisateur
                             tpl_coords = config['coords']
                             w_norm = tpl_coords[2] - tpl_coords[0]
                             h_norm = tpl_coords[3] - tpl_coords[1]
-                            
-                            anchor_h = ay2 - ay1
-                            
-                            # La taille de la valeur est souvent plus grande que l'ancre (lettres qui montent/descendent)
-                            # On se base sur la hauteur de l'ancre * 1.8 pour englober la valeur
-                            h_dynamique = anchor_h * 1.8
-                            
-                            # On conserve le ratio d'aspect de la boîte dessinée par l'utilisateur
                             ratio_boite = w_norm / h_norm if h_norm > 0 else 5
-                            w_dynamique = h_dynamique * ratio_boite
+                            val_w_px = val_h_px * ratio_boite
                             
-                            # On garde le max entre la taille proportionnelle à l'ancre et la taille absolue (au cas où)
-                            val_w_px = max(w_dynamique, w_norm * current_w)
-                            val_h_px = max(h_dynamique, h_norm * current_h)
+                            # Sécurité : ne pas descendre en dessous de la taille absolue du template
+                            val_w_px = max(val_w_px, w_norm * current_w)
+                            val_h_px = max(val_h_px, h_norm * current_h)
                             
+                            # --- Positionnement : l'ancre localise la Zone 2 points (: + valeur) ---
+                            # La zone NE contient PAS l'étiquette/ancre, seulement le ':' et la valeur.
                             lang = config.get('lang', 'ara+fra')
+                            marge_colon = int(anchor_h * 0.3)  # Marge pour attraper le ':'
                             
-                            # La "bonne méthode de mise en relation" : 
-                            # Si c'est une zone_2_points, le cadre dessiné par l'utilisateur englobe généralement l'ancre ET la valeur.
-                            # Il faut donc que notre nouvelle boîte dynamique englobe aussi l'ancre !
                             if lang == 'ara':
-                                # En arabe, l'ancre est à droite. La boîte doit s'étendre vers la gauche.
-                                # On aligne le bord droit de la boîte avec le bord droit de l'ancre (ax2).
-                                nx2 = ax2 + int(anchor_h * 0.5) # Petite marge à droite proportionnelle à la police
+                                # Arabe (RTL) : ancre à droite, valeur à gauche
+                                # Bord droit de la zone = bord gauche de l'ancre + marge pour le ':'
+                                nx2 = ax1 + marge_colon
                                 nx1 = nx2 - val_w_px
                             else:
-                                # En latin, l'ancre est à gauche. La boîte s'étend vers la droite.
-                                nx1 = ax1 - int(anchor_h * 0.5)
+                                # Latin (LTR) : ancre à gauche, valeur à droite
+                                nx1 = ax2 - marge_colon
                                 nx2 = nx1 + val_w_px
                                 
+                            # Centré verticalement sur l'ancre
                             ny1 = ay1 - (val_h_px - anchor_h) / 2
                             ny2 = ny1 + val_h_px
                             
@@ -1599,11 +1604,15 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                                 min(1, nx2 / current_w),
                                 min(1, ny2 / current_h)
                             ]
-                            logger.info(f"⚓ Zone '{nom_zone}': Ancre '{anchor}' trouvée ({matched_text} - {score:.0f}%), boîte ajustée dynamiquement.")
+                            logger.info(
+                                f"⚓ Ancre_2points '{nom_zone}' : Ancre '{anchor}' trouvée ('{matched_text}' - {score:.0f}%), "
+                                f"zone valeur = [{nx1:.0f},{ny1:.0f}]-[{nx2:.0f},{ny2:.0f}]px "
+                                f"(h_ancre={anchor_h:.0f}px, h_zone={val_h_px:.0f}px, w_zone={val_w_px:.0f}px)"
+                            )
                         else:
-                            logger.warning(f"⚓ Zone '{nom_zone}': Ancre '{anchor}' introuvable. Repli sur la coordonnée absolue.")
+                            logger.warning(f"⚓ Ancre_2points '{nom_zone}' : Ancre '{anchor}' introuvable. Repli sur coordonnées absolues.")
             except Exception as e:
-                logger.error(f"❌ Erreur lors de la recherche des ancres locales: {e}")
+                logger.error(f"❌ Erreur Ancre_2points : {e}")
                 
         # 1. Détection QR codes/codes-barres pour les zones marquées
         zones_qr = {k: v for k, v in zones_config.items() if v.get('type') == 'qrcode' or v.get('type') == 'barcode'}
@@ -2069,7 +2078,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
-        if config.get('type') == 'zone_2_points' and (not char_filter or char_filter == 'none'):
+        if est_type_2points(config) and (not char_filter or char_filter == 'none'):
             char_filter = 'strip_separators'
             
         if char_filter and char_filter != 'none' and texte:
@@ -2093,7 +2102,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
             statut = "echec"
         # Avertissement pour la zone 2 points
         avertissements = []
-        if config.get('type') == 'zone_2_points' and best_text:
+        if est_type_2points(config) and best_text:
             if ":" not in best_text:
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
                 # On ne déclenche l'avertissement que si le premier caractère est suspect
@@ -2212,7 +2221,7 @@ def analyser_avec_easyocr(image_path, zones_config):
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
-        if config.get('type') == 'zone_2_points' and (not char_filter or char_filter == 'none'):
+        if est_type_2points(config) and (not char_filter or char_filter == 'none'):
             char_filter = 'strip_separators'
             
         if char_filter and char_filter != 'none' and texte_final:
@@ -2236,7 +2245,7 @@ def analyser_avec_easyocr(image_path, zones_config):
             statut = "echec"
         # Avertissement pour la zone 2 points
         avertissements = []
-        if config.get('type') == 'zone_2_points' and best_text:
+        if est_type_2points(config) and best_text:
             if ":" not in best_text:
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
                 # On ne déclenche l'avertissement que si le premier caractère est suspect
@@ -2365,7 +2374,7 @@ def analyser_avec_paddleocr(image_path, zones_config):
         
         # POST-OCR: Appliquer le filtre de caractères si configuré
         char_filter = config.get('char_filter', 'none')
-        if config.get('type') == 'zone_2_points' and (not char_filter or char_filter == 'none'):
+        if est_type_2points(config) and (not char_filter or char_filter == 'none'):
             char_filter = 'strip_separators'
             
         if char_filter and char_filter != 'none' and texte_final:
@@ -2390,7 +2399,7 @@ def analyser_avec_paddleocr(image_path, zones_config):
             
         # Avertissement pour la zone 2 points
         avertissements = []
-        if config.get('type') == 'zone_2_points' and best_text:
+        if est_type_2points(config) and best_text:
             if ":" not in best_text:
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
                 # On ne déclenche l'avertissement que si le premier caractère est suspect

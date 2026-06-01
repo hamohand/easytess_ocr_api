@@ -492,20 +492,21 @@
                             <select [(ngModel)]="zone.type" class="sm-input" title="Type de zone">
                                 <option value="text">Texte OCR</option>
                                 <option value="zone_2_points">Zone 2 points (ex: :Valeur)</option>
+                                <option value="ancre_2points">⚓ Ancre 2 points (ancre → : → valeur)</option>
                                 <option value="champ">Champ (étiquette : valeur)</option>
                                 <option value="qrcode">QR Code</option>
                                 <option value="barcode">Code Barre</option>
                             </select>
                         </div>
 
-                        @if (zone.type === 'zone_2_points') {
+                        @if (zone.type === 'ancre_2points') {
                         <div class="config-row">
-                            <label title="Texte de l'étiquette servant de repère (ex: اللقب)">Ancre textuelle:</label>
-                            <input type="text" [(ngModel)]="zone.anchor_text" class="sm-input" placeholder="ex: اللقب">
+                            <label title="Texte de l'étiquette servant de repère spatial (ex: اللقب). L'ancre localise le ':' et la valeur.">⚓ Ancre textuelle:</label>
+                            <input type="text" [(ngModel)]="zone.anchor_text" class="sm-input" placeholder="ex: اللقب" required>
                         </div>
                         }
 
-                        @if (!zone.type || zone.type === 'text' || zone.type === 'champ' || zone.type === 'zone_2_points') {
+                        @if (!zone.type || zone.type === 'text' || zone.type === 'champ' || zone.type === 'zone_2_points' || zone.type === 'ancre_2points') {
                         <div class="config-row">
                             <label>Langue OCR:</label>
                             <select [(ngModel)]="zone.lang" class="sm-input">

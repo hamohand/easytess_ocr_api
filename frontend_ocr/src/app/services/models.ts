@@ -4,7 +4,7 @@ export interface Zone {
     id?: number;
     nom: string;
     coords: [number, number, number, number]; // [x1, y1, x2, y2]
-    type?: 'text' | 'champ' | 'zone_2_points' | 'qrcode' | 'barcode';
+    type?: 'text' | 'champ' | 'zone_2_points' | 'ancre_2points' | 'qrcode' | 'barcode';
     anchor_text?: string; // Ancre locale (ex: اللقب) pour les zones relatives
     lang?: 'fra' | 'ara' | 'ara+fra' | 'eng';  // Langue OCR pour cette zone
     preprocess?: 'auto' | 'arabic_textured' | 'latin_simple' | 'none';  // Mode prétraitement
