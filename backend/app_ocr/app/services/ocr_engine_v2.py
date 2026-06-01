@@ -19,6 +19,7 @@ except ImportError:
 apply_pillow_patch()
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def appliquer_filtre_caracteres(texte, char_filter):
@@ -1765,19 +1766,19 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                 logger.error(f"Erreur EasyOCR global: {e}")
         
         # 6. Correction avec valeurs attendues (si définies)
-        logger.warning("CORRECTION DEBUG: Debut section 6 (Correction)")
+        logger.debug("CORRECTION DEBUG: Debut section 6 (Correction)")
         for nom_zone, config in zones_config.items():
-            logger.warning(f"CORRECTION DEBUG: Checking zone {nom_zone}, has valeurs_attendues: {'valeurs_attendues' in config}")
+            logger.debug(f"CORRECTION DEBUG: Checking zone {nom_zone}, has valeurs_attendues: {'valeurs_attendues' in config}")
             if nom_zone in resultats and 'valeurs_attendues' in config:
                 valeurs = config.get('valeurs_attendues', [])
-                logger.warning(f"CORRECTION DEBUG: Zone {nom_zone}, valeurs={valeurs}")
+                logger.debug(f"CORRECTION DEBUG: Zone {nom_zone}, valeurs={valeurs}")
                 if valeurs and resultats[nom_zone].get('texte_auto'):
                     texte_original = resultats[nom_zone]['texte_auto']
-                    logger.warning(f"CORRECTION DEBUG: Calling corriger for zone {nom_zone} with texte='{texte_original}'")
+                    logger.debug(f"CORRECTION DEBUG: Calling corriger for zone {nom_zone} with texte='{texte_original}'")
                     texte_corrige, score = corriger_avec_valeurs_connues(texte_original, valeurs, force_match=True)
                     
                     if score > 0:
-                        logger.warning(f"CORRECTION DEBUG: Applying correction for {nom_zone}, score={score}")
+                        logger.debug(f"CORRECTION DEBUG: Applying correction for {nom_zone}, score={score}")
                         resultats[nom_zone]['texte_final'] = texte_corrige
                         resultats[nom_zone]['correction_appliquee'] = True
                         resultats[nom_zone]['valeur_originale'] = texte_original
@@ -1794,7 +1795,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             score
                         )
                     else:
-                        logger.warning(f"CORRECTION DEBUG: No score improvement for {nom_zone}")
+                        logger.debug(f"CORRECTION DEBUG: No score improvement for {nom_zone}")
             
         # 7. Remplissage des échecs complets
         for k in zones_config:
