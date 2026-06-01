@@ -1,7 +1,7 @@
 {
   "nom": "cni_01_2pts_ancre",
   "description": "",
-  "date_creation": "2026-06-01T04:39:55.286693",
+  "date_creation": "2026-06-01T20:00:54.092901",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_01_2pts_ancre\\reference.jpg",
   "zones": [
     {
@@ -22,8 +22,42 @@
       "type": "zone_2_points"
     },
     {
+      "anchor_text": "الاسم",
+      "char_filter": "strip_separators",
+      "coords": [
+        0.6033,
+        0.7155,
+        0.9195,
+        0.7946
+      ],
+      "expected_format": "single_line",
       "id": 1780281419337,
+      "lang": "ara",
+      "margin": 3,
       "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "zone_2_points"
+    },
+    {
+      "anchor_text": "رقم التعريف الوطني",
+      "char_filter": "strip_separators",
+      "coords": [
+        0.4242,
+        0.5639,
+        0.7955,
+        0.6271
+      ],
+      "expected_format": "single_line",
+      "id": 1780335984392,
+      "lang": "fra",
+      "margin": 3,
+      "nom": "nin",
+      "preprocess": "latin_simple",
+      "type": "zone_2_points"
+    },
+    {
+      "id": 1780336415075,
+      "nom": "dateNaissance",
       "type": "zone_2_points",
       "lang": "ara",
       "preprocess": "arabic_textured",
@@ -31,12 +65,46 @@
       "expected_format": "single_line",
       "margin": 3,
       "coords": [
-        0.6033,
-        0.7155,
-        0.9195,
-        0.7946
+        0.663,
+        0.8303,
+        0.8555,
+        0.8936
       ],
-      "anchor_text": "الاسم"
+      "anchor_text": "تاريخ الميلاد"
+    },
+    {
+      "id": 1780336431584,
+      "nom": "lieuNaissance",
+      "type": "zone_2_points",
+      "lang": "ara",
+      "preprocess": "arabic_textured",
+      "char_filter": "strip_separators",
+      "expected_format": "single_line",
+      "margin": 3,
+      "coords": [
+        0.6592,
+        0.9151,
+        0.8655,
+        0.9507
+      ],
+      "anchor_text": "مكان الميلاد"
+    },
+    {
+      "id": 1780336454268,
+      "nom": "sexe",
+      "type": "zone_2_points",
+      "lang": "ara",
+      "preprocess": "arabic_textured",
+      "char_filter": "strip_separators",
+      "expected_format": "single_word",
+      "margin": 3,
+      "coords": [
+        0.503,
+        0.8361,
+        0.578,
+        0.9092
+      ],
+      "anchor_text": "الجنس"
     }
   ],
   "cadre_reference": {
@@ -83,7 +151,7 @@
     }
   },
   "metadata": {
-    "nombre_zones": 2,
+    "nombre_zones": 6,
     "image_dimensions": {
       "width": 1010,
       "height": 640

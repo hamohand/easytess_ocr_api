@@ -1561,8 +1561,19 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             w_norm = tpl_coords[2] - tpl_coords[0]
                             h_norm = tpl_coords[3] - tpl_coords[1]
                             
-                            val_w_px = w_norm * current_w
-                            val_h_px = h_norm * current_h
+                            anchor_h = ay2 - ay1
+                            
+                            # La taille de la valeur est souvent plus grande que l'ancre (lettres qui montent/descendent)
+                            # On se base sur la hauteur de l'ancre * 1.8 pour englober la valeur
+                            h_dynamique = anchor_h * 1.8
+                            
+                            # On conserve le ratio d'aspect de la boîte dessinée par l'utilisateur
+                            ratio_boite = w_norm / h_norm if h_norm > 0 else 5
+                            w_dynamique = h_dynamique * ratio_boite
+                            
+                            # On garde le max entre la taille proportionnelle à l'ancre et la taille absolue (au cas où)
+                            val_w_px = max(w_dynamique, w_norm * current_w)
+                            val_h_px = max(h_dynamique, h_norm * current_h)
                             
                             lang = config.get('lang', 'ara+fra')
                             if lang == 'ara':
@@ -1572,7 +1583,6 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                                 nx1 = ax2 + 5
                                 nx2 = nx1 + val_w_px
                                 
-                            anchor_h = ay2 - ay1
                             ny1 = ay1 - (val_h_px - anchor_h) / 2
                             ny2 = ny1 + val_h_px
                             
