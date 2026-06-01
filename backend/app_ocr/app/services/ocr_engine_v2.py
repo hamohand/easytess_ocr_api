@@ -2077,11 +2077,14 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         # Avertissement pour la zone 2 points
         avertissements = []
         if config.get('type') == 'zone_2_points' and best_text:
-            if ":" in best_text:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
+            if ":" not in best_text:
+                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
+                # On ne déclenche l'avertissement que si le premier caractère est suspect
+                lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
+                if texte_final and texte_final[0] in lettres_suspectes:
+                    avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre suspecte. S'il était collé, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
             else:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, non détecté ou bien collé au début de la valeur (texte brut: '{best_text}')")
-                avertissements.append("Le ':' séparateur n'a pas été détecté. Il a peut-être été ignoré par l'OCR ou fusionné avec la première lettre de la valeur. Veuillez vérifier l'exactitude de la valeur lue.")
+                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
 
         resultats[nom_zone] = {
             'texte_auto': texte, 
@@ -2217,11 +2220,14 @@ def analyser_avec_easyocr(image_path, zones_config):
         # Avertissement pour la zone 2 points
         avertissements = []
         if config.get('type') == 'zone_2_points' and best_text:
-            if ":" in best_text:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
+            if ":" not in best_text:
+                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
+                # On ne déclenche l'avertissement que si le premier caractère est suspect
+                lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
+                if texte_final and texte_final[0] in lettres_suspectes:
+                    avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre suspecte. S'il était collé, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
             else:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, non détecté ou bien collé au début de la valeur (texte brut: '{best_text}')")
-                avertissements.append("Le ':' séparateur n'a pas été détecté. Il a peut-être été ignoré par l'OCR ou fusionné avec la première lettre de la valeur. Veuillez vérifier l'exactitude de la valeur lue.")
+                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
 
         resultats[nom_zone] = {
             'texte_auto': texte_final, 
@@ -2368,11 +2374,14 @@ def analyser_avec_paddleocr(image_path, zones_config):
         # Avertissement pour la zone 2 points
         avertissements = []
         if config.get('type') == 'zone_2_points' and best_text:
-            if ":" in best_text:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
+            if ":" not in best_text:
+                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
+                # On ne déclenche l'avertissement que si le premier caractère est suspect
+                lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
+                if texte_final and texte_final[0] in lettres_suspectes:
+                    avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre suspecte. S'il était collé, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
             else:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, non détecté ou bien collé au début de la valeur (texte brut: '{best_text}')")
-                avertissements.append("Le ':' séparateur n'a pas été détecté. Il a peut-être été ignoré par l'OCR ou fusionné avec la première lettre de la valeur. Veuillez vérifier l'exactitude de la valeur lue.")
+                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
             
         resultats[nom_zone] = {
             'texte_auto': texte_final, 
