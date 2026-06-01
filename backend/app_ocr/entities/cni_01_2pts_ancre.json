@@ -1,0 +1,92 @@
+{
+  "nom": "cni_01_2pts_ancre",
+  "description": "",
+  "date_creation": "2026-06-01T04:39:55.286693",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_01_2pts_ancre\\reference.jpg",
+  "zones": [
+    {
+      "anchor_text": "اللقب",
+      "char_filter": "strip_separators",
+      "coords": [
+        0.6597,
+        0.62,
+        0.9234,
+        0.6992
+      ],
+      "expected_format": "single_line",
+      "id": 1780257927893,
+      "lang": "ara",
+      "margin": 3,
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "zone_2_points"
+    },
+    {
+      "id": 1780281419337,
+      "nom": "prenom",
+      "type": "zone_2_points",
+      "lang": "ara",
+      "preprocess": "arabic_textured",
+      "char_filter": "strip_separators",
+      "expected_format": "single_line",
+      "margin": 3,
+      "coords": [
+        0.6033,
+        0.7155,
+        0.9195,
+        0.7946
+      ],
+      "anchor_text": "الاسم"
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 1010,
+      "height": 640
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ],
+      "manuel_formula": "0"
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ],
+      "manuel_formula": "largeur"
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ],
+      "manuel_formula": "0"
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ],
+      "manuel_formula": "hauteur"
+    },
+    "dimensions_absolues": {
+      "largeur": 1010,
+      "hauteur": 640,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 1010,
+      "height": 640
+    }
+  }
+}
