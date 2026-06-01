@@ -695,6 +695,7 @@ export class OcrUploadComponent implements OnDestroy {
         switch (statut) {
             case 'ok': return 'statut-ok';
             case 'corrigé': return 'statut-ok';
+            case 'warning': return 'statut-warning';
             case 'faible_confiance': return 'statut-warning';
             case 'echec': return 'statut-error';
             default: return '';

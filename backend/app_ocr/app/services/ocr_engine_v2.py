@@ -2202,14 +2202,21 @@ def analyser_avec_easyocr(image_path, zones_config):
             statut = "faible_confiance"
         else:
             statut = "echec"
+        # Avertissement pour la zone 2 points
+        avertissements = []
+        if config.get('type') == 'zone_2_points' and best_text and ":" not in best_text:
+            avertissements.append("Le ':' séparateur n'a pas été détecté. S'il est collé à la valeur, l'OCR l'a peut-être confondu avec la première lettre (ex: 'ن'). Vérifiez la valeur.")
+
         resultats[nom_zone] = {
             'texte_auto': texte_final, 
             'confiance_auto': conf_moy, 
-            'statut': statut, 
+            'statut': 'warning' if avertissements and statut == 'ok' else statut, 
             'moteur': 'easyocr',
             'coords': [x1, y1, x2, y2],
             'texte_final': texte_final,
-            'champ_ok': champ_ok
+            'champ_ok': champ_ok,
+            'texte_brut': best_text,
+            'avertissements': avertissements
         }
             
     return resultats
@@ -2342,14 +2349,21 @@ def analyser_avec_paddleocr(image_path, zones_config):
         else:
             statut = "echec"
             
+        # Avertissement pour la zone 2 points si le ':' n'a pas été lu du tout par l'OCR
+        avertissements = []
+        if config.get('type') == 'zone_2_points' and best_text and ":" not in best_text:
+            avertissements.append("Le ':' séparateur n'a pas été détecté. S'il est collé à la valeur, l'OCR l'a peut-être confondu avec la première lettre (ex: 'ن'). Vérifiez la valeur.")
+            
         resultats[nom_zone] = {
             'texte_auto': texte_final, 
             'confiance_auto': conf_moy, 
-            'statut': statut, 
+            'statut': 'warning' if avertissements and statut == 'ok' else statut, 
             'moteur': 'paddleocr',
             'coords': [x1, y1, x2, y2],
             'texte_final': texte_final,
-            'champ_ok': champ_ok
+            'champ_ok': champ_ok,
+            'texte_brut': best_text,
+            'avertissements': avertissements
         }
             
     return resultats

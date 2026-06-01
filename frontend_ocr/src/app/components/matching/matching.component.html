@@ -85,10 +85,17 @@
             @if (item.value.statut) {
                <span class="badge" 
                      [class.statut-ok]="item.value.statut === 'ok' || item.value.statut === 'corrigé'"
-                     [class.statut-warning]="item.value.statut === 'faible_confiance'"
+                     [class.statut-warning]="item.value.statut === 'faible_confiance' || item.value.statut === 'warning'"
                      [class.statut-error]="item.value.statut === 'non trouvé' || item.value.statut === 'echec'">
                  {{ item.value.statut }} ({{ ((item.value.confiance_auto || 0) * 100) | number:'1.0-0' }}%)
                </span>
+               @if (item.value.avertissements && item.value.avertissements.length > 0) {
+                 <div class="warnings-list" style="margin-top: 5px; font-size: 0.85em; color: #d35400;">
+                   @for (warn of item.value.avertissements; track $index) {
+                     <div [title]="warn">⚠️ Attention requise</div>
+                   }
+                 </div>
+               }
             }
           </td>
         </tr>
