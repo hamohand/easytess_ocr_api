@@ -112,7 +112,7 @@ def calculer_crop_valeur_2points(x1, y1, x2, y2, lang):
         tuple: (rx1, ry1, rx2, ry2) — Coordonnées du crop sans le ':'
     """
     zone_w = x2 - x1
-    trim_px = int(zone_w * 0.12)  # Exclure ~12% du côté du ':'
+    trim_px = int(zone_w * 0.15)  # Exclure ~15% du côté du ':'
     
     if lang in ('ara', 'ara+fra', 'ar'):
         # RTL: ':' est à droite → rogner le bord droit
@@ -1604,7 +1604,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             # --- Positionnement : l'ancre localise la Zone 2 points (: + valeur) ---
                             # La zone NE contient PAS l'étiquette/ancre, seulement le ':' et la valeur.
                             lang = config.get('lang', 'ara+fra')
-                            marge_colon = int(anchor_h * 0.3)  # Marge pour attraper le ':'
+                            marge_colon = 0  # Pas de marge : la zone exclut le ':' (le recrop gère la fusion)
                             
                             if lang == 'ara':
                                 # Arabe (RTL) : ancre à droite, valeur à gauche
@@ -2098,16 +2098,26 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
             rx1, ry1, rx2, ry2 = calculer_crop_valeur_2points(full_x1, full_y1, full_x2, full_y2, zone_lang)
             if rx2 > rx1 and ry2 > ry1:
                 try:
-                    zone_recrop = np.array(img.crop((rx1, ry1, rx2, ry2)).convert('L'))
+                    zone_recrop_pil = img.crop((rx1, ry1, rx2, ry2))
+                    zone_recrop_up = upscale_for_ocr(zone_recrop_pil)
+                    # Préparer les variantes de preprocessing pour le recrop
+                    if zone_lang in ('ara', 'ara+fra'):
+                        zone_recrop_iso = np.array(isolate_dark_text(zone_recrop_up, dark_threshold=100).convert('L'))
+                        recrop_variants = [zone_recrop_iso, np.array(zone_recrop_up.convert('L'))]
+                    else:
+                        recrop_variants = [np.array(zone_recrop_up.convert('L'))]
+                    
                     tess_config = f'--oem 3 --psm {best_psm}'
-                    recrop_text = pytesseract.image_to_string(zone_recrop, lang=zone_lang, config=tess_config).strip()
-                    if recrop_text:
-                        data = pytesseract.image_to_data(zone_recrop, lang=zone_lang, config=tess_config, output_type=pytesseract.Output.DICT)
-                        confs = [int(c) for c in data['conf'] if c != '-1' and str(c).isdigit()]
-                        recrop_conf = sum(confs) / len(confs) / 100 if confs else 0.0
-                        logger.info(f"🔄 [Recrop 2pts] Tesseract '{nom_zone}': ':' absent → recrop sans ':' → '{recrop_text[:30]}' (conf={recrop_conf:.0%})")
-                        texte = recrop_text
-                        confiance = recrop_conf
+                    for recrop_img in recrop_variants:
+                        recrop_text = pytesseract.image_to_string(recrop_img, lang=zone_lang, config=tess_config).strip()
+                        if recrop_text:
+                            data = pytesseract.image_to_data(recrop_img, lang=zone_lang, config=tess_config, output_type=pytesseract.Output.DICT)
+                            confs = [int(c) for c in data['conf'] if c != '-1' and str(c).isdigit()]
+                            recrop_conf = sum(confs) / len(confs) / 100 if confs else 0.0
+                            logger.info(f"🔄 [Recrop 2pts] Tesseract '{nom_zone}': ':' absent → recrop sans ':' → '{recrop_text[:30]}' (conf={recrop_conf:.0%})")
+                            texte = recrop_text
+                            confiance = recrop_conf
+                            break  # Première variante qui donne un résultat
                 except Exception as e:
                     logger.debug(f"Recrop 2pts Tesseract '{nom_zone}' erreur: {e}")
         
@@ -2271,7 +2281,13 @@ def analyser_avec_easyocr(image_path, zones_config):
             rx2, ry2 = min(img_w, rx2), min(img_h, ry2)
             if rx2 > rx1 and ry2 > ry1:
                 try:
-                    zone_recrop = np.array(img.crop((rx1, ry1, rx2, ry2)))
+                    zone_recrop_pil = img.crop((rx1, ry1, rx2, ry2))
+                    zone_recrop_up = upscale_for_ocr(zone_recrop_pil)
+                    if 'ara' in zone_lang or zone_lang == 'ar':
+                        zone_recrop_processed = isolate_dark_text(zone_recrop_up, dark_threshold=100)
+                        zone_recrop = np.array(zone_recrop_processed.convert('RGB'))
+                    else:
+                        zone_recrop = np.array(zone_recrop_up)
                     results_recrop = reader.readtext(zone_recrop)
                     if results_recrop:
                         if 'ara' in zone_lang or zone_lang == 'ar':
@@ -2453,7 +2469,13 @@ def analyser_avec_paddleocr(image_path, zones_config):
             rx2, ry2 = min(img_w, rx2), min(img_h, ry2)
             if rx2 > rx1 and ry2 > ry1:
                 try:
-                    zone_recrop = np.array(img.crop((rx1, ry1, rx2, ry2)))
+                    zone_recrop_pil = img.crop((rx1, ry1, rx2, ry2))
+                    zone_recrop_up = upscale_for_ocr(zone_recrop_pil)
+                    if 'ara' in zone_lang or zone_lang == 'ar':
+                        zone_recrop_processed = isolate_dark_text(zone_recrop_up, dark_threshold=100)
+                        zone_recrop = np.array(zone_recrop_processed.convert('RGB'))
+                    else:
+                        zone_recrop = np.array(zone_recrop_up)
                     results_recrop = reader.ocr(zone_recrop)
                     if results_recrop and results_recrop[0]:
                         lignes_r = results_recrop[0]
