@@ -2110,10 +2110,13 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         if est_type_2points(config) and best_text:
             if ":" not in best_text:
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
-                # On ne déclenche l'avertissement que si le premier caractère est suspect
+                # On est SÛR que le ':' est là → s'il est absent c'est qu'il a fusionné
                 lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
                 if texte and texte[0] in lettres_suspectes:
-                    avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre suspecte. S'il était collé, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
+                    char_fusionne = texte[0]
+                    texte = texte[1:]
+                    logger.info(f"🔧 [Anti-fusion ':'] Tesseract '{nom_zone}': retrait auto du 1er char suspect '{char_fusionne}' → '{texte}'")
+                    avertissements.append(f"Le ':' fusionné avec la 1ère lettre a été corrigé automatiquement ('{char_fusionne}' retiré). Vérifiez la valeur.")
             else:
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
 
@@ -2257,10 +2260,12 @@ def analyser_avec_easyocr(image_path, zones_config):
         if est_type_2points(config) and best_text:
             if ":" not in best_text:
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
-                # On ne déclenche l'avertissement que si le premier caractère est suspect
                 lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
                 if texte_final and texte_final[0] in lettres_suspectes:
-                    avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre suspecte. S'il était collé, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
+                    char_fusionne = texte_final[0]
+                    texte_final = texte_final[1:]
+                    logger.info(f"🔧 [Anti-fusion ':'] EasyOCR '{nom_zone}': retrait auto du 1er char suspect '{char_fusionne}' → '{texte_final}'")
+                    avertissements.append(f"Le ':' fusionné avec la 1ère lettre a été corrigé automatiquement ('{char_fusionne}' retiré). Vérifiez la valeur.")
             else:
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
 
@@ -2415,10 +2420,12 @@ def analyser_avec_paddleocr(image_path, zones_config):
         if est_type_2points(config) and best_text:
             if ":" not in best_text:
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
-                # On ne déclenche l'avertissement que si le premier caractère est suspect
                 lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
                 if texte_final and texte_final[0] in lettres_suspectes:
-                    avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre suspecte. S'il était collé, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
+                    char_fusionne = texte_final[0]
+                    texte_final = texte_final[1:]
+                    logger.info(f"🔧 [Anti-fusion ':'] PaddleOCR '{nom_zone}': retrait auto du 1er char suspect '{char_fusionne}' → '{texte_final}'")
+                    avertissements.append(f"Le ':' fusionné avec la 1ère lettre a été corrigé automatiquement ('{char_fusionne}' retiré). Vérifiez la valeur.")
             else:
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
             
