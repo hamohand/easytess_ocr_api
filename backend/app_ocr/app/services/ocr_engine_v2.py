@@ -1563,6 +1563,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             
                             anchor_h = ay2 - ay1
                             anchor_w = ax2 - ax1
+                            config['_anchor_h'] = anchor_h  # Stocker pour le limage du ':' dans les moteurs OCR
                             
                             # --- Dimensionnement proportionnel à l'ancre ---
                             # Hauteur : 2x la hauteur de l'ancre (marge pour lettres hautes/basses)
@@ -1936,6 +1937,22 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         
         x1_base, y1_base, x2_base, y2_base = get_absolute_coords(config['coords'], img_w, img_h)
         
+        # PRE-OCR: Limer le ':' pour les zones 2 points
+        # Le ':' a la même police que l'ancre → sa largeur ≈ 40% de la hauteur d'ancre
+        if est_type_2points(config):
+            _anchor_h = config.get('_anchor_h')
+            if _anchor_h is not None:
+                colon_w = int(_anchor_h * 0.4)
+            else:
+                colon_w = int((y2_base - y1_base) * 0.25)
+            # Sécurité : ne jamais limer plus de 20% de la largeur de zone
+            colon_w = min(colon_w, int((x2_base - x1_base) * 0.20))
+            if zone_lang in ('ara', 'ara+fra', 'ar'):
+                x2_base -= colon_w  # RTL : ':' est à droite
+            else:
+                x1_base += colon_w  # LTR : ':' est à gauche
+            logger.info(f"✂️ [Limage ':'] Tesseract '{nom_zone}': {colon_w}px limés (anchor_h={'%.0f' % _anchor_h if _anchor_h else 'estimé'})")
+        
         # Déterminer les marges à tester selon le mode
         margin_configuree = config.get('margin')
         if margin_configuree is None:
@@ -2162,6 +2179,21 @@ def analyser_avec_easyocr(image_path, zones_config):
         x1, y1 = max(0, x1), max(0, y1)
         x2, y2 = min(img_w, x2), min(img_h, y2)
         
+        # PRE-OCR: Limer le ':' pour les zones 2 points
+        if est_type_2points(config):
+            _anchor_h = config.get('_anchor_h')
+            if _anchor_h is not None:
+                colon_w = int(_anchor_h * 0.4)
+            else:
+                colon_w = int((y2 - y1) * 0.25)
+            colon_w = min(colon_w, int((x2 - x1) * 0.20))
+            if zone_lang in ('ara', 'ara+fra', 'ar'):
+                x2 -= colon_w
+            else:
+                x1 += colon_w
+            x1, x2 = max(0, x1), min(img_w, x2)
+            logger.info(f"✂️ [Limage ':'] EasyOCR '{nom_zone}': {colon_w}px limés")
+        
         if x2 <= x1 or y2 <= y1:
             continue
 
@@ -2308,6 +2340,21 @@ def analyser_avec_paddleocr(image_path, zones_config):
         # Sécurité
         x1, y1 = max(0, x1), max(0, y1)
         x2, y2 = min(img_w, x2), min(img_h, y2)
+        
+        # PRE-OCR: Limer le ':' pour les zones 2 points
+        if est_type_2points(config):
+            _anchor_h = config.get('_anchor_h')
+            if _anchor_h is not None:
+                colon_w = int(_anchor_h * 0.4)
+            else:
+                colon_w = int((y2 - y1) * 0.25)
+            colon_w = min(colon_w, int((x2 - x1) * 0.20))
+            if zone_lang in ('ara', 'ara+fra', 'ar'):
+                x2 -= colon_w
+            else:
+                x1 += colon_w
+            x1, x2 = max(0, x1), min(img_w, x2)
+            logger.info(f"✂️ [Limage ':'] PaddleOCR '{nom_zone}': {colon_w}px limés")
         
         if x2 <= x1 or y2 <= y1:
             continue
