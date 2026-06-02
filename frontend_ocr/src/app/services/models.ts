@@ -92,6 +92,7 @@ export interface ResultatOCR {
     texte_final?: string;
     texte_corrige_manuel?: string;
     marge_utilisee?: number;  // Marge gagnante trouvée par le mode approfondi
+    avertissements?: string[];
 }
 
 export interface AnalyseResponse {

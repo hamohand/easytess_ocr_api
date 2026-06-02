@@ -158,9 +158,9 @@
             </td>
             <td>
               <span [class]="'badge ' + getStatutClass(result.statut)">{{ result.statut }}</span>
-              @if (result.avertissements && result.avertissements.length > 0) {
+              @if (result['avertissements'] && result['avertissements'].length > 0) {
                 <div class="warnings-list" style="margin-top: 5px; font-size: 0.85em; color: #d35400;">
-                  @for (warn of result.avertissements; track $index) {
+                  @for (warn of result['avertissements']; track $index) {
                     <div [title]="warn">⚠️ Attention requise</div>
                   }
                 </div>

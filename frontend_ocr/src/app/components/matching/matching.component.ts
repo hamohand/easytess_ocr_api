@@ -10,6 +10,7 @@ export interface MatchingDataResult {
   texte_auto?: string | null;
   statut?: string | null;
   confiance_auto?: number | null;
+  avertissements?: string[] | null;
   [key: string]: any;
 }
 
