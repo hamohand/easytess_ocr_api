@@ -2076,10 +2076,14 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         if config.get('type') == 'champ' and texte:
             texte, champ_ok = extraire_valeur_champ(texte)
         
-        # POST-OCR: Appliquer le filtre de caractères si configuré
+        # POST-OCR: Étape 1 — Nettoyage automatique des séparateurs (zones 2 points)
+        if est_type_2points(config) and texte:
+            texte = texte.strip(" :.؛٫-")
+        
+        # POST-OCR: Étape 2 — Filtre utilisateur (si configuré)
         char_filter = config.get('char_filter', 'none')
-        if est_type_2points(config) and (not char_filter or char_filter == 'none'):
-            char_filter = 'strip_separators'
+        if char_filter == 'strip_separators':
+            char_filter = 'none'  # Déjà appliqué à l'étape 1 pour les zones 2 points
             
         if char_filter and char_filter != 'none' and texte:
             texte, format_respecte = appliquer_filtre_caracteres(texte, char_filter)
@@ -2219,10 +2223,14 @@ def analyser_avec_easyocr(image_path, zones_config):
         if config.get('type') == 'champ' and texte_final:
             texte_final, champ_ok = extraire_valeur_champ(texte_final)
         
-        # POST-OCR: Appliquer le filtre de caractères si configuré
+        # POST-OCR: Étape 1 — Nettoyage automatique des séparateurs (zones 2 points)
+        if est_type_2points(config) and texte_final:
+            texte_final = texte_final.strip(" :.؛٫-")
+        
+        # POST-OCR: Étape 2 — Filtre utilisateur (si configuré)
         char_filter = config.get('char_filter', 'none')
-        if est_type_2points(config) and (not char_filter or char_filter == 'none'):
-            char_filter = 'strip_separators'
+        if char_filter == 'strip_separators':
+            char_filter = 'none'
             
         if char_filter and char_filter != 'none' and texte_final:
             texte_final, format_respecte = appliquer_filtre_caracteres(texte_final, char_filter)
@@ -2372,10 +2380,14 @@ def analyser_avec_paddleocr(image_path, zones_config):
         if config.get('type') == 'champ' and texte_final:
             texte_final, champ_ok = extraire_valeur_champ(texte_final)
         
-        # POST-OCR: Appliquer le filtre de caractères si configuré
+        # POST-OCR: Étape 1 — Nettoyage automatique des séparateurs (zones 2 points)
+        if est_type_2points(config) and texte_final:
+            texte_final = texte_final.strip(" :.؛٫-")
+        
+        # POST-OCR: Étape 2 — Filtre utilisateur (si configuré)
         char_filter = config.get('char_filter', 'none')
-        if est_type_2points(config) and (not char_filter or char_filter == 'none'):
-            char_filter = 'strip_separators'
+        if char_filter == 'strip_separators':
+            char_filter = 'none'
             
         if char_filter and char_filter != 'none' and texte_final:
             texte_final, format_respecte = appliquer_filtre_caracteres(texte_final, char_filter)

@@ -1,0 +1,131 @@
+{
+  "nom": "cni_01_ancre_2points",
+  "description": "",
+  "date_creation": "2026-06-02T12:44:03.551511",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_01_ancre_2points\\reference.jpg",
+  "zones": [
+    {
+      "anchor_text": "اللقب",
+      "char_filter": "strip_separators",
+      "coords": [
+        0.6567,
+        0.6246,
+        0.918,
+        0.6957
+      ],
+      "expected_format": "single_line",
+      "id": 1780348310551,
+      "lang": "ara",
+      "margin": 4,
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "zone_2_points"
+    },
+    {
+      "anchor_text": "الجنس",
+      "char_filter": "strip_separators",
+      "coords": [
+        0.4892,
+        0.8254,
+        0.578,
+        0.9223
+      ],
+      "expected_format": "auto",
+      "id": 1780375756867,
+      "lang": "ara",
+      "margin": 3,
+      "nom": "sexe",
+      "preprocess": "arabic_textured",
+      "type": "zone_2_points",
+      "valeurs_attendues": [
+        "ذكر",
+        "أنثى",
+        "انثى"
+      ]
+    },
+    {
+      "anchor_text": "الاسم",
+      "char_filter": "strip_separators",
+      "coords": [
+        0.6555,
+        0.7214,
+        0.918,
+        0.8024
+      ],
+      "expected_format": "single_line",
+      "id": 1780396536713,
+      "lang": "ara",
+      "margin": 3,
+      "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "zone_2_points"
+    },
+    {
+      "anchor_text": "رقم التعريف الوطني",
+      "char_filter": "strip_separators",
+      "coords": [
+        0.4555,
+        0.5653,
+        0.8042,
+        0.6345
+      ],
+      "expected_format": "single_word",
+      "id": 1780396555057,
+      "lang": "fra",
+      "margin": 3,
+      "nom": "nin",
+      "preprocess": "latin_simple",
+      "type": "zone_2_points"
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 1010,
+      "height": 640
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ],
+      "manuel_formula": "0"
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ],
+      "manuel_formula": "largeur"
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ],
+      "manuel_formula": "0"
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ],
+      "manuel_formula": "hauteur"
+    },
+    "dimensions_absolues": {
+      "largeur": 1010,
+      "hauteur": 640,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 4,
+    "image_dimensions": {
+      "width": 1010,
+      "height": 640
+    }
+  }
+}

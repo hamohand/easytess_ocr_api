@@ -529,20 +529,26 @@
 
                         <div class="config-row" style="flex-wrap: wrap;">
                             <label title="Filtre les caractères parasites après OCR">Filtre caractères:</label>
-                            <input type="text" [(ngModel)]="zone.char_filter" [attr.list]="'charFiltersList-' + zone.id" class="sm-input" placeholder="Ex: none, custom:0-9.">
+                            <input type="text" [(ngModel)]="zone.char_filter" [attr.list]="'charFiltersList-' + zone.id" class="sm-input" placeholder="Ex: none, digits_only, regex:...">
                             <datalist id="charFiltersList-{{zone.id}}">
                                 <option value="none">Aucun filtre</option>
-                                <option value="strip_separators">Nettoyer ponctuation initiale</option>
                                 <option value="alpha_only">Lettres uniquement</option>
                                 <option value="digits_only">Chiffres uniquement</option>
                                 <option value="digits_and_dot">Chiffres et point (.)</option>
                                 <option value="alphanum">Lettres + Chiffres</option>
+                                <option value="strip_separators">Nettoyer ponctuation (auto si 2pts)</option>
                                 <option value="custom:?!:">Ex: custom:?!:</option>
                                 <option value="regex:\d&#123;8&#125;">Ex: regex:\d&#123;8&#125;</option>
                             </datalist>
+                            @if (zone.type === 'zone_2_points' || zone.type === 'ancre_2points') {
+                            <div style="font-size: 0.8em; color: #2196F3; width: 100%; text-align: right; margin-top: 4px;">
+                                ℹ️ <em>Le nettoyage du ':' est <strong>automatique</strong> pour les zones 2 points. Vous pouvez ajouter un filtre supplémentaire (ex: digits_only, regex:...).</em>
+                            </div>
+                            } @else {
                             <div style="font-size: 0.8em; color: #666; width: 100%; text-align: right; margin-top: 4px;">
                                 💡 <em>Tapez "custom:AB" pour ne garder que A et B, ou "regex:\d&#123;2&#125;\.\d&#123;2&#125;" pour forcer un format.</em>
                             </div>
+                            }
                         </div>
 
                         <div class="config-row">
