@@ -1942,7 +1942,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         if est_type_2points(config):
             _anchor_h = config.get('_anchor_h')
             if _anchor_h is not None:
-                colon_w = int(_anchor_h * 0.4)
+                colon_w = int(_anchor_h * 0.35)
             else:
                 colon_w = int((y2_base - y1_base) * 0.25)
             # Sécurité : ne jamais limer plus de 20% de la largeur de zone
@@ -2183,7 +2183,7 @@ def analyser_avec_easyocr(image_path, zones_config):
         if est_type_2points(config):
             _anchor_h = config.get('_anchor_h')
             if _anchor_h is not None:
-                colon_w = int(_anchor_h * 0.4)
+                colon_w = int(_anchor_h * 0.35)
             else:
                 colon_w = int((y2 - y1) * 0.25)
             colon_w = min(colon_w, int((x2 - x1) * 0.20))
@@ -2345,7 +2345,7 @@ def analyser_avec_paddleocr(image_path, zones_config):
         if est_type_2points(config):
             _anchor_h = config.get('_anchor_h')
             if _anchor_h is not None:
-                colon_w = int(_anchor_h * 0.4)
+                colon_w = int(_anchor_h * 0.35)
             else:
                 colon_w = int((y2 - y1) * 0.25)
             colon_w = min(colon_w, int((x2 - x1) * 0.20))
