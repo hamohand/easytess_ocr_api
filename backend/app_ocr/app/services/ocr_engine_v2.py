@@ -100,6 +100,28 @@ def est_type_2points(config):
     """Vérifie si la zone est de type '2 points' (zone_2_points OU ancre_2points)."""
     return config.get('type') in ('zone_2_points', 'ancre_2points')
 
+
+def calculer_crop_valeur_2points(x1, y1, x2, y2, lang):
+    """
+    Pour les zones 2 points, calcule un crop réduit qui exclut la zone du ':'.
+    Le ':' se trouve côté étiquette :
+      - RTL (arabe)  → ':' est au bord DROIT de la zone → on rogne x2
+      - LTR (latin)  → ':' est au bord GAUCHE de la zone → on rogne x1
+    
+    Returns:
+        tuple: (rx1, ry1, rx2, ry2) — Coordonnées du crop sans le ':'
+    """
+    zone_w = x2 - x1
+    trim_px = int(zone_w * 0.12)  # Exclure ~12% du côté du ':'
+    
+    if lang in ('ara', 'ara+fra', 'ar'):
+        # RTL: ':' est à droite → rogner le bord droit
+        return x1, y1, x2 - trim_px, y2
+    else:
+        # LTR: ':' est à gauche → rogner le bord gauche
+        return x1 + trim_px, y1, x2, y2
+
+
 # =============================================================================
 # EXTRACTION "CHAMP" — Séparation étiquette / valeur par le caractère ":"
 # =============================================================================
@@ -2065,6 +2087,30 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         texte = best_text
         confiance = best_real_conf
         
+        # POST-OCR: Recrop intelligent pour zones 2 points
+        # Si ':' absent du texte brut, l'OCR l'a peut-être fusionné avec la 1ère lettre.
+        # On refait l'OCR sur un crop réduit qui exclut physiquement la zone du ':'
+        if est_type_2points(config) and texte and ':' not in texte:
+            full_x1 = max(0, x1_base - best_margin)
+            full_y1 = max(0, y1_base - best_margin)
+            full_x2 = min(img_w, x2_base + best_margin)
+            full_y2 = min(img_h, y2_base + best_margin)
+            rx1, ry1, rx2, ry2 = calculer_crop_valeur_2points(full_x1, full_y1, full_x2, full_y2, zone_lang)
+            if rx2 > rx1 and ry2 > ry1:
+                try:
+                    zone_recrop = np.array(img.crop((rx1, ry1, rx2, ry2)).convert('L'))
+                    tess_config = f'--oem 3 --psm {best_psm}'
+                    recrop_text = pytesseract.image_to_string(zone_recrop, lang=zone_lang, config=tess_config).strip()
+                    if recrop_text:
+                        data = pytesseract.image_to_data(zone_recrop, lang=zone_lang, config=tess_config, output_type=pytesseract.Output.DICT)
+                        confs = [int(c) for c in data['conf'] if c != '-1' and str(c).isdigit()]
+                        recrop_conf = sum(confs) / len(confs) / 100 if confs else 0.0
+                        logger.info(f"🔄 [Recrop 2pts] Tesseract '{nom_zone}': ':' absent → recrop sans ':' → '{recrop_text[:30]}' (conf={recrop_conf:.0%})")
+                        texte = recrop_text
+                        confiance = recrop_conf
+                except Exception as e:
+                    logger.debug(f"Recrop 2pts Tesseract '{nom_zone}' erreur: {e}")
+        
         # Recalculer les coords absolues avec la marge gagnante
         x1_final = max(0, x1_base - best_margin)
         y1_final = max(0, y1_base - best_margin)
@@ -2111,7 +2157,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
                 # On ne déclenche l'avertissement que si le premier caractère est suspect
                 lettres_suspectes = ['ن', 'ت', 'ث', 'ب', 'ي', 'ش', 'ف', 'ق']
-                if texte_final and texte_final[0] in lettres_suspectes:
+                if texte and texte[0] in lettres_suspectes:
                     avertissements.append("Le ':' séparateur n'a pas été détecté et le texte commence par une lettre suspecte. S'il était collé, l'OCR l'a peut-être confondu avec ce premier caractère (ex: lu comme un 'ن'). Vérifiez la valeur.")
             else:
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
@@ -2217,6 +2263,31 @@ def analyser_avec_easyocr(image_path, zones_config):
         
         texte_final = best_text
         conf_moy = best_real_conf
+        
+        # POST-OCR: Recrop intelligent pour zones 2 points
+        if est_type_2points(config) and texte_final and ':' not in texte_final:
+            rx1, ry1, rx2, ry2 = calculer_crop_valeur_2points(x1, y1, x2, y2, zone_lang)
+            rx1, ry1 = max(0, rx1), max(0, ry1)
+            rx2, ry2 = min(img_w, rx2), min(img_h, ry2)
+            if rx2 > rx1 and ry2 > ry1:
+                try:
+                    zone_recrop = np.array(img.crop((rx1, ry1, rx2, ry2)))
+                    results_recrop = reader.readtext(zone_recrop)
+                    if results_recrop:
+                        if 'ara' in zone_lang or zone_lang == 'ar':
+                            results_recrop = sorted(results_recrop, key=lambda r: max([pt[0] for pt in r[0]]), reverse=True)
+                            textes_r = [get_display(t) for _, t, _ in results_recrop]
+                        else:
+                            textes_r = [t for _, t, _ in results_recrop]
+                        confs_r = [c for _, _, c in results_recrop]
+                        recrop_text = " ".join(textes_r)
+                        recrop_conf = sum(confs_r) / len(confs_r) if confs_r else 0.0
+                        if recrop_text:
+                            logger.info(f"🔄 [Recrop 2pts] EasyOCR '{nom_zone}': ':' absent → recrop sans ':' → '{recrop_text[:30]}' (conf={recrop_conf:.0%})")
+                            texte_final = recrop_text
+                            conf_moy = recrop_conf
+                except Exception as e:
+                    logger.debug(f"Recrop 2pts EasyOCR '{nom_zone}' erreur: {e}")
         
         # POST-OCR: Extraction "champ" (étiquette : valeur → valeur seule)
         champ_ok = False
@@ -2374,6 +2445,32 @@ def analyser_avec_paddleocr(image_path, zones_config):
         
         texte_final = best_text
         conf_moy = best_real_conf
+        
+        # POST-OCR: Recrop intelligent pour zones 2 points
+        if est_type_2points(config) and texte_final and ':' not in texte_final:
+            rx1, ry1, rx2, ry2 = calculer_crop_valeur_2points(x1, y1, x2, y2, zone_lang)
+            rx1, ry1 = max(0, rx1), max(0, ry1)
+            rx2, ry2 = min(img_w, rx2), min(img_h, ry2)
+            if rx2 > rx1 and ry2 > ry1:
+                try:
+                    zone_recrop = np.array(img.crop((rx1, ry1, rx2, ry2)))
+                    results_recrop = reader.ocr(zone_recrop)
+                    if results_recrop and results_recrop[0]:
+                        lignes_r = results_recrop[0]
+                        if 'ara' in zone_lang or zone_lang == 'ar':
+                            lignes_r = sorted(lignes_r, key=lambda r: max([pt[0] for pt in r[0]]), reverse=True)
+                            textes_r = [get_display(line[1][0]) for line in lignes_r]
+                        else:
+                            textes_r = [line[1][0] for line in lignes_r]
+                        confs_r = [line[1][1] for line in lignes_r]
+                        recrop_text = " ".join(textes_r)
+                        recrop_conf = sum(confs_r) / len(confs_r) if confs_r else 0.0
+                        if recrop_text:
+                            logger.info(f"🔄 [Recrop 2pts] PaddleOCR '{nom_zone}': ':' absent → recrop sans ':' → '{recrop_text[:30]}' (conf={recrop_conf:.0%})")
+                            texte_final = recrop_text
+                            conf_moy = recrop_conf
+                except Exception as e:
+                    logger.debug(f"Recrop 2pts PaddleOCR '{nom_zone}' erreur: {e}")
         
         # POST-OCR: Extraction "champ" (étiquette : valeur → valeur seule)
         champ_ok = False
