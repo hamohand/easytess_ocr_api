@@ -1273,12 +1273,23 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
         except:
             pass
         
-        # 0. NOUVEAU: Si un cadre de référence est défini, détecter les étiquettes et transformer les coordonnées
-        # Support des clés: haut, droite, gauche_bas (Nouveau) OU origine, largeur, hauteur (Legacy)
-        if not cadre_reference:
-            logger.warning("⚠️ DEBUG: Pas de cadre de référence fourni. Analyse en coordonnées Image (0,0).")
+        # Vérifier si le cadre a des étiquettes réelles (pas juste des valeurs par défaut vides)
+        cadre_has_labels = False
+        if cadre_reference:
+            for key in ('haut', 'droite', 'gauche', 'bas', 'origine', 'largeur', 'hauteur', 'gauche_bas'):
+                ref = cadre_reference.get(key)
+                if ref and (ref.get('labels', []) or ref.get('template_path')):
+                    cadre_has_labels = True
+                    break
         
-        if cadre_reference and (cadre_reference.get('haut') or cadre_reference.get('origine')):
+        if cadre_reference and not cadre_has_labels:
+            logger.info("📐 Cadre de référence sans étiquettes → ignoré (utilisation des ancres de zone uniquement)")
+            cadre_reference = None
+        
+        if not cadre_reference:
+            logger.info("ℹ️ Pas de cadre de référence. Analyse en coordonnées image directes.")
+        
+        if cadre_reference and cadre_has_labels:
             logger.info(f"📐 Détection du cadre de référence (3 étiquettes)...")
             
             # Convertir format cadre_reference vers format ancres pour détection
