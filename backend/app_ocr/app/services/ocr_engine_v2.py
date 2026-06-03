@@ -2164,7 +2164,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
             statut = "echec"
         # Avertissement pour la zone 2 points
         avertissements = []
-        if est_type_2points(config) and best_text:
+        if config.get('type') == 'zone_2_points' and best_text:
             if not any(c in best_text for c in ':;،؛：∶'):
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
                 avertissements.append("Le ':' séparateur n'a pas été détecté. Il a pu être ignoré, fusionné avec une lettre adjacente, ou tronqué. Vérifiez la valeur.")
@@ -2308,7 +2308,7 @@ def analyser_avec_easyocr(image_path, zones_config):
             statut = "echec"
         # Avertissement pour la zone 2 points
         avertissements = []
-        if est_type_2points(config) and best_text:
+        if config.get('type') == 'zone_2_points' and best_text:
             if not any(c in best_text for c in ':;،؛：∶'):
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
                 avertissements.append("Le ':' séparateur n'a pas été détecté. Il a pu être ignoré, fusionné avec une lettre adjacente, ou tronqué. Vérifiez la valeur.")
@@ -2463,7 +2463,7 @@ def analyser_avec_paddleocr(image_path, zones_config):
             
         # Avertissement pour la zone 2 points
         avertissements = []
-        if est_type_2points(config) and best_text:
+        if config.get('type') == 'zone_2_points' and best_text:
             if not any(c in best_text for c in ':;،؛：∶'):
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
                 avertissements.append("Le ':' séparateur n'a pas été détecté. Il a pu être ignoré, fusionné avec une lettre adjacente, ou tronqué. Vérifiez la valeur.")
