@@ -2079,7 +2079,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         
         # POST-OCR: Étape 1 — Nettoyage automatique des séparateurs (zones 2 points)
         if est_type_2points(config) and texte:
-            texte = texte.strip(" :.؛٫-")
+            texte = texte.strip(" :.؛٫;،：∶-")
         
         # POST-OCR: Étape 2 — Filtre utilisateur (si configuré)
         char_filter = config.get('char_filter', 'none')
@@ -2108,7 +2108,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
         # Avertissement pour la zone 2 points
         avertissements = []
         if est_type_2points(config) and best_text:
-            if ":" not in best_text:
+            if not any(c in best_text for c in ':;،؛：∶'):
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
                 avertissements.append("Le ':' séparateur n'a pas été détecté. Il a pu être ignoré, fusionné avec une lettre adjacente, ou tronqué. Vérifiez la valeur.")
             else:
@@ -2223,7 +2223,7 @@ def analyser_avec_easyocr(image_path, zones_config):
         
         # POST-OCR: Étape 1 — Nettoyage automatique des séparateurs (zones 2 points)
         if est_type_2points(config) and texte_final:
-            texte_final = texte_final.strip(" :.؛٫-")
+            texte_final = texte_final.strip(" :.؛٫;،：∶-")
         
         # POST-OCR: Étape 2 — Filtre utilisateur (si configuré)
         char_filter = config.get('char_filter', 'none')
@@ -2252,7 +2252,7 @@ def analyser_avec_easyocr(image_path, zones_config):
         # Avertissement pour la zone 2 points
         avertissements = []
         if est_type_2points(config) and best_text:
-            if ":" not in best_text:
+            if not any(c in best_text for c in ':;،؛：∶'):
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
                 avertissements.append("Le ':' séparateur n'a pas été détecté. Il a pu être ignoré, fusionné avec une lettre adjacente, ou tronqué. Vérifiez la valeur.")
             else:
@@ -2377,7 +2377,7 @@ def analyser_avec_paddleocr(image_path, zones_config):
         
         # POST-OCR: Étape 1 — Nettoyage automatique des séparateurs (zones 2 points)
         if est_type_2points(config) and texte_final:
-            texte_final = texte_final.strip(" :.؛٫-")
+            texte_final = texte_final.strip(" :.؛٫;،：∶-")
         
         # POST-OCR: Étape 2 — Filtre utilisateur (si configuré)
         char_filter = config.get('char_filter', 'none')
@@ -2407,7 +2407,7 @@ def analyser_avec_paddleocr(image_path, zones_config):
         # Avertissement pour la zone 2 points
         avertissements = []
         if est_type_2points(config) and best_text:
-            if ":" not in best_text:
+            if not any(c in best_text for c in ':;،؛：∶'):
                 logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
                 avertissements.append("Le ':' séparateur n'a pas été détecté. Il a pu être ignoré, fusionné avec une lettre adjacente, ou tronqué. Vérifiez la valeur.")
             else:
