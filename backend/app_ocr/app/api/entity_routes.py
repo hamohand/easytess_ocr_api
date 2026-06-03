@@ -404,7 +404,7 @@ def sauvegarder_entite():
 
     try:
         # --- Pré-calcul des ancres de référence (A0) pour les zones avec anchor_text ---
-        zones_avec_ancre = [z for z in zones if z.get('anchor_text') and z.get('type') in ('ancre_2points', 'ancre')]
+        zones_avec_ancre = [z for z in zones if z.get('anchor_text') and z.get('type') in ('ancre', 'ancre_2points')]
         if zones_avec_ancre and image_path and os.path.exists(image_path):
             try:
                 from app.services.ocr_engine_v2 import get_paddleocr_reader, PADDLEOCR_DISPONIBLE

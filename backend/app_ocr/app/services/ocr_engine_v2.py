@@ -97,8 +97,8 @@ def appliquer_filtre_caracteres(texte, char_filter):
 
 
 def est_type_2points(config):
-    """Vérifie si la zone est de type '2 points' (zone_2_points OU ancre_2points)."""
-    return config.get('type') in ('zone_2_points', 'ancre_2points')
+    """Vérifie si la zone est de type '2 points' (zone_2_points)."""
+    return config.get('type') == 'zone_2_points'
 
 # =============================================================================
 # EXTRACTION "CHAMP" — Séparation étiquette / valeur par le caractère ":"
@@ -1528,13 +1528,11 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                 
         logger.info(f"✅ Coordonnées ajustées selon cadre de référence")
     
-        # --- Méthode Ancre : Localisation dynamique par ancre (ancre_2points + ancre) ---
-        zones_ancre2pts = {k: v for k, v in zones_config.items() if v.get('type') == 'ancre_2points' and v.get('anchor_text')}
-        zones_ancre_simple = {k: v for k, v in zones_config.items() if v.get('type') == 'ancre' and v.get('anchor_text')}
-        zones_avec_ancre = {**zones_ancre2pts, **zones_ancre_simple}
+        # --- Méthode Ancre : Localisation dynamique par ancre ---
+        zones_avec_ancre = {k: v for k, v in zones_config.items() if v.get('type') in ('ancre', 'ancre_2points') and v.get('anchor_text')}
         
         if zones_avec_ancre and PADDLEOCR_DISPONIBLE:
-            logger.info(f"⚓ Ancres : {len(zones_ancre2pts)} ancre_2points + {len(zones_ancre_simple)} ancre simple à localiser.")
+            logger.info(f"⚓ Ancres : {len(zones_avec_ancre)} zone(s) à localiser.")
             try:
                 reader = get_paddleocr_reader('ara+fra')
                 result_global = reader.ocr(image_path, cls=True)
@@ -1614,22 +1612,12 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                                 val_w_px = max(val_w_px, w_norm * current_w)
                                 val_h_px = max(val_h_px, h_norm * current_h)
                                 
-                                zone_type = config.get('type', 'ancre')
-                                
-                                if zone_type == 'ancre_2points':
-                                    # Positionnement latéral (existant)
+                                # Déterminer la direction (rétrocompat ancre_2points)
+                                direction = config.get('anchor_direction')
+                                if not direction:
+                                    # ancre_2points legacy : direction selon la langue
                                     lang = config.get('lang', 'ara+fra')
-                                    if lang == 'ara':
-                                        nx2 = ax1
-                                        nx1 = nx2 - val_w_px
-                                    else:
-                                        nx1 = ax2
-                                        nx2 = nx1 + val_w_px
-                                    ny1 = ay1 - (val_h_px - a_h) / 2
-                                    ny2 = ny1 + val_h_px
-                                else:
-                                    # Positionnement directionnel (ancre simple)
-                                    direction = config.get('anchor_direction', 'dessus')
+                                    direction = 'gauche' if lang in ('ara', 'ara+fra') else 'droite'
                                     if direction == 'dessus':
                                         ny2 = ay1
                                         ny1 = ny2 - val_h_px
@@ -1653,8 +1641,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                                     else:
                                         logger.warning(f"⚓ Ancre '{nom_zone}' : direction '{direction}' inconnue. Repli sur coordonnées absolues.")
                                         continue
-                                
-                                methode = "fallback (direction)"
+                            methode = "fallback (direction)"
                             
                             config['coords'] = [
                                 max(0, nx1 / current_w),
@@ -1662,9 +1649,8 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                                 min(1, nx2 / current_w),
                                 min(1, ny2 / current_h)
                             ]
-                            icon = "⚓" if config.get('type') == 'ancre_2points' else "📌"
                             logger.info(
-                                f"{icon} '{nom_zone}' : Ancre '{anchor}' trouvée ('{matched_text}' - {score:.0f}%), "
+                                f"⚓ '{nom_zone}' : Ancre '{anchor}' trouvée ('{matched_text}' - {score:.0f}%), "
                                 f"méthode={methode}, zone=[{nx1:.0f},{ny1:.0f}]-[{nx2:.0f},{ny2:.0f}]px"
                             )
                         else:
