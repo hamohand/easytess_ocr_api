@@ -1528,10 +1528,13 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                 
         logger.info(f"✅ Coordonnées ajustées selon cadre de référence")
     
-        # --- Méthode Ancre_2points : L'ancre localise la Zone 2 points (: + valeur) ---
+        # --- Méthode Ancre : Localisation dynamique par ancre (ancre_2points + ancre) ---
         zones_ancre2pts = {k: v for k, v in zones_config.items() if v.get('type') == 'ancre_2points' and v.get('anchor_text')}
-        if zones_ancre2pts and PADDLEOCR_DISPONIBLE:
-            logger.info(f"⚓ Ancre_2points : {len(zones_ancre2pts)} zone(s) à localiser dynamiquement.")
+        zones_ancre_simple = {k: v for k, v in zones_config.items() if v.get('type') == 'ancre' and v.get('anchor_text')}
+        zones_avec_ancre = {**zones_ancre2pts, **zones_ancre_simple}
+        
+        if zones_avec_ancre and PADDLEOCR_DISPONIBLE:
+            logger.info(f"⚓ Ancres : {len(zones_ancre2pts)} ancre_2points + {len(zones_ancre_simple)} ancre simple à localiser.")
             try:
                 reader = get_paddleocr_reader('ara+fra')
                 result_global = reader.ocr(image_path, cls=True)
@@ -1547,10 +1550,10 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                     
                     with Image.open(image_path) as current_img:
                         current_w, current_h = current_img.size
-                        
+                    
+                    # --- Traitement ancre_2points (existant) ---
                     for nom_zone, config in zones_ancre2pts.items():
                         anchor = config['anchor_text']
-                        # Recherche floue (ratio > 80%)
                         match = process.extractOne(anchor, list(mots_dict.keys()), scorer=fuzz.ratio)
                         if match and match[1] >= 80:
                             matched_text = match[0]
@@ -1563,39 +1566,28 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             
                             anchor_h = ay2 - ay1
                             anchor_w = ax2 - ax1
-                            config['_anchor_h'] = anchor_h  # Stocker pour le limage du ':' dans les moteurs OCR
+                            config['_anchor_h'] = anchor_h
                             
-                            # --- Dimensionnement proportionnel à l'ancre ---
-                            # Hauteur : 2x la hauteur de l'ancre (marge pour lettres hautes/basses)
                             val_h_px = anchor_h * 2.0
-                            
-                            # Largeur : on conserve le ratio d'aspect de la boîte dessinée par l'utilisateur
                             tpl_coords = config['coords']
                             w_norm = tpl_coords[2] - tpl_coords[0]
                             h_norm = tpl_coords[3] - tpl_coords[1]
                             ratio_boite = w_norm / h_norm if h_norm > 0 else 5
                             val_w_px = val_h_px * ratio_boite
                             
-                            # Sécurité : ne pas descendre en dessous de la taille absolue du template
                             val_w_px = max(val_w_px, w_norm * current_w)
                             val_h_px = max(val_h_px, h_norm * current_h)
                             
-                            # --- Positionnement : l'ancre localise la Zone 2 points (: + valeur) ---
-                            # La zone NE contient PAS l'étiquette/ancre, seulement le ':' et la valeur.
                             lang = config.get('lang', 'ara+fra')
-                            marge_colon = 0  # Zone s'arrête au bord de l'ancre (le ':' reste à l'extérieur)
+                            marge_colon = 0
                             
                             if lang == 'ara':
-                                # Arabe (RTL) : ancre à droite, valeur à gauche
-                                # Bord droit de la zone = bord gauche de l'ancre + marge pour le ':'
                                 nx2 = ax1 + marge_colon
                                 nx1 = nx2 - val_w_px
                             else:
-                                # Latin (LTR) : ancre à gauche, valeur à droite
                                 nx1 = ax2 - marge_colon
                                 nx2 = nx1 + val_w_px
                                 
-                            # Centré verticalement sur l'ancre
                             ny1 = ay1 - (val_h_px - anchor_h) / 2
                             ny2 = ny1 + val_h_px
                             
@@ -1612,8 +1604,80 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             )
                         else:
                             logger.warning(f"⚓ Ancre_2points '{nom_zone}' : Ancre '{anchor}' introuvable. Repli sur coordonnées absolues.")
+                    
+                    # --- Traitement ancre simple (nouveau) ---
+                    for nom_zone, config in zones_ancre_simple.items():
+                        anchor = config['anchor_text']
+                        match = process.extractOne(anchor, list(mots_dict.keys()), scorer=fuzz.ratio)
+                        if match and match[1] >= 80:
+                            matched_text = match[0]
+                            score = match[1]
+                            anchor_box = mots_dict[matched_text]
+                            ax1 = min([pt[0] for pt in anchor_box])
+                            ay1 = min([pt[1] for pt in anchor_box])
+                            ax2 = max([pt[0] for pt in anchor_box])
+                            ay2 = max([pt[1] for pt in anchor_box])
+                            
+                            anchor_h = ay2 - ay1
+                            anchor_w = ax2 - ax1
+                            anchor_cx = (ax1 + ax2) / 2
+                            anchor_cy = (ay1 + ay2) / 2
+                            
+                            # Dimensionnement : proportionnel à l'ancre, avec ratio de la boîte template
+                            val_h_px = anchor_h * 2.0
+                            tpl_coords = config['coords']
+                            w_norm = tpl_coords[2] - tpl_coords[0]
+                            h_norm = tpl_coords[3] - tpl_coords[1]
+                            ratio_boite = w_norm / h_norm if h_norm > 0 else 5
+                            val_w_px = val_h_px * ratio_boite
+                            
+                            val_w_px = max(val_w_px, w_norm * current_w)
+                            val_h_px = max(val_h_px, h_norm * current_h)
+                            
+                            direction = config.get('anchor_direction', 'dessus')
+                            
+                            if direction == 'dessus':
+                                # Valeur AU-DESSUS de l'ancre
+                                ny2 = ay1  # Bas de la zone = haut de l'ancre
+                                ny1 = ny2 - val_h_px
+                                nx1 = anchor_cx - val_w_px / 2
+                                nx2 = anchor_cx + val_w_px / 2
+                            elif direction == 'dessous':
+                                # Valeur EN-DESSOUS de l'ancre
+                                ny1 = ay2  # Haut de la zone = bas de l'ancre
+                                ny2 = ny1 + val_h_px
+                                nx1 = anchor_cx - val_w_px / 2
+                                nx2 = anchor_cx + val_w_px / 2
+                            elif direction == 'gauche':
+                                # Valeur à GAUCHE de l'ancre
+                                nx2 = ax1
+                                nx1 = nx2 - val_w_px
+                                ny1 = ay1 - (val_h_px - anchor_h) / 2
+                                ny2 = ny1 + val_h_px
+                            elif direction == 'droite':
+                                # Valeur à DROITE de l'ancre
+                                nx1 = ax2
+                                nx2 = nx1 + val_w_px
+                                ny1 = ay1 - (val_h_px - anchor_h) / 2
+                                ny2 = ny1 + val_h_px
+                            else:
+                                logger.warning(f"⚓ Ancre '{nom_zone}' : direction inconnue '{direction}'. Repli sur coordonnées absolues.")
+                                continue
+                            
+                            config['coords'] = [
+                                max(0, nx1 / current_w),
+                                max(0, ny1 / current_h),
+                                min(1, nx2 / current_w),
+                                min(1, ny2 / current_h)
+                            ]
+                            logger.info(
+                                f"📌 Ancre '{nom_zone}' : Ancre '{anchor}' trouvée ('{matched_text}' - {score:.0f}%), "
+                                f"direction={direction}, zone = [{nx1:.0f},{ny1:.0f}]-[{nx2:.0f},{ny2:.0f}]px"
+                            )
+                        else:
+                            logger.warning(f"📌 Ancre '{nom_zone}' : Ancre '{anchor}' introuvable. Repli sur coordonnées absolues.")
             except Exception as e:
-                logger.error(f"❌ Erreur Ancre_2points : {e}")
+                logger.error(f"❌ Erreur Ancres : {e}")
                 
         # 1. Détection QR codes/codes-barres pour les zones marquées
         zones_qr = {k: v for k, v in zones_config.items() if v.get('type') == 'qrcode' or v.get('type') == 'barcode'}
