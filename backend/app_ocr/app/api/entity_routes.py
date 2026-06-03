@@ -403,6 +403,52 @@ def sauvegarder_entite():
                     current_app.logger.info(f"✅ Template {anchor_type} sauvegardé: {template_path}")
 
     try:
+        # --- Pré-calcul des ancres de référence (A0) pour les zones avec anchor_text ---
+        zones_avec_ancre = [z for z in zones if z.get('anchor_text') and z.get('type') in ('ancre_2points', 'ancre')]
+        if zones_avec_ancre and image_path and os.path.exists(image_path):
+            try:
+                from app.services.ocr_engine_v2 import get_paddleocr_reader, PADDLEOCR_DISPONIBLE
+                if PADDLEOCR_DISPONIBLE:
+                    reader = get_paddleocr_reader('ara+fra')
+                    result_ref = reader.ocr(image_path, cls=True)
+                    from rapidfuzz import process, fuzz
+                    
+                    if result_ref and result_ref[0]:
+                        with Image.open(image_path) as img_ref:
+                            w0, h0 = img_ref.size
+                        
+                        mots_ref = {}
+                        for res in result_ref[0]:
+                            box = res[0]
+                            text = res[1][0]
+                            mots_ref[text] = box
+                        
+                        for zone in zones_avec_ancre:
+                            anchor = zone['anchor_text']
+                            match = process.extractOne(anchor, list(mots_ref.keys()), scorer=fuzz.ratio)
+                            if match and match[1] >= 80:
+                                anchor_box = mots_ref[match[0]]
+                                ax1 = min(pt[0] for pt in anchor_box)
+                                ay1 = min(pt[1] for pt in anchor_box)
+                                ax2 = max(pt[0] for pt in anchor_box)
+                                ay2 = max(pt[1] for pt in anchor_box)
+                                
+                                zone['_anchor_ref'] = {
+                                    'cx': ((ax1 + ax2) / 2) / w0,
+                                    'cy': ((ay1 + ay2) / 2) / h0,
+                                    'h': (ay2 - ay1) / h0,
+                                    'w': (ax2 - ax1) / w0,
+                                    'matched': match[0],
+                                    'score': match[1],
+                                    'img_w': w0,
+                                    'img_h': h0
+                                }
+                                current_app.logger.info(f"⚓ Ancre ref '{anchor}' trouvée → _anchor_ref stocké (cx={zone['_anchor_ref']['cx']:.3f}, cy={zone['_anchor_ref']['cy']:.3f}, h={zone['_anchor_ref']['h']:.4f})")
+                            else:
+                                current_app.logger.warning(f"⚠️ Ancre ref '{anchor}' introuvable dans l'image de référence")
+            except Exception as e:
+                current_app.logger.error(f"❌ Erreur pré-calcul ancres de référence: {e}")
+
         get_manager().sauvegarder_entite(nom, zones, image_path=image_path, description=description, cadre_reference=cadre_reference)
         session.pop('temp_zones', None)
         session.pop('temp_image_path', None)

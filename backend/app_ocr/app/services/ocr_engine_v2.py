@@ -1551,8 +1551,8 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                     with Image.open(image_path) as current_img:
                         current_w, current_h = current_img.size
                     
-                    # --- Traitement ancre_2points (existant) ---
-                    for nom_zone, config in zones_ancre2pts.items():
+                    # --- Traitement unifié : ancre_2points + ancre simple ---
+                    for nom_zone, config in zones_avec_ancre.items():
                         anchor = config['anchor_text']
                         match = process.extractOne(anchor, list(mots_dict.keys()), scorer=fuzz.ratio)
                         if match and match[1] >= 80:
@@ -1564,105 +1564,97 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             ax2 = max([pt[0] for pt in anchor_box])
                             ay2 = max([pt[1] for pt in anchor_box])
                             
-                            anchor_h = ay2 - ay1
-                            anchor_w = ax2 - ax1
-                            config['_anchor_h'] = anchor_h
+                            a_h = ay2 - ay1   # hauteur ancre IC (pixels)
+                            a_w = ax2 - ax1
+                            a_cx = (ax1 + ax2) / 2
+                            a_cy = (ay1 + ay2) / 2
+                            config['_anchor_h'] = a_h
                             
-                            val_h_px = anchor_h * 2.0
-                            tpl_coords = config['coords']
-                            w_norm = tpl_coords[2] - tpl_coords[0]
-                            h_norm = tpl_coords[3] - tpl_coords[1]
-                            ratio_boite = w_norm / h_norm if h_norm > 0 else 5
-                            val_w_px = val_h_px * ratio_boite
+                            tpl_coords = config['coords']  # Z0 normalisé
+                            anchor_ref = config.get('_anchor_ref')
                             
-                            val_w_px = max(val_w_px, w_norm * current_w)
-                            val_h_px = max(val_h_px, h_norm * current_h)
-                            
-                            lang = config.get('lang', 'ara+fra')
-                            marge_colon = 0
-                            
-                            if lang == 'ara':
-                                nx2 = ax1 + marge_colon
-                                nx1 = nx2 - val_w_px
-                            else:
-                                nx1 = ax2 - marge_colon
-                                nx2 = nx1 + val_w_px
+                            if anchor_ref and anchor_ref.get('h', 0) > 0:
+                                # === MÉTHODE EXACTE : Z = A + (Z0 - A0) × s ===
+                                w0 = anchor_ref['img_w']
+                                h0 = anchor_ref['img_h']
                                 
-                            ny1 = ay1 - (val_h_px - anchor_h) / 2
-                            ny2 = ny1 + val_h_px
-                            
-                            config['coords'] = [
-                                max(0, nx1 / current_w),
-                                max(0, ny1 / current_h),
-                                min(1, nx2 / current_w),
-                                min(1, ny2 / current_h)
-                            ]
-                            logger.info(
-                                f"⚓ Ancre_2points '{nom_zone}' : Ancre '{anchor}' trouvée ('{matched_text}' - {score:.0f}%), "
-                                f"zone valeur = [{nx1:.0f},{ny1:.0f}]-[{nx2:.0f},{ny2:.0f}]px "
-                                f"(h_ancre={anchor_h:.0f}px, h_zone={val_h_px:.0f}px, w_zone={val_w_px:.0f}px)"
-                            )
-                        else:
-                            logger.warning(f"⚓ Ancre_2points '{nom_zone}' : Ancre '{anchor}' introuvable. Repli sur coordonnées absolues.")
-                    
-                    # --- Traitement ancre simple (nouveau) ---
-                    for nom_zone, config in zones_ancre_simple.items():
-                        anchor = config['anchor_text']
-                        match = process.extractOne(anchor, list(mots_dict.keys()), scorer=fuzz.ratio)
-                        if match and match[1] >= 80:
-                            matched_text = match[0]
-                            score = match[1]
-                            anchor_box = mots_dict[matched_text]
-                            ax1 = min([pt[0] for pt in anchor_box])
-                            ay1 = min([pt[1] for pt in anchor_box])
-                            ax2 = max([pt[0] for pt in anchor_box])
-                            ay2 = max([pt[1] for pt in anchor_box])
-                            
-                            anchor_h = ay2 - ay1
-                            anchor_w = ax2 - ax1
-                            anchor_cx = (ax1 + ax2) / 2
-                            anchor_cy = (ay1 + ay2) / 2
-                            
-                            # Dimensionnement : proportionnel à l'ancre, avec ratio de la boîte template
-                            val_h_px = anchor_h * 2.0
-                            tpl_coords = config['coords']
-                            w_norm = tpl_coords[2] - tpl_coords[0]
-                            h_norm = tpl_coords[3] - tpl_coords[1]
-                            ratio_boite = w_norm / h_norm if h_norm > 0 else 5
-                            val_w_px = val_h_px * ratio_boite
-                            
-                            val_w_px = max(val_w_px, w_norm * current_w)
-                            val_h_px = max(val_h_px, h_norm * current_h)
-                            
-                            direction = config.get('anchor_direction', 'dessus')
-                            
-                            if direction == 'dessus':
-                                # Valeur AU-DESSUS de l'ancre
-                                ny2 = ay1  # Bas de la zone = haut de l'ancre
-                                ny1 = ny2 - val_h_px
-                                nx1 = anchor_cx - val_w_px / 2
-                                nx2 = anchor_cx + val_w_px / 2
-                            elif direction == 'dessous':
-                                # Valeur EN-DESSOUS de l'ancre
-                                ny1 = ay2  # Haut de la zone = bas de l'ancre
-                                ny2 = ny1 + val_h_px
-                                nx1 = anchor_cx - val_w_px / 2
-                                nx2 = anchor_cx + val_w_px / 2
-                            elif direction == 'gauche':
-                                # Valeur à GAUCHE de l'ancre
-                                nx2 = ax1
-                                nx1 = nx2 - val_w_px
-                                ny1 = ay1 - (val_h_px - anchor_h) / 2
-                                ny2 = ny1 + val_h_px
-                            elif direction == 'droite':
-                                # Valeur à DROITE de l'ancre
-                                nx1 = ax2
-                                nx2 = nx1 + val_w_px
-                                ny1 = ay1 - (val_h_px - anchor_h) / 2
-                                ny2 = ny1 + val_h_px
+                                # A0 en pixels de IR
+                                a0_cx = anchor_ref['cx'] * w0
+                                a0_cy = anchor_ref['cy'] * h0
+                                a0_h = anchor_ref['h'] * h0
+                                
+                                # Z0 en pixels de IR
+                                z0_cx = (tpl_coords[0] + tpl_coords[2]) / 2 * w0
+                                z0_cy = (tpl_coords[1] + tpl_coords[3]) / 2 * h0
+                                z0_w = (tpl_coords[2] - tpl_coords[0]) * w0
+                                z0_h = (tpl_coords[3] - tpl_coords[1]) * h0
+                                
+                                # Facteur d'échelle
+                                s = a_h / a0_h
+                                
+                                # Offset en "unités d'ancre" puis application
+                                z_cx = a_cx + (z0_cx - a0_cx) / a0_h * a_h
+                                z_cy = a_cy + (z0_cy - a0_cy) / a0_h * a_h
+                                z_w = z0_w * s
+                                z_h = z0_h * s
+                                
+                                nx1 = z_cx - z_w / 2
+                                ny1 = z_cy - z_h / 2
+                                nx2 = z_cx + z_w / 2
+                                ny2 = z_cy + z_h / 2
+                                
+                                methode = f"exacte (s={s:.2f})"
                             else:
-                                logger.warning(f"⚓ Ancre '{nom_zone}' : direction inconnue '{direction}'. Repli sur coordonnées absolues.")
-                                continue
+                                # === FALLBACK : positionnement par direction (pas de _anchor_ref) ===
+                                val_h_px = a_h * 2.0
+                                w_norm = tpl_coords[2] - tpl_coords[0]
+                                h_norm = tpl_coords[3] - tpl_coords[1]
+                                ratio_boite = w_norm / h_norm if h_norm > 0 else 5
+                                val_w_px = val_h_px * ratio_boite
+                                val_w_px = max(val_w_px, w_norm * current_w)
+                                val_h_px = max(val_h_px, h_norm * current_h)
+                                
+                                zone_type = config.get('type', 'ancre')
+                                
+                                if zone_type == 'ancre_2points':
+                                    # Positionnement latéral (existant)
+                                    lang = config.get('lang', 'ara+fra')
+                                    if lang == 'ara':
+                                        nx2 = ax1
+                                        nx1 = nx2 - val_w_px
+                                    else:
+                                        nx1 = ax2
+                                        nx2 = nx1 + val_w_px
+                                    ny1 = ay1 - (val_h_px - a_h) / 2
+                                    ny2 = ny1 + val_h_px
+                                else:
+                                    # Positionnement directionnel (ancre simple)
+                                    direction = config.get('anchor_direction', 'dessus')
+                                    if direction == 'dessus':
+                                        ny2 = ay1
+                                        ny1 = ny2 - val_h_px
+                                        nx1 = a_cx - val_w_px / 2
+                                        nx2 = a_cx + val_w_px / 2
+                                    elif direction == 'dessous':
+                                        ny1 = ay2
+                                        ny2 = ny1 + val_h_px
+                                        nx1 = a_cx - val_w_px / 2
+                                        nx2 = a_cx + val_w_px / 2
+                                    elif direction == 'gauche':
+                                        nx2 = ax1
+                                        nx1 = nx2 - val_w_px
+                                        ny1 = ay1 - (val_h_px - a_h) / 2
+                                        ny2 = ny1 + val_h_px
+                                    elif direction == 'droite':
+                                        nx1 = ax2
+                                        nx2 = nx1 + val_w_px
+                                        ny1 = ay1 - (val_h_px - a_h) / 2
+                                        ny2 = ny1 + val_h_px
+                                    else:
+                                        logger.warning(f"⚓ Ancre '{nom_zone}' : direction '{direction}' inconnue. Repli sur coordonnées absolues.")
+                                        continue
+                                
+                                methode = "fallback (direction)"
                             
                             config['coords'] = [
                                 max(0, nx1 / current_w),
@@ -1670,12 +1662,13 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                                 min(1, nx2 / current_w),
                                 min(1, ny2 / current_h)
                             ]
+                            icon = "⚓" if config.get('type') == 'ancre_2points' else "📌"
                             logger.info(
-                                f"📌 Ancre '{nom_zone}' : Ancre '{anchor}' trouvée ('{matched_text}' - {score:.0f}%), "
-                                f"direction={direction}, zone = [{nx1:.0f},{ny1:.0f}]-[{nx2:.0f},{ny2:.0f}]px"
+                                f"{icon} '{nom_zone}' : Ancre '{anchor}' trouvée ('{matched_text}' - {score:.0f}%), "
+                                f"méthode={methode}, zone=[{nx1:.0f},{ny1:.0f}]-[{nx2:.0f},{ny2:.0f}]px"
                             )
                         else:
-                            logger.warning(f"📌 Ancre '{nom_zone}' : Ancre '{anchor}' introuvable. Repli sur coordonnées absolues.")
+                            logger.warning(f"⚓ '{nom_zone}' : Ancre '{anchor}' introuvable. Repli sur coordonnées absolues.")
             except Exception as e:
                 logger.error(f"❌ Erreur Ancres : {e}")
                 
