@@ -2162,15 +2162,7 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
             statut = "faible_confiance"
         else:
             statut = "echec"
-        # Avertissement pour la zone 2 points
         avertissements = []
-        if est_type_2points(config) and best_text:
-            if not any(c in best_text for c in ':;،؛：∶'):
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
-                avertissements.append("Le ':' séparateur n'a pas été détecté. Il a pu être ignoré, fusionné avec une lettre adjacente, ou tronqué. Vérifiez la valeur.")
-            else:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
-
         resultats[nom_zone] = {
             'texte_auto': texte, 
             'confiance_auto': confiance, 
@@ -2306,15 +2298,7 @@ def analyser_avec_easyocr(image_path, zones_config):
             statut = "faible_confiance"
         else:
             statut = "echec"
-        # Avertissement pour la zone 2 points
         avertissements = []
-        if est_type_2points(config) and best_text:
-            if not any(c in best_text for c in ':;،؛：∶'):
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
-                avertissements.append("Le ':' séparateur n'a pas été détecté. Il a pu être ignoré, fusionné avec une lettre adjacente, ou tronqué. Vérifiez la valeur.")
-            else:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
-
         resultats[nom_zone] = {
             'texte_auto': texte_final, 
             'confiance_auto': conf_moy, 
@@ -2461,15 +2445,7 @@ def analyser_avec_paddleocr(image_path, zones_config):
         else:
             statut = "echec"
             
-        # Avertissement pour la zone 2 points
         avertissements = []
-        if est_type_2points(config) and best_text:
-            if not any(c in best_text for c in ':;،؛：∶'):
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' non trouvé, ignoré ou fusionné par l'OCR (texte brut: '{best_text}')")
-                avertissements.append("Le ':' séparateur n'a pas été détecté. Il a pu être ignoré, fusionné avec une lettre adjacente, ou tronqué. Vérifiez la valeur.")
-            else:
-                logger.info(f"🔍 [Zone 2 points] '{nom_zone}' : ':' trouvé, début de valeur détecté (texte brut: '{best_text}')")
-            
         resultats[nom_zone] = {
             'texte_auto': texte_final, 
             'confiance_auto': conf_moy, 
