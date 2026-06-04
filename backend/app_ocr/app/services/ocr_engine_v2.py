@@ -1629,29 +1629,30 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                                     # ancre_2points legacy : direction selon la langue
                                     lang = config.get('lang', 'ara+fra')
                                     direction = 'gauche' if lang in ('ara', 'ara+fra') else 'droite'
-                                    if direction == 'dessus':
-                                        ny2 = ay1
-                                        ny1 = ny2 - val_h_px
-                                        nx1 = a_cx - val_w_px / 2
-                                        nx2 = a_cx + val_w_px / 2
-                                    elif direction == 'dessous':
-                                        ny1 = ay2
-                                        ny2 = ny1 + val_h_px
-                                        nx1 = a_cx - val_w_px / 2
-                                        nx2 = a_cx + val_w_px / 2
-                                    elif direction == 'gauche':
-                                        nx2 = ax1
-                                        nx1 = nx2 - val_w_px
-                                        ny1 = ay1 - (val_h_px - a_h) / 2
-                                        ny2 = ny1 + val_h_px
-                                    elif direction == 'droite':
-                                        nx1 = ax2
-                                        nx2 = nx1 + val_w_px
-                                        ny1 = ay1 - (val_h_px - a_h) / 2
-                                        ny2 = ny1 + val_h_px
-                                    else:
-                                        logger.warning(f"⚓ Ancre '{nom_zone}' : direction '{direction}' inconnue. Repli sur coordonnées absolues.")
-                                        continue
+                                
+                                if direction == 'dessus':
+                                    ny2 = ay1
+                                    ny1 = ny2 - val_h_px
+                                    nx1 = a_cx - val_w_px / 2
+                                    nx2 = a_cx + val_w_px / 2
+                                elif direction == 'dessous':
+                                    ny1 = ay2
+                                    ny2 = ny1 + val_h_px
+                                    nx1 = a_cx - val_w_px / 2
+                                    nx2 = a_cx + val_w_px / 2
+                                elif direction == 'gauche':
+                                    nx2 = ax1
+                                    nx1 = nx2 - val_w_px
+                                    ny1 = ay1 - (val_h_px - a_h) / 2
+                                    ny2 = ny1 + val_h_px
+                                elif direction == 'droite':
+                                    nx1 = ax2
+                                    nx2 = nx1 + val_w_px
+                                    ny1 = ay1 - (val_h_px - a_h) / 2
+                                    ny2 = ny1 + val_h_px
+                                else:
+                                    logger.warning(f"⚓ Ancre '{nom_zone}' : direction '{direction}' inconnue. Repli sur coordonnées absolues.")
+                                    continue
                             methode = "fallback (direction)"
                             
                             config['coords'] = [
