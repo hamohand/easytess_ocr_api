@@ -425,7 +425,7 @@ def sauvegarder_entite():
                         
                         for zone in zones_avec_ancre:
                             anchor = zone['anchor_text']
-                            match = process.extractOne(anchor, list(mots_ref.keys()), scorer=fuzz.ratio)
+                            match = process.extractOne(anchor, list(mots_ref.keys()), scorer=fuzz.partial_ratio)
                             if match and match[1] >= 80:
                                 anchor_box = mots_ref[match[0]]
                                 ax1 = min(pt[0] for pt in anchor_box)

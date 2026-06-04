@@ -1557,13 +1557,17 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                         text = res[1][0]
                         mots_dict[text] = box
                     
+                    logger.info(f"⚓ Textes détectés par PaddleOCR ({len(mots_dict)}): {list(mots_dict.keys())[:20]}")
+                    
                     with Image.open(image_path) as current_img:
                         current_w, current_h = current_img.size
                     
-                    # --- Traitement unifié : ancre_2points + ancre simple ---
+                    # --- Traitement unifié des ancres ---
                     for nom_zone, config in zones_avec_ancre.items():
                         anchor = config['anchor_text']
-                        match = process.extractOne(anchor, list(mots_dict.keys()), scorer=fuzz.ratio)
+                        # partial_ratio permet de trouver "Given names" dans "Given names / الأسماء / Prénoms"
+                        match = process.extractOne(anchor, list(mots_dict.keys()), scorer=fuzz.partial_ratio)
+                        logger.info(f"⚓ Recherche ancre '{anchor}' → meilleur match: {match}")
                         if match and match[1] >= 80:
                             matched_text = match[0]
                             score = match[1]

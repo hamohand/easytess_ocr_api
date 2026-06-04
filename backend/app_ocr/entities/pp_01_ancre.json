@@ -1,0 +1,120 @@
+{
+  "nom": "pp_01_ancre",
+  "description": "Avec des ancres",
+  "date_creation": "2026-06-03T20:45:07.558821",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\pp_01_ancre\\reference.png",
+  "zones": [
+    {
+      "_anchor_ref": {
+        "cx": 0.3892857142857143,
+        "cy": 0.1795774647887324,
+        "h": 0.023943661971830985,
+        "w": 0.07040816326530612,
+        "matched": "Surname",
+        "score": 100.0,
+        "img_w": 980,
+        "img_h": 710
+      },
+      "anchor_direction": "dessous",
+      "anchor_text": "Surname",
+      "char_filter": "alpha_only",
+      "coords": [
+        0.29,
+        0.1943,
+        0.555,
+        0.2392
+      ],
+      "expected_format": "single_line",
+      "id": 1780476391537,
+      "lang": "ara",
+      "margin": 3,
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "ancre"
+    },
+    {
+      "anchor_direction": "dessous",
+      "anchor_text": "Given names",
+      "char_filter": "alpha_only",
+      "coords": [
+        0.29,
+        0.3,
+        0.5513,
+        0.35
+      ],
+      "expected_format": "single_line",
+      "id": 1780476402620,
+      "lang": "ara",
+      "margin": 3,
+      "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "ancre"
+    },
+    {
+      "anchor_direction": "dessous",
+      "anchor_text": "Passport No.",
+      "char_filter": "regex:\\d{9}",
+      "coords": [
+        0.6913,
+        0.1182,
+        0.8187,
+        0.1803
+      ],
+      "expected_format": "single_word",
+      "id": 1780477495779,
+      "lang": "fra",
+      "margin": 3,
+      "nom": "numeroPiece",
+      "preprocess": "latin_simple",
+      "type": "ancre"
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710,
+      "dpi_x": 199.9996,
+      "dpi_y": 199.9996
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ]
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ]
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ]
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ]
+    },
+    "dimensions_absolues": {
+      "largeur": 663,
+      "hauteur": 433,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 3,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  }
+}
