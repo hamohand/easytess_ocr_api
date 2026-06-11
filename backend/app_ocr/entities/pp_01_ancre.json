@@ -1,7 +1,7 @@
 {
   "nom": "pp_01_ancre",
   "description": "Avec des ancres",
-  "date_creation": "2026-06-03T20:45:07.558821",
+  "date_creation": "2026-06-04T03:43:54.221809",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\pp_01_ancre\\reference.png",
   "zones": [
     {
@@ -48,7 +48,17 @@
       "margin": 3,
       "nom": "prenom",
       "preprocess": "arabic_textured",
-      "type": "ancre"
+      "type": "ancre",
+      "_anchor_ref": {
+        "cx": 0.7255102040816327,
+        "cy": 0.45211267605633804,
+        "h": 0.01971830985915493,
+        "w": 0.022448979591836733,
+        "matched": " ",
+        "score": 100.0,
+        "img_w": 980,
+        "img_h": 710
+      }
     },
     {
       "anchor_direction": "dessous",
@@ -66,7 +76,17 @@
       "margin": 3,
       "nom": "numeroPiece",
       "preprocess": "latin_simple",
-      "type": "ancre"
+      "type": "ancre",
+      "_anchor_ref": {
+        "cx": 0.7979591836734694,
+        "cy": 0.10774647887323943,
+        "h": 0.02112676056338028,
+        "w": 0.030612244897959183,
+        "matched": "No.",
+        "score": 100.0,
+        "img_w": 980,
+        "img_h": 710
+      }
     }
   ],
   "cadre_reference": {

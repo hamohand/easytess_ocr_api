@@ -1,7 +1,7 @@
 {
   "nom": "cni_01_ancre_2points",
   "description": "",
-  "date_creation": "2026-06-03T04:47:36.812350",
+  "date_creation": "2026-06-04T04:00:36.732249",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_01_ancre_2points\\reference.jpg",
   "zones": [
     {
@@ -19,7 +19,8 @@
       "margin": 3,
       "nom": "nom",
       "preprocess": "arabic_textured",
-      "type": "ancre_2points"
+      "type": "ancre",
+      "anchor_direction": "gauche"
     },
     {
       "anchor_text": "الجنس",
@@ -36,12 +37,13 @@
       "margin": 3,
       "nom": "sexe",
       "preprocess": "arabic_textured",
-      "type": "ancre_2points",
+      "type": "ancre",
       "valeurs_attendues": [
         "ذكر",
         "أنثى",
         "انثى"
-      ]
+      ],
+      "anchor_direction": "gauche"
     },
     {
       "anchor_text": "الاسم",
@@ -58,7 +60,8 @@
       "margin": 3,
       "nom": "prenom",
       "preprocess": "arabic_textured",
-      "type": "ancre_2points"
+      "type": "ancre",
+      "anchor_direction": "gauche"
     },
     {
       "anchor_text": "رقم التعريف الوطني",
@@ -75,11 +78,12 @@
       "margin": 3,
       "nom": "nin",
       "preprocess": "latin_simple",
-      "type": "ancre_2points"
+      "type": "ancre",
+      "anchor_direction": "gauche"
     },
     {
       "anchor_text": "تاريخ الميلاد",
-      "char_filter": "none",
+      "char_filter": "digits_and_dot",
       "coords": [
         0.6737,
         0.8372,
@@ -92,7 +96,8 @@
       "margin": 3,
       "nom": "dateNaissance",
       "preprocess": "latin_simple",
-      "type": "ancre_2points"
+      "type": "ancre",
+      "anchor_direction": "gauche"
     },
     {
       "anchor_text": "مكان الميلاد",
@@ -109,7 +114,8 @@
       "margin": 3,
       "nom": "lieuNaissance",
       "preprocess": "arabic_textured",
-      "type": "ancre_2points"
+      "type": "ancre",
+      "anchor_direction": "gauche"
     },
     {
       "anchor_direction": "dessus",

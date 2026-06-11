@@ -1,72 +1,44 @@
 {
   "nom": "cni_01",
-  "description": "cni_wafa_rogne_01",
-  "date_creation": "2026-05-27T09:22:04.130760",
+  "description": " copie de cni_01_ancre_2points",
+  "date_creation": "2026-06-04T05:15:48.383921",
   "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_01\\reference.jpg",
   "zones": [
     {
-      "char_filter": "none",
-      "coords": [
-        0.55,
-        0.61,
-        0.97,
-        0.72
-      ],
-      "expected_format": "single_line",
-      "id": 1777806810784,
-      "lang": "ara",
-      "margin": 0,
-      "nom": "nom",
-      "preprocess": "arabic_textured",
-      "type": "champ"
-    },
-    {
+      "anchor_direction": "gauche",
+      "anchor_text": "اللقب",
       "char_filter": "alpha_only",
       "coords": [
-        0.7316,
-        0.7087,
-        0.915,
-        0.8075
+        0.6567,
+        0.6246,
+        0.918,
+        0.6957
       ],
       "expected_format": "single_line",
-      "id": 1778137682271,
+      "id": 1780348310551,
       "lang": "ara",
-      "margin": -6,
-      "nom": "prenom",
+      "margin": 3,
+      "nom": "nom",
       "preprocess": "arabic_textured",
-      "type": "text"
+      "type": "ancre"
     },
     {
-      "char_filter": "digits_and_dot",
+      "anchor_direction": "gauche",
+      "anchor_text": "الجنس",
+      "char_filter": "alpha_only",
       "coords": [
-        0.6504,
-        0.8233,
-        0.8541,
-        0.906
+        0.4892,
+        0.8254,
+        0.578,
+        0.9223
       ],
-      "expected_format": "single_word",
-      "id": 1778137708804,
-      "lang": "fra",
-      "margin": -6,
-      "nom": "dateNaissance",
-      "preprocess": "latin_simple",
-      "type": "text"
-    },
-    {
-      "char_filter": "^(?:[أا]نثى|ذكر)$",
-      "coords": [
-        0.45,
-        0.8064,
-        0.5666,
-        0.9272
-      ],
-      "expected_format": "single_word",
-      "id": 1778137720938,
+      "expected_format": "auto",
+      "id": 1780375756867,
       "lang": "ara",
-      "margin": -6,
+      "margin": 3,
       "nom": "sexe",
       "preprocess": "arabic_textured",
-      "type": "text",
+      "type": "ancre",
       "valeurs_attendues": [
         "ذكر",
         "أنثى",
@@ -74,36 +46,94 @@
       ]
     },
     {
-      "char_filter": "regex:\\d{18}",
+      "anchor_direction": "gauche",
+      "anchor_text": "الاسم",
+      "char_filter": "strip_separators",
       "coords": [
-        0.4307,
-        0.5612,
-        0.8,
-        0.6403
+        0.6555,
+        0.7214,
+        0.918,
+        0.8024
       ],
-      "expected_format": "single_word",
-      "id": 1778174922500,
-      "lang": "fra",
-      "margin": -8,
-      "nom": "nin",
-      "preprocess": "latin_simple",
-      "type": "text"
+      "expected_format": "single_line",
+      "id": 1780396536713,
+      "lang": "ara",
+      "margin": 3,
+      "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "ancre"
     },
     {
-      "char_filter": "regex:\\d{9}",
+      "anchor_direction": "gauche",
+      "anchor_text": "رقم التعريف الوطني",
+      "char_filter": "regex:\\d{18}",
       "coords": [
-        0.29,
-        0.2106,
-        0.5061,
-        0.2975
+        0.43,
+        0.5653,
+        0.8042,
+        0.6345
       ],
       "expected_format": "single_word",
-      "id": 1779694531990,
+      "id": 1780396555057,
       "lang": "fra",
-      "margin": 0,
+      "margin": 3,
+      "nom": "nin",
+      "preprocess": "latin_simple",
+      "type": "ancre"
+    },
+    {
+      "anchor_direction": "gauche",
+      "anchor_text": "تاريخ الميلاد",
+      "char_filter": "digits_and_dot",
+      "coords": [
+        0.6737,
+        0.8372,
+        0.8575,
+        0.8905
+      ],
+      "expected_format": "single_line",
+      "id": 1780415480349,
+      "lang": "fra",
+      "margin": 3,
+      "nom": "dateNaissance",
+      "preprocess": "latin_simple",
+      "type": "ancre"
+    },
+    {
+      "anchor_direction": "gauche",
+      "anchor_text": "مكان الميلاد",
+      "char_filter": "alpha_only",
+      "coords": [
+        0.61,
+        0.8876,
+        0.865,
+        0.9548
+      ],
+      "expected_format": "single_line",
+      "id": 1780415622639,
+      "lang": "ara",
+      "margin": 3,
+      "nom": "lieuNaissance",
+      "preprocess": "arabic_textured",
+      "type": "ancre"
+    },
+    {
+      "anchor_direction": "dessus",
+      "anchor_text": "الجمهورية",
+      "char_filter": "regex:\\d{9}",
+      "coords": [
+        0.28,
+        0.21,
+        0.49,
+        0.33
+      ],
+      "expected_format": "single_word",
+      "id": 1780449211270,
+      "lang": "fra",
+      "margin": 3,
       "nom": "numeroPiece",
       "preprocess": "latin_simple",
-      "type": "text"
+      "type": "ancre"
     }
   ],
   "cadre_reference": {
@@ -116,28 +146,32 @@
       "position_base": [
         0.5,
         0
-      ]
+      ],
+      "manuel_formula": "0"
     },
     "droite": {
       "labels": [],
       "position_base": [
         1,
         0.5
-      ]
+      ],
+      "manuel_formula": "largeur"
     },
     "gauche": {
       "labels": [],
       "position_base": [
         0,
         0.5
-      ]
+      ],
+      "manuel_formula": "0"
     },
     "bas": {
       "labels": [],
       "position_base": [
         0.5,
         1
-      ]
+      ],
+      "manuel_formula": "hauteur"
     },
     "dimensions_absolues": {
       "largeur": 1010,
@@ -146,7 +180,7 @@
     }
   },
   "metadata": {
-    "nombre_zones": 6,
+    "nombre_zones": 7,
     "image_dimensions": {
       "width": 1010,
       "height": 640
