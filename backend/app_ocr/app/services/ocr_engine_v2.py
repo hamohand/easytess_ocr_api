@@ -404,6 +404,114 @@ def preprocess_for_arabic_ocr(zone_img, apply_binarization=True):
         return zone_img.convert('L')  # Fallback: juste convertir en niveaux de gris
 
 
+def preprocess_passport_zone(zone_img):
+    """
+    Prétraitement optimisé pour les passeports biométriques.
+    
+    Les passeports ont des caractéristiques spécifiques :
+    - Texte gravé au laser dans le polycarbonate (pas de l'encre)
+    - Fond texturé avec guilloches et motifs de sécurité
+    - Contraste modéré (texte sombre mais pas noir pur)
+    - Micro-impressions de sécurité (bruit à filtrer)
+    
+    Pipeline :
+    1. Débruitage bilatéral → lisse les guilloches, préserve les bords du texte
+    2. CLAHE agressif → renforce le contraste local du texte gravé
+    3. TopHat morphologique → extrait les éléments sombres (texte) du fond large (guilloches)
+    4. Binarisation adaptative locale → meilleure que Otsu pour fonds non-uniformes
+    5. Nettoyage composantes connectées → élimine les micro-impressions résiduelles
+    
+    Args:
+        zone_img: Image PIL de la zone découpée
+    
+    Returns:
+        Image PIL prétraitée (niveaux de gris, texte noir sur fond blanc)
+    """
+    import cv2
+    
+    try:
+        # Convertir PIL -> OpenCV grayscale
+        if zone_img.mode == 'L':
+            gray = np.array(zone_img)
+        else:
+            img_cv = cv2.cvtColor(np.array(zone_img), cv2.COLOR_RGB2BGR)
+            gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+        
+        h, w = gray.shape
+        
+        # --- Étape 1 : Débruitage bilatéral ---
+        # Lisse le fond texturé (guilloches) tout en préservant les bords nets du texte laser.
+        # d=9 : rayon du filtre, sigmaColor=75 : tolérance couleur, sigmaSpace=75 : tolérance spatiale
+        denoised = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
+        
+        # --- Étape 2 : CLAHE agressif ---
+        # clipLimit=3.0 (plus agressif que le 2.0 générique) pour renforcer le contraste
+        # du texte gravé au laser qui a un contraste modéré
+        # tileGridSize=(4,4) : grille plus fine pour s'adapter aux variations locales du fond
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(4, 4))
+        enhanced = clahe.apply(denoised)
+        
+        # --- Étape 3 : TopHat morphologique (Black Hat) ---
+        # Extrait les éléments SOMBRES plus petits que le kernel structurant.
+        # Le texte (petits traits fins) est extrait, les guilloches (motifs larges) sont supprimées.
+        # Kernel de taille proportionnelle à la hauteur de la zone (environ h/3, min 15px)
+        kernel_size = max(15, h // 3)
+        kernel_tophat = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+        # BlackHat = closing(img) - img → met en évidence les éléments sombres (le texte)
+        blackhat = cv2.morphologyEx(enhanced, cv2.MORPH_BLACKHAT, kernel_tophat)
+        
+        # Normaliser le résultat du BlackHat pour maximiser le contraste
+        if blackhat.max() > 0:
+            blackhat = cv2.normalize(blackhat, None, 0, 255, cv2.NORM_MINMAX)
+        
+        # --- Étape 4 : Binarisation adaptative locale ---
+        # Meilleure que Otsu pour les fonds non-uniformes des passeports
+        # blockSize=25 : taille du voisinage (doit être impair)
+        # C=8 : constante soustraite de la moyenne locale
+        block_size = max(11, (min(h, w) // 4) | 1)  # Taille adaptée, toujours impair
+        binary = cv2.adaptiveThreshold(
+            blackhat, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV, block_size, 8
+        )
+        
+        # --- Étape 5 : Nettoyage morphologique ---
+        # Opening pour supprimer le petit bruit (micro-impressions de sécurité)
+        kernel_clean = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+        cleaned = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel_clean)
+        
+        # Closing horizontal pour reconnecter les lettres arabes
+        kernel_connect = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 1))
+        cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, kernel_connect)
+        
+        # --- Étape 6 : Filtrage des composantes connectées ---
+        # Élimine les petits artefacts résiduels (bruit du fond de sécurité)
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(cleaned, connectivity=8)
+        
+        if num_labels > 1:
+            sizes = stats[1:, cv2.CC_STAT_AREA]
+            if len(sizes) > 0:
+                median_size = np.median(sizes)
+                # Seuil plus agressif que l'isolation générique : 30% de la médiane
+                min_size = max(8, median_size * 0.3)
+                
+                filtered = np.zeros_like(cleaned)
+                for i in range(1, num_labels):
+                    if stats[i, cv2.CC_STAT_AREA] >= min_size:
+                        filtered[labels == i] = 255
+                cleaned = filtered
+        
+        # Inverser : texte noir sur fond blanc (meilleur pour OCR)
+        result = cv2.bitwise_not(cleaned)
+        
+        n_kept = np.sum(stats[1:, cv2.CC_STAT_AREA] >= min_size) if num_labels > 1 and len(sizes) > 0 else 0
+        logger.info(f"🛂 Prétraitement passeport: {w}x{h}, CLAHE+TopHat+binarisation, {n_kept} composantes gardées")
+        
+        return Image.fromarray(result)
+        
+    except Exception as e:
+        logger.warning(f"Erreur prétraitement passeport: {e}")
+        return zone_img.convert('L')
+
 def auto_crop_zone(zone_img, margin=5, min_content_ratio=0.01):
     """
     Recadre automatiquement une zone pour supprimer les espaces blancs.
@@ -874,7 +982,8 @@ def get_paddleocr_reader(zone_lang='ara+fra'):
             import logging as pp_logging
             pp_logging.getLogger('ppocr').setLevel(pp_logging.ERROR)
             # use_angle_cls=True pour détecter l'orientation du texte
-            reader = PaddleOCR(use_angle_cls=True, lang=lang_code, show_log=False)
+            # det_limit_side_len=2560 pour éviter de trop réduire les images larges (ex: passeport ouvert)
+            reader = PaddleOCR(use_angle_cls=True, lang=lang_code, show_log=False, det_limit_side_len=2560)
             _paddleocr_readers[lang_code] = reader
             logger.info(f"Modèle PaddleOCR chargé pour la langue '{lang_code}' (Logs désactivés)")
         except Exception as e:
@@ -1240,6 +1349,277 @@ def resoudre_formules_ancres(cadre_reference, etiquettes_detectees, img_dims, im
     return total_resolues
 
 
+def analyser_ancres_pures(image_path, zones_config, mode='rapide'):
+    """
+    Analyse OCR basée uniquement sur les ancres textuelles.
+    Pas de cadre de référence, pas de _anchor_ref, pas de dimensions.
+    
+    Pour chaque zone:
+    1. Trouver l'ancre textuelle dans l'image (PaddleOCR + fuzzy match)
+    2. Calculer la position via anchor_offset × hauteur_ancre
+    3. Extraire le texte OCR de la zone calculée
+    
+    Returns:
+        tuple: (resultats, alertes, cadre_detecte) — même signature que analyser_hybride
+    """
+    with _analyser_lock:
+        try:
+            from rapidfuzz import process, fuzz
+        except ImportError:
+            logger.error("❌ rapidfuzz n'est pas installé — requis pour analyser_ancres_pures")
+            return {}, ["rapidfuzz manquant"], None
+
+        resultats = {}
+
+        # --- 1. Ouvrir l'image pour obtenir les dimensions ---
+        try:
+            with Image.open(image_path) as img:
+                img_w, img_h = img.size
+        except Exception as e:
+            logger.error(f"❌ Impossible d'ouvrir l'image: {e}")
+            return None, str(e), None
+
+        # --- 2. Scan OCR global de l'image pour trouver tous les mots ---
+        if not PADDLEOCR_DISPONIBLE:
+            logger.error("❌ PaddleOCR non disponible — requis pour analyser_ancres_pures")
+            return {}, ["PaddleOCR non disponible"], None
+
+        reader = get_paddleocr_reader('ara+fra')
+        if not reader:
+            logger.error("❌ Impossible d'obtenir le lecteur PaddleOCR")
+            return {}, ["Lecteur PaddleOCR indisponible"], None
+
+        try:
+            ocr_results = reader.ocr(image_path, cls=True)
+        except Exception as e:
+            logger.error(f"❌ Erreur PaddleOCR scan global: {e}")
+            return {}, [str(e)], None
+
+        # Construire la liste de tous les mots détectés [{text, box, center, h_char}, ...]
+        # On garde TOUS les résultats (pas de dict qui écrase les doublons)
+        mots_list = []
+        if ocr_results and ocr_results[0]:
+            for res in ocr_results[0]:
+                box = res[0]
+                text = res[1][0].strip()
+                if not text:
+                    continue
+                bx1 = min(pt[0] for pt in box)
+                by1 = min(pt[1] for pt in box)
+                bx2 = max(pt[0] for pt in box)
+                by2 = max(pt[1] for pt in box)
+                box_h = by2 - by1
+                box_w = bx2 - bx1
+                if box_h <= 0:
+                    continue
+                # Estimer la hauteur d'un caractère unique :
+                # Si le texte contient N lignes, h_char ≈ box_h / N
+                # Heuristique : un texte avec largeur >> hauteur est sur 1 ligne
+                # Sinon, estimer le nombre de lignes par le ratio hauteur/largeur
+                nb_lines_estimate = max(1, round(box_h / max(box_w / max(len(text), 1) * 1.5, box_h)))
+                # Plus simple et robuste : on utilise la hauteur brute de la box
+                # mais on logue pour diagnostic
+                mots_list.append({
+                    'text': text,
+                    'box': box,
+                    'cx': (bx1 + bx2) / 2,
+                    'cy': (by1 + by2) / 2,
+                    'x1': bx1, 'y1': by1,
+                    'x2': bx2, 'y2': by2,
+                    'h': box_h,
+                    'w': box_w,
+                })
+
+        logger.info(f"⚓ Scan global: {len(mots_list)} bloc(s) texte détecté(s) dans l'image")
+        if mots_list:
+            # Logger les 15 premiers mots pour diagnostic
+            for m in mots_list[:15]:
+                logger.debug(f"   📝 '{m['text'][:40]}' → h={m['h']:.0f}px, w={m['w']:.0f}px, pos=({m['cx']:.0f},{m['cy']:.0f})")
+
+        # --- 3. Pour chaque zone avec anchor_text + anchor_offset, recalculer les coords ---
+        zones_resolues = 0
+        for nom_zone, config in zones_config.items():
+            anchor_text = config.get('anchor_text')
+            anchor_offset = config.get('anchor_offset')
+
+            if not anchor_text or not anchor_offset:
+                continue
+
+            if not mots_list:
+                logger.warning(f"⚠️ '{nom_zone}': aucun mot détecté pour la recherche d'ancre")
+                continue
+
+            # Fuzzy match amélioré : chercher dans tous les blocs
+            # On récupère TOUS les candidats avec score >= 60
+            # puis on choisit le bloc le PLUS COURT (le plus proche du texte recherché)
+            # → stabilise h_a entre sauvegarde et analyse
+            candidates = []
+            for idx, m in enumerate(mots_list):
+                score_partial = fuzz.partial_ratio(anchor_text, m['text'])
+                score_token = fuzz.token_set_ratio(anchor_text, m['text'])
+                best_score = max(score_partial, score_token)
+                if best_score >= 60:
+                    candidates.append((idx, m, best_score))
+            
+            if not candidates:
+                logger.warning(f"⚠️ '{nom_zone}': ancre '{anchor_text}' introuvable")
+                continue
+            
+            # Parmi les bons candidats (score >= 60), préférer :
+            # 1. Ceux avec score >= 80 ET longueur de texte la plus courte
+            # 2. Sinon le meilleur score
+            strong = [(idx, m, s) for idx, m, s in candidates if s >= 80]
+            if strong:
+                # Prendre le plus court parmi les forts
+                best = min(strong, key=lambda x: len(x[1]['text']))
+            else:
+                # Prendre le meilleur score
+                best = max(candidates, key=lambda x: x[2])
+            
+            matched_idx, anchor_entry, match_score = best
+
+            logger.info(f"⚓ '{nom_zone}': ancre '{anchor_text}' → match '{anchor_entry['text'][:30]}' (score={match_score}, h_a={anchor_entry['h']:.0f}px, w={anchor_entry['w']:.0f}px)")
+
+            # Reconstruire les coordonnées de la zone depuis les bords de l'ancre
+            a_x1 = anchor_entry['x1']  # bord gauche de l'ancre
+            a_y2 = anchor_entry['y2']  # bord bas de l'ancre
+            h_a = anchor_entry['h']
+
+            # Nouveau format basé sur les bords (dx_left, dy_top)
+            if 'dx_left' in anchor_offset:
+                dx_left = anchor_offset.get('dx_left', 0)
+                dy_top = anchor_offset.get('dy_top', 0)
+                w = anchor_offset.get('w', 1)
+                h = anchor_offset.get('h', 1)
+
+                # Reconstruction directe depuis les bords
+                zx1 = a_x1 + dx_left * h_a
+                zy1 = a_y2 + dy_top * h_a
+                zx2 = zx1 + w * h_a
+                zy2 = zy1 + h * h_a
+            else:
+                # Ancien format basé sur le centre (dx, dy) — rétro-compatibilité
+                ax = anchor_entry['cx']
+                ay = anchor_entry['cy']
+                dx = anchor_offset.get('dx', 0)
+                dy = anchor_offset.get('dy', 0)
+                w = anchor_offset.get('w', 1)
+                h_off = anchor_offset.get('h', 1)
+                cx = ax + dx * h_a
+                cy = ay + dy * h_a
+                zw = w * h_a
+                zh = h_off * h_a
+                zx1 = cx - zw / 2
+                zy1 = cy - zh / 2
+                zx2 = cx + zw / 2
+                zy2 = cy + zh / 2
+
+            # Mettre à jour les coordonnées normalisées de la zone
+            config['coords'] = [
+                max(0, zx1 / img_w),
+                max(0, zy1 / img_h),
+                min(1, zx2 / img_w),
+                min(1, zy2 / img_h)
+            ]
+
+            zones_resolues += 1
+            logger.info(
+                f"⚓ '{nom_zone}' : h_a={h_a:.0f}px → "
+                f"zone [{zx1:.0f},{zy1:.0f}]-[{zx2:.0f},{zy2:.0f}]px"
+            )
+
+        logger.info(f"⚓ {zones_resolues}/{len(zones_config)} zone(s) repositionnée(s) par ancres pures")
+
+        # --- 4. OCR multi-étage (même logique que analyser_hybride) ---
+
+        # Étage 1 : PaddleOCR (moteur primaire)
+        if PADDLEOCR_DISPONIBLE:
+            try:
+                logger.info(f"🚣 PaddleOCR: analyse de {len(zones_config)} zone(s) [ancres pures]")
+                resultats_paddle = analyser_avec_paddleocr(image_path, zones_config)
+                resultats.update(resultats_paddle)
+            except Exception as e:
+                logger.error(f"❌ Erreur PaddleOCR: {e}")
+
+        # Étage 2 : Tesseract sur zones à faible confiance (< 90%)
+        seuil_refaire_tesseract = 0.90
+        zones_faibles = {
+            k: v for k, v in zones_config.items()
+            if k not in resultats
+            or resultats[k]['confiance_auto'] < seuil_refaire_tesseract
+        }
+
+        if zones_faibles and TESSERACT_DISPONIBLE:
+            try:
+                logger.info(f"🔤 Tesseract: analyse secondaire de {len(zones_faibles)} zone(s) [ancres pures]")
+                res_tess = analyser_avec_tesseract(image_path, zones_faibles, mode=mode)
+                for k, v in res_tess.items():
+                    if k in resultats:
+                        if v['confiance_auto'] > resultats[k]['confiance_auto']:
+                            logger.info(f"✨ Zone {k}: Tesseract meilleur ({v['confiance_auto']:.0%}) que PaddleOCR ({resultats[k]['confiance_auto']:.0%})")
+                            resultats[k] = v
+                            resultats[k]['ameliore_par'] = 'tesseract'
+                    else:
+                        resultats[k] = v
+                        resultats[k]['ameliore_par'] = 'tesseract'
+            except Exception as e:
+                logger.error(f"❌ Erreur Tesseract: {e}")
+
+        # Étage 3 : EasyOCR en dernier recours (< 60%)
+        seuil_refaire_easyocr = 0.60
+        zones_tres_faibles = {
+            k: v for k, v in zones_config.items()
+            if k not in resultats
+            or resultats[k]['confiance_auto'] < seuil_refaire_easyocr
+        }
+
+        if zones_tres_faibles and EASYOCR_DISPONIBLE:
+            try:
+                logger.info(f"🔤 EasyOCR: analyse de {len(zones_tres_faibles)} zone(s) à améliorer [ancres pures]")
+                res_easy = analyser_avec_easyocr(image_path, zones_tres_faibles)
+                for k, v in res_easy.items():
+                    if k in resultats:
+                        if v['confiance_auto'] > resultats[k]['confiance_auto']:
+                            logger.info(f"✨ Zone {k}: EasyOCR meilleur ({v['confiance_auto']:.0%})")
+                            resultats[k] = v
+                            resultats[k]['ameliore_par'] = 'easyocr'
+                    else:
+                        resultats[k] = v
+                        resultats[k]['ameliore_par'] = 'easyocr'
+            except Exception as e:
+                logger.error(f"❌ Erreur EasyOCR: {e}")
+
+        # --- 5. Remplissage des zones sans résultat ---
+        for k in zones_config:
+            if k not in resultats:
+                resultats[k] = {
+                    'texte_auto': '',
+                    'confiance_auto': 0,
+                    'statut': 'echec',
+                    'moteur': 'aucun',
+                    'coords': zones_config[k].get('coords', [0, 0, 1, 1]),
+                    'texte_final': ''
+                }
+
+        # --- 6. Normalisation des coordonnées en relatif ---
+        # Les moteurs (PaddleOCR, etc) renvoient des coordonnées en pixels absolus
+        # On les convertit en relatif [0..1] pour le dessin frontend
+        for k, v in resultats.items():
+            coords = v.get('coords', [])
+            # Si une coord est > 1.0, c'est qu'on est en pixels absolus
+            if coords and any(c > 1.0 for c in coords):
+                x1, y1, x2, y2 = coords
+                v['coords'] = [
+                    max(0.0, x1 / img_w),
+                    max(0.0, y1 / img_h),
+                    min(1.0, x2 / img_w),
+                    min(1.0, y2 / img_h)
+                ]
+
+        alertes = [k for k, v in resultats.items() if v.get('statut') != 'ok']
+        return resultats, alertes, None
+
+
 _analyser_lock = threading.Lock()
 
 def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapide'):
@@ -1549,8 +1929,8 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                 result_global = reader.ocr(image_path, cls=True)
                 from rapidfuzz import process, fuzz
                 
-                if result_global and result_global[0]:
-                    lignes_ocr = result_global[0]
+                if result_global and len(result_global) > 0:
+                    lignes_ocr = result_global[0] or []
                     mots_dict = {}
                     for res in lignes_ocr:
                         box = res[0]
@@ -1585,6 +1965,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                             
                             tpl_coords = config['coords']  # Z0 normalisé
                             anchor_ref = config.get('_anchor_ref')
+                            logger.info(f"DEBUG: anchor_ref for {nom_zone} is {anchor_ref}")
                             
                             if anchor_ref and anchor_ref.get('h', 0) > 0:
                                 # === MÉTHODE EXACTE : Z = A + (Z0 - A0) × s ===
@@ -1595,6 +1976,7 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                                 a0_cx = anchor_ref['cx'] * w0
                                 a0_cy = anchor_ref['cy'] * h0
                                 a0_h = anchor_ref['h'] * h0
+                                a0_w = anchor_ref.get('w', 0) * w0
                                 
                                 # Z0 en pixels de IR
                                 z0_cx = (tpl_coords[0] + tpl_coords[2]) / 2 * w0
@@ -1602,21 +1984,27 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                                 z0_w = (tpl_coords[2] - tpl_coords[0]) * w0
                                 z0_h = (tpl_coords[3] - tpl_coords[1]) * h0
                                 
-                                # Facteur d'échelle
-                                s = a_h / a0_h
+                                # Facteurs d'échelle (X et Y)
+                                s_y = a_h / a0_h if a0_h > 0 else 1.0
+                                s_x = a_w / a0_w if a0_w > 0 else s_y
                                 
-                                # Offset en "unités d'ancre" puis application
-                                z_cx = a_cx + (z0_cx - a0_cx) / a0_h * a_h
-                                z_cy = a_cy + (z0_cy - a0_cy) / a0_h * a_h
-                                z_w = z0_w * s
-                                z_h = z0_h * s
+                                # Si l'écart entre s_x et s_y est extrême (erreur OCR), on moyenne
+                                if a0_w > 0 and (s_x / s_y > 1.5 or s_y / s_x > 1.5):
+                                    s_avg = (s_x + s_y) / 2
+                                    s_x = s_y = s_avg
+                                
+                                # Offset en pixels et application
+                                z_cx = a_cx + (z0_cx - a0_cx) * s_x
+                                z_cy = a_cy + (z0_cy - a0_cy) * s_y
+                                z_w = z0_w * s_x
+                                z_h = z0_h * s_y
                                 
                                 nx1 = z_cx - z_w / 2
                                 ny1 = z_cy - z_h / 2
                                 nx2 = z_cx + z_w / 2
                                 ny2 = z_cy + z_h / 2
                                 
-                                methode = f"exacte (s={s:.2f})"
+                                methode = f"exacte (sx={s_x:.2f}, sy={s_y:.2f})"
                             else:
                                 # === FALLBACK : positionnement par direction (pas de _anchor_ref) ===
                                 val_h_px = a_h * 2.0
@@ -1647,17 +2035,19 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                                 elif direction == 'gauche':
                                     nx2 = ax1
                                     nx1 = nx2 - val_w_px
-                                    ny1 = ay1 - (val_h_px - a_h) / 2
+                                    # Décaler légèrement la boîte vers le bas pour ne pas mordre sur la ligne du dessus
+                                    ny1 = ay1 - (val_h_px - a_h) / 4
                                     ny2 = ny1 + val_h_px
                                 elif direction == 'droite':
                                     nx1 = ax2
                                     nx2 = nx1 + val_w_px
-                                    ny1 = ay1 - (val_h_px - a_h) / 2
+                                    # Décaler légèrement la boîte vers le bas
+                                    ny1 = ay1 - (val_h_px - a_h) / 4
                                     ny2 = ny1 + val_h_px
                                 else:
                                     logger.warning(f"⚓ Ancre '{nom_zone}' : direction '{direction}' inconnue. Repli sur coordonnées absolues.")
                                     continue
-                            methode = "fallback (direction)"
+                                methode = "fallback (direction)"
                             
                             config['coords'] = [
                                 max(0, nx1 / current_w),
@@ -1730,31 +2120,67 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                         def get_seq(i):
                             return sequences[i] if i < len(sequences) else ""
                             
-                        # Extractions de base
-                        if len(sequences) >= 6:
-                            add_qr_field('nom', get_seq(4))
-                            add_qr_field('prenom', get_seq(5))
-                            
-                        # Extractions étendues
-                        if len(sequences) >= 26:
-                            add_qr_field('numeroPiece', get_seq(2))
-                            add_qr_field('dateNaissance', get_seq(6))
-                            add_qr_field('lieuNaissance', get_seq(8))
-                            add_qr_field('pere', get_seq(9))
-                            
-                            mere_val = f"{get_seq(10)} {get_seq(11)}".strip()
-                            add_qr_field('mere', mere_val)
-                            
-                            add_qr_field('sexe', get_seq(12))
-                            add_qr_field('latines', get_seq(13))
-                            add_qr_field('prenomLatines', get_seq(14))
-                            add_qr_field('delivrePar', get_seq(15))
-                            
-                            
-                            # nin : 18 chiffres consécutifs dans la chaîne complète
-                            match_nin = re.search(r'\d{18}', qr_data)
-                            if match_nin:
-                                add_qr_field('nin', match_nin.group(0))
+                        # Détection automatique du type de document (Naissance vs Décès)
+                        is_deces = False
+                        if 'adc' in nom_zone.lower() or 'deces' in nom_zone.lower():
+                            is_deces = True
+                        elif len(sequences) >= 20:
+                            import re
+                            is_seq_15_date = bool(re.match(r'^\d{2}/\d{2}/\d{4}$', get_seq(15)))
+                            is_seq_5_date = bool(re.match(r'^\d{2}/\d{2}/\d{4}$', get_seq(5)))
+                            if is_seq_15_date and is_seq_5_date:
+                                is_deces = True
+                        
+                        if is_deces:
+                            # --- Mappage pour l'Acte de Décès ---
+                            if len(sequences) >= 5:
+                                add_qr_field('nom', get_seq(3))
+                                add_qr_field('prenom', get_seq(4))
+                            if len(sequences) >= 15:
+                                add_qr_field('numeroPiece', get_seq(2))
+                                add_qr_field('dateNaissance', get_seq(5))
+                                add_qr_field('lieuNaissance', get_seq(6))
+                                add_qr_field('latines', get_seq(9))
+                                add_qr_field('prenomLatines', get_seq(10))
+                                add_qr_field('lieuDeces', get_seq(11))
+                                add_qr_field('pere', get_seq(12))
+                                
+                                # Nom de famille de la mère (14) + prénom de la mère (13)
+                                mere_val = f"{get_seq(14)} {get_seq(13)}".strip()
+                                add_qr_field('mere', mere_val)
+                            if len(sequences) >= 21:
+                                add_qr_field('dateDeces', get_seq(15))
+                                add_qr_field('heureDeces', get_seq(16))
+                                add_qr_field('delivrePar', get_seq(17))
+                                add_qr_field('dateDeclaration', get_seq(18))
+                                add_qr_field('heureDeclaration', get_seq(19))
+                                add_qr_field('declarant', get_seq(20))
+                        else:
+                            # --- Mappage pour l'Extrait de Naissance ---
+                            # Extractions de base
+                            if len(sequences) >= 6:
+                                add_qr_field('nom', get_seq(4))
+                                add_qr_field('prenom', get_seq(5))
+                                
+                            # Extractions étendues
+                            if len(sequences) >= 26:
+                                add_qr_field('numeroPiece', get_seq(2))
+                                add_qr_field('dateNaissance', get_seq(6))
+                                add_qr_field('lieuNaissance', get_seq(8))
+                                add_qr_field('pere', get_seq(9))
+                                
+                                mere_val = f"{get_seq(10)} {get_seq(11)}".strip()
+                                add_qr_field('mere', mere_val)
+                                
+                                add_qr_field('sexe', get_seq(12))
+                                add_qr_field('latines', get_seq(13))
+                                add_qr_field('prenomLatines', get_seq(14))
+                                add_qr_field('delivrePar', get_seq(15))
+                                
+                                # nin : 18 chiffres consécutifs dans la chaîne complète
+                                match_nin = re.search(r'\d{18}', qr_data)
+                                if match_nin:
+                                    add_qr_field('nin', match_nin.group(0))
                     # ----------------------------------------------------------------
     
                 else:
@@ -2090,6 +2516,11 @@ def analyser_avec_tesseract(image_path, zones_config, mode='rapide'):
                     (zone_img_gray, "raw"),
                 ]
             
+            # Ajouter la variante passeport pour les entités ancre_pure
+            if config.get('anchor_offset') is not None:
+                zone_img_passport = preprocess_passport_zone(zone_img)
+                variants.append((zone_img_passport, "passport"))
+            
             for psm in psm_modes:
                 for img_variant, variant_name in variants:
                     try:
@@ -2231,6 +2662,15 @@ def analyser_avec_easyocr(image_path, zones_config):
             (np.array(zone_img_isolated_100.convert('RGB')), "iso100"),
         ]
         
+        # Ajouter les variantes passeport pour les entités ancre_pure
+        is_passport = config.get('anchor_offset') is not None
+        if is_passport:
+            zone_img_passport = preprocess_passport_zone(zone_img_upscaled)
+            variants.append((np.array(zone_img_passport.convert('RGB')), "passport"))
+            # Aussi tester l'isolation avec suppression des lignes verticales
+            zone_img_iso_vlines = isolate_dark_text(zone_img_upscaled, dark_threshold=90, remove_vlines=True)
+            variants.append((np.array(zone_img_iso_vlines.convert('RGB')), "iso90+vlines"))
+        
         best_text = ""
         best_effective_conf = -1.0
         best_real_conf = 0.0
@@ -2366,6 +2806,14 @@ def analyser_avec_paddleocr(image_path, zones_config):
             (np.array(zone_img_isolated_80.convert('RGB')), "iso80"),
             (np.array(zone_img_isolated_100.convert('RGB')), "iso100"),
         ]
+        
+        # Ajouter les variantes passeport pour les entités ancre_pure
+        is_passport = config.get('anchor_offset') is not None
+        if is_passport:
+            zone_img_passport = preprocess_passport_zone(zone_img_upscaled)
+            variants.append((np.array(zone_img_passport.convert('RGB')), "passport"))
+            zone_img_iso_vlines = isolate_dark_text(zone_img_upscaled, dark_threshold=90, remove_vlines=True)
+            variants.append((np.array(zone_img_iso_vlines.convert('RGB')), "iso90+vlines"))
         
         best_text = ""
         best_effective_conf = -1.0
