@@ -18,6 +18,10 @@
             <span class="sub-tab-icon">⚙️</span>
             Gestion des Entités
         </button>
+        <button class="sub-tab-btn" [class.active]="activeOcrTab() === 'entity_anchor'" (click)="setOcrTab('entity_anchor')">
+            <span class="sub-tab-icon">⚓</span>
+            Entité-Ancre
+        </button>
         <button class="sub-tab-btn" [class.active]="activeOcrTab() === 'composite'" (click)="setOcrTab('composite')">
             <span class="sub-tab-icon">🧩</span>
             Entités Composites
@@ -41,6 +45,8 @@
             <app-ocr-upload />
         } @else if (activeOcrTab() === 'entity') {
             <app-entity-creator />
+        } @else if (activeOcrTab() === 'entity_anchor') {
+            <app-entity-anchor-creator />
         } @else if (activeOcrTab() === 'composite') {
             <app-composite-creator />
         } @else if (activeOcrTab() === 'matching') {

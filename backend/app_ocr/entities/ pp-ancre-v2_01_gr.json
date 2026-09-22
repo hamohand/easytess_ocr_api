@@ -1,0 +1,65 @@
+{
+  "nom": " pp-ancre-v2_01_gr",
+  "description": "passeport ouvert",
+  "date_creation": "2026-06-21T05:06:32.112165",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\ pp-ancre-v2_01_gr\\reference.png",
+  "zones": [
+    {
+      "id": 1782011169401,
+      "nom": "nom",
+      "anchor_text": "Nom",
+      "coords": [
+        0.2975,
+        0.5863,
+        0.5463,
+        0.6135
+      ],
+      "anchor_offset": {
+        "dx_left": 7.554,
+        "dy_top": -23.428253333333327,
+        "w": 16.520320000000005,
+        "h": 2.491519999999999
+      },
+      "anchor_direction": "dessous",
+      "lang": "ara",
+      "char_filter": "alpha_only",
+      "expected_format": "auto",
+      "preprocess": "auto",
+      "margin": 5,
+      "type": "ancre"
+    },
+    {
+      "id": 1782011169402,
+      "nom": "autorite",
+      "anchor_text": "السلطة",
+      "coords": [
+        0.62,
+        0.805,
+        0.7837,
+        0.8338
+      ],
+      "anchor_offset": {
+        "dx_left": -0.056923076923077624,
+        "dy_top": -1.3049999999999937,
+        "w": 6.270969230769231,
+        "h": 1.5219692307692254
+      },
+      "anchor_direction": "dessous",
+      "lang": "ara",
+      "char_filter": "alpha_only",
+      "expected_format": "auto",
+      "preprocess": "auto",
+      "margin": 5,
+      "type": "ancre"
+    }
+  ],
+  "cadre_reference": null,
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 996,
+      "height": 1374
+    }
+  },
+  "type": "ancre_pure"
+}

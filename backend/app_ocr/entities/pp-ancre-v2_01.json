@@ -1,0 +1,89 @@
+{
+  "nom": "pp-ancre-v2_01",
+  "description": "Ancres version 2",
+  "date_creation": "2026-06-20T21:50:15.262082",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\pp-ancre-v2_01\\reference.png",
+  "zones": [
+    {
+      "id": 1781985002691,
+      "nom": "nom",
+      "anchor_text": "Surname",
+      "coords": [
+        0.2938,
+        0.1904,
+        0.5413,
+        0.24
+      ],
+      "anchor_offset": {
+        "dx_left": -3.3574117647058834,
+        "dy_top": -0.04800000000000015,
+        "w": 14.267647058823533,
+        "h": 2.0715294117647063
+      },
+      "anchor_direction": "dessous",
+      "lang": "ara",
+      "char_filter": "alpha_only",
+      "expected_format": "auto",
+      "preprocess": "auto",
+      "margin": 4,
+      "type": "ancre"
+    },
+    {
+      "id": 1781985002692,
+      "nom": "autorite",
+      "anchor_text": "السلطة",
+      "coords": [
+        0.6138,
+        0.625,
+        0.7675,
+        0.6771
+      ],
+      "anchor_offset": {
+        "dx_left": -0.20345454545454542,
+        "dy_top": -0.011363636363636364,
+        "w": 6.846636363636363,
+        "h": 1.6814090909090929
+      },
+      "anchor_direction": "dessous",
+      "lang": "ara",
+      "char_filter": "alpha_only",
+      "expected_format": "auto",
+      "preprocess": "auto",
+      "margin": 4,
+      "type": "ancre"
+    },
+    {
+      "id": 1781985002693,
+      "nom": "lieuNaissance",
+      "anchor_text": "مكان الميلاد",
+      "coords": [
+        0.2913,
+        0.5032,
+        0.4625,
+        0.5619
+      ],
+      "anchor_offset": {
+        "dx_left": -11.945407407407409,
+        "dy_top": -4.32325925925926,
+        "w": 6.213925925925927,
+        "h": 1.5435925925925913
+      },
+      "anchor_direction": "dessous",
+      "lang": "ara",
+      "char_filter": "alpha_only",
+      "expected_format": "auto",
+      "preprocess": "auto",
+      "margin": 4,
+      "type": "ancre"
+    }
+  ],
+  "cadre_reference": null,
+  "metadata": {
+    "nombre_zones": 3,
+    "image_dimensions": {
+      "width": 980,
+      "height": 710
+    }
+  },
+  "type": "ancre_pure"
+}

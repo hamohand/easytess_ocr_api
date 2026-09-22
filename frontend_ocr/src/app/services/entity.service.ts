@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Entite, Zone, ImageEntiteUploadResponse, CadreReference } from './models';
+import { Entite, Zone, ImageEntiteUploadResponse, CadreReference, AnchorZone, AnchorEntite } from './models';
 
 @Injectable({
     providedIn: 'root'
@@ -152,5 +152,26 @@ export class EntityService {
         return this.http.post<{success: boolean}>(`${this.apiUrl}/entite-composite`, {
             nom, sous_entites, mapping, description
         });
+    }
+
+    /**
+     * Sauvegarde une entité en mode ancres pures
+     */
+    sauvegarderEntiteAncre(
+        nom: string,
+        zones: AnchorZone[],
+        imageFilename?: string,
+        description?: string
+    ): Observable<{ success: boolean }> {
+        return this.http.post<{ success: boolean }>(`${this.apiUrl}/sauvegarder-entite-ancre`, {
+            nom, zones, image_filename: imageFilename, description
+        });
+    }
+
+    /**
+     * Liste les entités ancre-pure
+     */
+    listerEntitesAncre(): Observable<AnchorEntite[]> {
+        return this.http.get<AnchorEntite[]>(`${this.apiUrl}/entites-ancre`);
     }
 }

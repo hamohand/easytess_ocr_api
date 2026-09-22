@@ -253,3 +253,41 @@ export interface InvoicePageResult {
     articles: InvoiceArticle[];
 }
 
+// ─── Anchor-pure entity models ───────────────────────────
+
+export interface AnchorOffset {
+    // Nouveau format (basé sur les bords de l'ancre - plus stable)
+    dx_left?: number;  // Distance bord gauche ancre → bord gauche zone (en multiples de h_a)
+    dy_top?: number;   // Distance bord bas ancre → bord haut zone (en multiples de h_a)
+    // Ancien format (basé sur le centre - rétro-compatibilité)
+    dx?: number;  // Horizontal offset from anchor center (in multiples of anchor height)
+    dy?: number;  // Vertical offset from anchor center (in multiples of anchor height)
+    w: number;   // Zone width (in multiples of anchor height)
+    h: number;   // Zone height (in multiples of anchor height)
+    [key: string]: number | undefined;  // Allow dynamic property access
+}
+
+export interface AnchorZone {
+    id: number;
+    nom: string;
+    anchor_text: string;
+    coords: [number, number, number, number];
+    anchor_offset?: AnchorOffset;
+    lang?: string;
+    char_filter?: string;
+    expected_format?: string;
+    preprocess?: string;
+    margin?: number;
+    anchor_direction?: string;
+}
+
+export interface AnchorEntite {
+    nom: string;
+    description?: string;
+    type: 'ancre_pure';
+    date_creation?: string;
+    image_reference?: string;
+    zones: AnchorZone[];
+    metadata?: { nombre_zones: number };
+}
+

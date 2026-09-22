@@ -1,8 +1,8 @@
 {
   "nom": "pp_01",
   "description": "Passeport DZ",
-  "date_creation": "2026-03-02T20:13:04.383230",
-  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\eeasytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\pp_01\\reference.png",
+  "date_creation": "2026-06-19T19:43:18.285964",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\pp_01\\reference.png",
   "zones": [
     {
       "coords": [
@@ -96,11 +96,18 @@
       "type": "text",
       "valeurs_attendues": [
         "ذ",
+        "أ",
         "ا"
       ]
     }
   ],
   "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 980,
+      "height": 710,
+      "dpi_x": 199.9996,
+      "dpi_y": 199.9996
+    },
     "haut": {
       "labels": [
         "regex:DZA"
@@ -108,18 +115,14 @@
       "position_base": [
         0.503061224489796,
         0.11830985915492957
-      ],
-      "offset_x": 0,
-      "offset_y": -10
+      ]
     },
     "droite": {
       "labels": [],
       "position_base": [
         1,
         0.5
-      ],
-      "offset_x": 0,
-      "offset_y": 0
+      ]
     },
     "gauche": {
       "labels": [
@@ -128,9 +131,7 @@
       "position_base": [
         0.02346938775510204,
         0.8007042253521127
-      ],
-      "offset_x": 0,
-      "offset_y": 0
+      ]
     },
     "bas": {
       "labels": [
@@ -139,13 +140,7 @@
       "position_base": [
         0.4683673469387755,
         0.8169014084507042
-      ],
-      "offset_x": 0,
-      "offset_y": 0
-    },
-    "image_base_dimensions": {
-      "width": 980,
-      "height": 710
+      ]
     },
     "dimensions_absolues": {
       "largeur": 957,

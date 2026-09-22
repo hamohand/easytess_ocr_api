@@ -1,0 +1,74 @@
+{
+  "nom": "adc_01",
+  "description": "Acte de décès QRcode",
+  "date_creation": "2026-06-18T19:46:37.776466",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\adc_01\\reference.jpg",
+  "zones": [
+    {
+      "id": 1781804674211,
+      "nom": "adc_QR",
+      "type": "qrcode",
+      "lang": "ara+fra",
+      "preprocess": "auto",
+      "char_filter": "none",
+      "expected_format": "auto",
+      "margin": 0,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ]
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 2481,
+      "height": 3508
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ],
+      "manuel_formula": "0"
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ],
+      "manuel_formula": "largeur"
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ],
+      "manuel_formula": "0"
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ],
+      "manuel_formula": "hauteur"
+    },
+    "dimensions_absolues": {
+      "largeur": 2481,
+      "hauteur": 3508,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 1,
+    "image_dimensions": {
+      "width": 2481,
+      "height": 3508
+    }
+  }
+}

@@ -118,7 +118,11 @@ export class OcrUploadComponent implements OnDestroy {
                         char_filter: z.char_filter || 'none',
                         margin: z.margin || 0,
                         expected_format: z.expected_format || 'auto',
-                        valeurs_attendues: z.valeurs_attendues || []
+                        valeurs_attendues: z.valeurs_attendues || [],
+                        // Ancres pures
+                        anchor_text: (z as any).anchor_text,
+                        anchor_offset: (z as any).anchor_offset,
+                        anchor_direction: z.anchor_direction
                     };
                 });
 

@@ -1,0 +1,116 @@
+{
+  "nom": "cni_01_verso_mrz",
+  "description": "",
+  "date_creation": "2026-06-23T22:24:11.799430",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_01_verso_mrz\\reference.jpeg",
+  "zones": [
+    {
+      "id": 1782246031647,
+      "nom": "nomLatines",
+      "type": "ancre",
+      "lang": "fra",
+      "preprocess": "latin_simple",
+      "char_filter": "alpha_only",
+      "expected_format": "single_line",
+      "margin": 3,
+      "coords": [
+        0.1043,
+        0.0242,
+        0.5061,
+        0.1045
+      ],
+      "anchor_text": "Nom",
+      "anchor_direction": "droite",
+      "_anchor_ref": {
+        "cx": 0.07822085889570553,
+        "cy": 0.06619385342789598,
+        "h": 0.037825059101654845,
+        "w": 0.06134969325153374,
+        "matched": "Nom:",
+        "score": 100.0,
+        "img_w": 652,
+        "img_h": 423
+      }
+    },
+    {
+      "id": 1782246043053,
+      "nom": "prenomLatines",
+      "type": "ancre",
+      "lang": "fra",
+      "preprocess": "latin_simple",
+      "char_filter": "alpha_only",
+      "expected_format": "single_line",
+      "margin": 3,
+      "coords": [
+        0.1702,
+        0.1116,
+        0.7653,
+        0.2062
+      ],
+      "anchor_text": "Prénom(s)",
+      "anchor_direction": "droite",
+      "_anchor_ref": {
+        "cx": 0.10889570552147239,
+        "cy": 0.16548463356973994,
+        "h": 0.04728132387706856,
+        "w": 0.12576687116564417,
+        "matched": " Prnom",
+        "score": 83.33333333333334,
+        "img_w": 652,
+        "img_h": 423
+      }
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 652,
+      "height": 423,
+      "dpi_x": 200.0,
+      "dpi_y": 200.0
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ],
+      "manuel_formula": "0"
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ],
+      "manuel_formula": "largeur"
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ],
+      "manuel_formula": "0"
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ],
+      "manuel_formula": "hauteur"
+    },
+    "dimensions_absolues": {
+      "largeur": 652,
+      "hauteur": 423,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 652,
+      "height": 423
+    }
+  }
+}

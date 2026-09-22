@@ -1,0 +1,192 @@
+{
+  "filename": "ocr_b8931f08-ad5b-4059-8e2e-a2a8583d6df5_acte_deces_pere.jpg",
+  "date": "2026-06-18T19:50:28.373900",
+  "resultats": {
+    "adc_QR": {
+      "code_count": 1,
+      "code_type": "QRCODE",
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_opencv",
+      "sequences": [
+        "1920",
+        "2018",
+        "01141000",
+        "حمرون",
+        "فرحات",
+        "19/01/1932",
+        "عزازقة",
+        "18",
+        "15",
+        "HAMROUN",
+        "Ferhat",
+        "العلمة",
+        "محند",
+        "ظريفة",
+        "تواتي",
+        "31/12/2018",
+        "11:00",
+        "العلمة",
+        "31/12/2018",
+        "15:00",
+        "فريد حمرون",
+        "0",
+        "0",
+        "0",
+        "العلمة",
+        "2025-10-11 01:46:38.243#lPE36pCQH3gy3fN6XlRVVN8bwioC+AQY2bBemh/pRJbtDk/II4Bbz+dEgvmHWEtHAXSTk+2o/qAJB/c5V6LxPoh9NE+Xv6p7UGJcJGFMzNFTE4VZC+E404vEhJsl9yMRaqjiq9vc84MPSvZRRe1FFUyXruXJa9omPMh+G5aT9uAt+vrHH7beuHBMCjQ1HnJPPfPMCJOcu6xKc/eOZ8CLMeHMJbMgVAmbke45MSotnqUXnGKBa5IK9SUeBh/42aWlebVbnS4+EyCgXCSQc6yTRYjfsptrm+5SaFrsUc+AbEesaDqwjNL4QeloHv+eU+XZMTfbc+DmGbvuykmaf0SjdQ=="
+      ],
+      "statut": "ok",
+      "texte_auto": "1920*2018*01141000*حمرون*فرحات*19/01/1932**عزازقة*18*15*HAMROUN*Ferhat*العلمة**محند**ظريفة*تواتي**31/12/2018*11:00*العلمة*31/12/2018*15:00*فريد حمرون*0*0*0*العلمة*2025-10-11 01:46:38.243#lPE36pCQH3gy3fN6XlRVVN8bwioC+AQY2bBemh/pRJbtDk/II4Bbz+dEgvmHWEtHAXSTk+2o/qAJB/c5V6LxPoh9NE+Xv6p7UGJcJGFMzNFTE4VZC+E404vEhJsl9yMRaqjiq9vc84MPSvZRRe1FFUyXruXJa9omPMh+G5aT9uAt+vrHH7beuHBMCjQ1HnJPPfPMCJOcu6xKc/eOZ8CLMeHMJbMgVAmbke45MSotnqUXnGKBa5IK9SUeBh/42aWlebVbnS4+EyCgXCSQc6yTRYjfsptrm+5SaFrsUc+AbEesaDqwjNL4QeloHv+eU+XZMTfbc+DmGbvuykmaf0SjdQ==",
+      "texte_final": "1920*2018*01141000*حمرون*فرحات*19/01/1932**عزازقة*18*15*HAMROUN*Ferhat*العلمة**محند**ظريفة*تواتي**31/12/2018*11:00*العلمة*31/12/2018*15:00*فريد حمرون*0*0*0*العلمة*2025-10-11 01:46:38.243#lPE36pCQH3gy3fN6XlRVVN8bwioC+AQY2bBemh/pRJbtDk/II4Bbz+dEgvmHWEtHAXSTk+2o/qAJB/c5V6LxPoh9NE+Xv6p7UGJcJGFMzNFTE4VZC+E404vEhJsl9yMRaqjiq9vc84MPSvZRRe1FFUyXruXJa9omPMh+G5aT9uAt+vrHH7beuHBMCjQ1HnJPPfPMCJOcu6xKc/eOZ8CLMeHMJbMgVAmbke45MSotnqUXnGKBa5IK9SUeBh/42aWlebVbnS4+EyCgXCSQc6yTRYjfsptrm+5SaFrsUc+AbEesaDqwjNL4QeloHv+eU+XZMTfbc+DmGbvuykmaf0SjdQ=="
+    },
+    "dateNaissance": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "عزازقة",
+      "texte_final": "عزازقة"
+    },
+    "delivrePar": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "31/12/2018",
+      "texte_final": "31/12/2018"
+    },
+    "latines": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "ظريفة",
+      "texte_final": "ظريفة"
+    },
+    "lieuNaissance": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "15",
+      "texte_final": "15"
+    },
+    "mere": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "Ferhat العلمة",
+      "texte_final": "Ferhat العلمة"
+    },
+    "nom": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "فرحات",
+      "texte_final": "فرحات"
+    },
+    "numeroPiece": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "01141000",
+      "texte_final": "01141000"
+    },
+    "pere": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "HAMROUN",
+      "texte_final": "HAMROUN"
+    },
+    "prenom": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "19/01/1932",
+      "texte_final": "19/01/1932"
+    },
+    "prenomLatines": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "تواتي",
+      "texte_final": "تواتي"
+    },
+    "sexe": {
+      "confiance_auto": 1,
+      "coords": [
+        0.017,
+        0.7285,
+        0.3814,
+        0.9849
+      ],
+      "moteur": "qrcode_sequence_auto",
+      "statut": "ok",
+      "texte_auto": "محند",
+      "texte_final": "محند"
+    }
+  }
+}

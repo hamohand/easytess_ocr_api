@@ -83,7 +83,7 @@ def api_detecter_zone():
             buffered = BytesIO()
             preview_img.save(buffered, format="JPEG")
             img_str = base64.b64encode(buffered.getvalue()).decode()
-            if isinstance(result, dict) and result.get('success'):
+            if isinstance(result, dict):
                 result['preview_image_base64'] = f"data:image/jpeg;base64,{img_str}"
         else:
             result = detecter_zone_facture(filepath, lang=lang)

@@ -383,28 +383,19 @@ def _extract_articles(lines, header_idx, x_min, x_max, ignore_footer=False):
                 # Exclure les valeurs purement numériques/monétaires
                 if not _is_numeric_or_monetary(mot['text']):
                     mots_designation.append(mot)
+                else:
+                    # Les nombres dans la zone agissent comme séparateurs (autres colonnes)
+                    mots_autres.append(mot)
             else:
                 mots_autres.append(mot)
         
         if mots_designation:
-            # 1. Filtrage horizontal : s'assurer de ne garder qu'un seul produit sur la ligne.
-            # Si des mots sont séparés par un espace anormalement grand, on ne garde que le premier groupe.
-            mots_designation.sort(key=lambda m: m['x'])
-            groupe_principal = [mots_designation[0]]
-            for i in range(1, len(mots_designation)):
-                mot_prec = mots_designation[i-1]
-                mot_courant = mots_designation[i]
-                ecart = mot_courant['x'] - (mot_prec['x'] + mot_prec['width'])
-                
-                # Estimation de la largeur d'un caractère du mot précédent
-                largeur_char_moyenne = max(3, mot_prec['width'] / max(1, len(mot_prec['text'])))
-                
-                # Si l'écart est supérieur à 5 caractères, c'est sans doute une autre colonne/produit
-                if ecart > largeur_char_moyenne * 5:
-                    break
-                groupe_principal.append(mot_courant)
-                
-            mots_designation = groupe_principal
+            # Tri intelligent: de droite à gauche pour l'Arabe, de gauche à droite pour le reste
+            is_arabic = any('\u0600' <= c <= '\u06FF' for m in mots_designation for c in m['text'])
+            if is_arabic:
+                mots_designation.sort(key=lambda m: m['x'], reverse=True)
+            else:
+                mots_designation.sort(key=lambda m: m['x'])
             
             designation_text = ' '.join(m['text'] for m in mots_designation)
             avg_conf = np.mean([m['conf'] for m in mots_designation])
@@ -462,13 +453,13 @@ def detecter_zone_facture(image_path, lang='fra'):
     img_w, img_h = img_dims
     
     if not mots:
-        return {'success': False, 'error': "Aucun texte détecté."}
+        return {'success': False, 'error': "Aucun texte détecté.", 'image_dimensions': {'width': img_w, 'height': img_h}}
         
     lines = _group_words_into_lines(mots)
     header_idx, designation_mot = _find_header_line(lines)
     
     if header_idx is None:
-        return {'success': False, 'error': "En-tête du tableau non trouvé."}
+        return {'success': False, 'error': "En-tête du tableau non trouvé.", 'image_dimensions': {'width': img_w, 'height': img_h}}
         
     header_line = lines[header_idx]
     x_min, x_max = _detect_designation_bounds(header_line, designation_mot, img_w)
@@ -549,19 +540,40 @@ def extraire_facture(image_path, lang='fra', fallback_bounds=None, zone_manuelle
     logger.info(f"📊 {len(lines)} lignes regroupées à partir de {len(mots)} mots")
     
     if zone_manuelle:
-        x_min = zone_manuelle['x_min'] * img_w
-        x_max = zone_manuelle['x_max'] * img_w
-        y_min = zone_manuelle['y_min'] * img_h
-        y_max = zone_manuelle['y_max'] * img_h
+        x_min_zone = zone_manuelle['x_min'] * img_w
+        x_max_zone = zone_manuelle['x_max'] * img_w
+        y_min_zone = zone_manuelle['y_min'] * img_h
+        y_max_zone = zone_manuelle['y_max'] * img_h
         
         lignes_filtrees = []
         for line in lines:
             line_y = _line_y_center(line)
-            if y_min <= line_y <= y_max:
-                lignes_filtrees.append(line)
+            if y_min_zone <= line_y <= y_max_zone:
+                # Conserver uniquement les mots horizontalement dans la zone
+                mots_in_zone = [m for m in line if x_min_zone <= m['x'] + m['width']/2 <= x_max_zone]
+                if mots_in_zone:
+                    lignes_filtrees.append(mots_in_zone)
                 
-        articles = _extract_articles(lignes_filtrees, -1, x_min, x_max, ignore_footer=True)
-        en_tete_detecte = "Zone manuelle"
+        # Tenter de trouver un en-tête dans cette zone manuelle
+        header_idx, designation_mot = _find_header_line(lignes_filtrees)
+        
+        if header_idx is not None:
+            # On a trouvé l'en-tête, on calcule précisément la colonne
+            col_x_min, col_x_max = _detect_designation_bounds(lignes_filtrees[header_idx], designation_mot, img_w)
+            # Combiner les bornes de la zone et de la colonne
+            final_x_min = max(x_min_zone, col_x_min)
+            final_x_max = min(x_max_zone, col_x_max)
+            articles = _extract_articles(lignes_filtrees, header_idx, final_x_min, final_x_max, ignore_footer=True)
+            en_tete_detecte = _line_text(lignes_filtrees[header_idx])
+            colonne_designation = {'x_min': final_x_min, 'x_max': final_x_max}
+        else:
+            # Pas d'en-tête: on extrait directement toutes les lignes de la zone
+            articles = _extract_articles(lignes_filtrees, -1, x_min_zone, x_max_zone, ignore_footer=True)
+            en_tete_detecte = "Zone manuelle (En-tête non détecté)"
+            colonne_designation = {'x_min': x_min_zone, 'x_max': x_max_zone}
+            
+        # Assigner pour les logs et retours finaux
+        x_min, x_max = colonne_designation['x_min'], colonne_designation['x_max']
         
     else:
         # 3. Trouver l'en-tête

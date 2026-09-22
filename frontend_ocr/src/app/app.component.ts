@@ -7,13 +7,14 @@ import { CompositeCreatorComponent } from './components/composite-creator/compos
 import { MatchingComponent } from './components/matching/matching.component';
 import { InvoiceExtractorComponent } from './components/invoice-extractor/invoice-extractor.component';
 import { ImageCropperComponent } from './components/image-cropper/image-cropper.component';
+import { EntityAnchorCreatorComponent } from './components/entity-anchor/entity-anchor-creator.component';
 
-type OcrTab = 'analyse' | 'entity' | 'composite' | 'matching' | 'facture' | 'crop';
+type OcrTab = 'analyse' | 'entity' | 'entity_anchor' | 'composite' | 'matching' | 'facture' | 'crop';
 
 @Component({
     selector: 'app-root',
     standalone: true,
-    imports: [CommonModule, OcrUploadComponent, EntityCreatorComponent, CompositeCreatorComponent, MatchingComponent, InvoiceExtractorComponent, ImageCropperComponent],
+    imports: [CommonModule, OcrUploadComponent, EntityCreatorComponent, CompositeCreatorComponent, MatchingComponent, InvoiceExtractorComponent, ImageCropperComponent, EntityAnchorCreatorComponent],
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.css']
 })

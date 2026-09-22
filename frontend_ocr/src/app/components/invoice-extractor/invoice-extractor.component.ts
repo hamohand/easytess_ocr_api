@@ -143,27 +143,41 @@ export class InvoiceExtractorComponent {
 
         this.invoiceService.detecterZone(file, this.lang()).subscribe({
             next: (res) => {
-                if (res.success && res.zone) {
-                    if (res.preview_image_base64) {
-                        this.previewUrl.set(res.preview_image_base64);
-                        // Force update of dimensions if image dimensions are returned
-                        if (res.image_dimensions) {
-                            this.imageDimensions.set(res.image_dimensions);
-                        }
-                    }
+                if (res.preview_image_base64) {
+                    this.previewUrl.set(res.preview_image_base64);
+                }
+                
+                const dims = res.image_dimensions;
+                if (dims) {
+                    this.imageDimensions.set(dims);
+                }
+
+                if (res.success && res.zone && dims) {
+                    this.cropX.set(res.zone.x_min * dims.width);
+                    this.cropY.set(res.zone.y_min * dims.height);
+                    this.cropW.set((res.zone.x_max - res.zone.x_min) * dims.width);
+                    this.cropH.set((res.zone.y_max - res.zone.y_min) * dims.height);
                     
-                    const dims = res.image_dimensions;
-                    if (dims) {
-                        this.imageDimensions.set(dims);
-                        this.cropX.set(Math.floor(res.zone.x_min * dims.width));
-                        this.cropY.set(Math.floor(res.zone.y_min * dims.height));
-                        this.cropW.set(Math.ceil((res.zone.x_max - res.zone.x_min) * dims.width));
-                        this.cropH.set(Math.ceil((res.zone.y_max - res.zone.y_min) * dims.height));
-                    }
                     this.state.set('validating_zone');
+                    this.errorMessage.set(''); // Clear errors if any
                 } else {
-                    this.state.set('error');
-                    this.errorMessage.set(res.error || 'Erreur lors de la détection de la zone.');
+                    // Si on a l'image mais pas la zone (ex: en-tête non trouvé)
+                    if (dims || this.previewUrl()) {
+                        const currentDims = dims || this.imageDimensions();
+                        if (currentDims) {
+                            this.cropX.set(currentDims.width * 0.1);
+                            this.cropY.set(currentDims.height * 0.3);
+                            this.cropW.set(currentDims.width * 0.8);
+                            this.cropH.set(currentDims.height * 0.4);
+                            
+                            this.state.set('validating_zone');
+                            // On stocke le message d'erreur mais on continue
+                            this.errorMessage.set((res.error || 'Détection automatique échouée.') + ' Veuillez dessiner la zone manuellement.');
+                        }
+                    } else {
+                        this.state.set('error');
+                        this.errorMessage.set(res.error || 'Erreur lors de la détection de la zone.');
+                    }
                 }
             },
             error: (err) => {

@@ -1463,31 +1463,67 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                         def get_seq(i):
                             return sequences[i] if i < len(sequences) else ""
                             
-                        # Extractions de base
-                        if len(sequences) >= 6:
-                            add_qr_field('nom', get_seq(4))
-                            add_qr_field('prenom', get_seq(5))
-                            
-                        # Extractions étendues
-                        if len(sequences) >= 26:
-                            add_qr_field('numeroPiece', get_seq(2))
-                            add_qr_field('dateNaissance', get_seq(6))
-                            add_qr_field('lieuNaissance', get_seq(8))
-                            add_qr_field('pere', get_seq(9))
-                            
-                            mere_val = f"{get_seq(10)} {get_seq(11)}".strip()
-                            add_qr_field('mere', mere_val)
-                            
-                            add_qr_field('sexe', get_seq(12))
-                            add_qr_field('latines', get_seq(13))
-                            add_qr_field('prenomLatines', get_seq(14))
-                            add_qr_field('delivrePar', get_seq(15))
-                            
-                            
-                            # nin : 18 chiffres consécutifs dans la chaîne complète
-                            match_nin = re.search(r'\d{18}', qr_data)
-                            if match_nin:
-                                add_qr_field('nin', match_nin.group(0))
+                        # Détection automatique du type de document (Naissance vs Décès)
+                        is_deces = False
+                        if 'adc' in nom_zone.lower() or 'deces' in nom_zone.lower():
+                            is_deces = True
+                        elif len(sequences) >= 20:
+                            import re
+                            is_seq_15_date = bool(re.match(r'^\d{2}/\d{2}/\d{4}$', get_seq(15)))
+                            is_seq_5_date = bool(re.match(r'^\d{2}/\d{2}/\d{4}$', get_seq(5)))
+                            if is_seq_15_date and is_seq_5_date:
+                                is_deces = True
+                        
+                        if is_deces:
+                            # --- Mappage pour l'Acte de Décès ---
+                            if len(sequences) >= 5:
+                                add_qr_field('nom', get_seq(3))
+                                add_qr_field('prenom', get_seq(4))
+                            if len(sequences) >= 15:
+                                add_qr_field('numeroPiece', get_seq(2))
+                                add_qr_field('dateNaissance', get_seq(5))
+                                add_qr_field('lieuNaissance', get_seq(6))
+                                add_qr_field('latines', get_seq(9))
+                                add_qr_field('prenomLatines', get_seq(10))
+                                add_qr_field('lieuDeces', get_seq(11))
+                                add_qr_field('pere', get_seq(12))
+                                
+                                # Nom de famille de la mère (14) + prénom de la mère (13)
+                                mere_val = f"{get_seq(14)} {get_seq(13)}".strip()
+                                add_qr_field('mere', mere_val)
+                            if len(sequences) >= 21:
+                                add_qr_field('dateDeces', get_seq(15))
+                                add_qr_field('heureDeces', get_seq(16))
+                                add_qr_field('delivrePar', get_seq(17))
+                                add_qr_field('dateDeclaration', get_seq(18))
+                                add_qr_field('heureDeclaration', get_seq(19))
+                                add_qr_field('declarant', get_seq(20))
+                        else:
+                            # --- Mappage pour l'Extrait de Naissance ---
+                            # Extractions de base
+                            if len(sequences) >= 6:
+                                add_qr_field('nom', get_seq(4))
+                                add_qr_field('prenom', get_seq(5))
+                                
+                            # Extractions étendues
+                            if len(sequences) >= 26:
+                                add_qr_field('numeroPiece', get_seq(2))
+                                add_qr_field('dateNaissance', get_seq(6))
+                                add_qr_field('lieuNaissance', get_seq(8))
+                                add_qr_field('pere', get_seq(9))
+                                
+                                mere_val = f"{get_seq(10)} {get_seq(11)}".strip()
+                                add_qr_field('mere', mere_val)
+                                
+                                add_qr_field('sexe', get_seq(12))
+                                add_qr_field('latines', get_seq(13))
+                                add_qr_field('prenomLatines', get_seq(14))
+                                add_qr_field('delivrePar', get_seq(15))
+                                
+                                # nin : 18 chiffres consécutifs dans la chaîne complète
+                                match_nin = re.search(r'\d{18}', qr_data)
+                                if match_nin:
+                                    add_qr_field('nin', match_nin.group(0))
                     # ----------------------------------------------------------------
     
                 else:
@@ -1496,7 +1532,68 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
             except Exception as e:
                 logger.error(f"Erreur détection QR code zone {nom_zone}: {e}")
         
-        # 2. Zones OCR classiques (exclure les zones QR déjà traitées)
+        
+        # 1.5. Détection Clé-Valeur (Ancres textuelles pour les champs)
+        zones_cle_valeur = {k: v for k, v in zones_config.items() if v.get('type') == 'ancre' and v.get('anchor_text')}
+        if zones_cle_valeur:
+            logger.info("🔍 Recherche par paires Clé-Valeur demandée...")
+            if 'mots_ocr' not in locals() or mots_ocr is None or len(mots_ocr) == 0:
+                mots_ocr, _ = ocr_global_avec_positions(image_path, lang='ara+fra')
+            
+            for nom_zone, config in zones_cle_valeur.items():
+                anchor_text = config.get('anchor_text')
+                direction = config.get('anchor_direction', 'gauche') # gauche, droite, bas, haut
+                
+                # Chercher le mot ancre
+                meilleur_mot = None
+                for mot in mots_ocr:
+                    # Recherche exacte ou fuzzy basique
+                    if anchor_text in mot['text'] or mot['text'] in anchor_text:
+                        meilleur_mot = mot
+                        break
+                
+                if meilleur_mot:
+                    logger.info(f"✅ Mot ancre trouvé pour {nom_zone}: {meilleur_mot['text']}")
+                    ax, ay, aw, ah = meilleur_mot['x'], meilleur_mot['y'], meilleur_mot['width'], meilleur_mot['height']
+                    
+                    # Trouver les mots dans la direction
+                    mots_valeurs = []
+                    for mot in mots_ocr:
+                        if mot == meilleur_mot: continue
+                        mx, my, mw, mh = mot['x'], mot['y'], mot['width'], mot['height']
+                        
+                        # Vérifier si sur la même ligne (tolérance Y)
+                        if abs(my - ay) < ah:
+                            if direction == 'gauche' and mx < ax:
+                                mots_valeurs.append(mot)
+                            elif direction == 'droite' and mx > ax:
+                                mots_valeurs.append(mot)
+                    
+                    # Trier et fusionner
+                    if mots_valeurs:
+                        # Si direction gauche, trier de droite à gauche (RTL)
+                        mots_valeurs.sort(key=lambda m: m['x'], reverse=(direction=='gauche'))
+                        texte_extrait = " ".join([m['text'] for m in mots_valeurs])
+                        
+                        # Nettoyer si alpha_only
+                        if config.get('char_filter') == 'alpha_only':
+                            import re
+                            texte_extrait = re.sub(r'[^\w\s؀-ۿ]', '', texte_extrait)
+                        
+                        logger.info(f"🎉 Valeur extraite pour {nom_zone}: {texte_extrait}")
+                        resultats[nom_zone] = {
+                            'texte_auto': texte_extrait,
+                            'confiance_auto': 0.9,
+                            'statut': 'succes',
+                            'moteur': 'cle-valeur',
+                            'coords': config.get('coords', [0,0,1,1]),
+                            'texte_final': texte_extrait
+                        }
+                else:
+                    logger.warning(f"❌ Mot ancre non trouvé pour {nom_zone} ({anchor_text})")
+
+        # 2. Zones OCR classiques (exclure les zones QR et Clé-Valeur déjà traitées)
+
         zones_ocr = {k: v for k, v in zones_config.items() if k not in resultats}
         
         # 3. Essai Tesseract sur zones OCR

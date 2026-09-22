@@ -1,0 +1,233 @@
+<!-- entity-anchor-creator.component.html -->
+<div class="anchor-creator">
+    <!-- Header -->
+    <div class="header">
+        <h1>⚓ Entités-Ancre</h1>
+        <p>Créez des entités OCR basées sur des ancres textuelles — sans cadre de référence</p>
+    </div>
+
+    <!-- Error message -->
+    @if (errorMessage()) {
+    <div class="error-message">
+        ❌ {{ errorMessage() }}
+        <button class="close-btn" (click)="errorMessage.set('')">✕</button>
+    </div>
+    }
+
+    <!-- Success message -->
+    @if (successMessage()) {
+    <div class="success-message">
+        {{ successMessage() }}
+    </div>
+    }
+
+    <!-- Existing entities list -->
+    <div class="entities-section">
+        <div class="section-header">
+            <h2>📂 Entités-Ancre existantes</h2>
+            <button class="btn btn-small btn-outline" (click)="chargerEntites()">🔄 Rafraîchir</button>
+        </div>
+
+        @if (isLoading()) {
+        <div class="loading-indicator">
+            <div class="spinner"></div>
+            <span>Chargement...</span>
+        </div>
+        }
+
+        @if (entites().length === 0 && !isLoading()) {
+        <p class="empty-message">Aucune entité-ancre définie. Créez-en une ci-dessous.</p>
+        }
+
+        <div class="entities-grid">
+            @for (entite of entites(); track entite.nom) {
+            <div class="entity-card" [class.editing]="editingEntityName() === entite.nom">
+                <div class="entity-info">
+                    <div class="entity-name">⚓ {{ entite.nom }}</div>
+                    @if (entite.description) {
+                    <div class="entity-desc">{{ entite.description }}</div>
+                    }
+                    <div class="entity-meta">
+                        {{ entite.zones.length }} zone(s)
+                        @if (entite.date_creation) {
+                        · {{ entite.date_creation }}
+                        }
+                    </div>
+                </div>
+                <div class="entity-actions">
+                    <button class="btn btn-small btn-primary" (click)="chargerEntite(entite.nom)">✏️ Éditer</button>
+                    <button class="btn btn-small btn-danger" (click)="supprimerEntite(entite.nom)">🗑️</button>
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+
+    <!-- Creator form -->
+    <div class="creator-section">
+        <h2>{{ editMode() ? '✏️ Modification' : '➕ Nouvelle entité-ancre' }}</h2>
+
+        <!-- Entity name + description -->
+        <div class="entity-form">
+            <div class="form-group">
+                <label>Nom de l'entité :</label>
+                <input type="text" [ngModel]="entityName()" (ngModelChange)="entityName.set($event)" placeholder="ex: Passeport_V2_Ancre" [disabled]="editMode()">
+            </div>
+            <div class="form-group">
+                <label>Description (optionnel) :</label>
+                <textarea [ngModel]="entityDescription()" (ngModelChange)="entityDescription.set($event)" rows="2" placeholder="Description de l'entité-ancre"></textarea>
+            </div>
+        </div>
+
+        <!-- Image upload -->
+        <div class="upload-section">
+            <button class="btn btn-primary" (click)="imageInput.click()">📷 Charger une image de référence</button>
+            <input #imageInput type="file" accept="image/*" (change)="onImageSelected($event)" hidden>
+            @if (uploadedImageFilename()) {
+            <span class="filename">{{ uploadedImageFilename() }}</span>
+            }
+        </div>
+
+        <!-- Canvas for drawing zones -->
+        @if (imageUrl()) {
+        <div class="canvas-section">
+            <div class="canvas-controls">
+                <div class="instructions">🖱️ Dessinez un rectangle pour définir une zone</div>
+            </div>
+            <div class="canvas-wrapper">
+                <canvas #imageCanvas
+                    (mousedown)="onMouseDown($event)"
+                    (mousemove)="onMouseMove($event)"
+                    (mouseup)="onMouseUp($event)">
+                </canvas>
+            </div>
+        </div>
+        }
+
+        <!-- Zones list -->
+        @if (zones().length > 0) {
+        <div class="zones-list">
+            <h3>📋 Zones définies ({{ zones().length }})</h3>
+            <div class="zones-grid">
+                @for (zone of zones(); track zone.id) {
+                <div class="zone-card">
+                    <div class="zone-header">
+                        <span class="zone-number">{{ $index + 1 }}</span>
+                        <input type="text" [(ngModel)]="zone.nom" class="zone-name-edit" placeholder="Nom de la zone">
+                    </div>
+
+                    <!-- Anchor text (REQUIRED) -->
+                    <div class="config-row">
+                        <label>⚓ Texte ancre :</label>
+                        <input type="text" [(ngModel)]="zone.anchor_text" class="sm-input" placeholder="ex: Surname" required>
+                    </div>
+
+                    <!-- Direction de l'ancre -->
+                    <div class="config-row">
+                        <label>Direction :</label>
+                        <select [(ngModel)]="zone.anchor_direction" class="sm-input">
+                            <option value="droite">À droite</option>
+                            <option value="gauche">À gauche</option>
+                            <option value="dessous">En dessous</option>
+                            <option value="dessus">Au dessus</option>
+                        </select>
+                    </div>
+
+                    <!-- Language -->
+                    <div class="config-row">
+                        <label>Langue OCR :</label>
+                        <select [(ngModel)]="zone.lang" class="sm-input">
+                            <option value="ara+fra">Arabe + Français</option>
+                            <option value="fra">Français</option>
+                            <option value="ara">Arabe</option>
+                            <option value="eng">Anglais</option>
+                        </select>
+                    </div>
+
+                    <!-- Char filter -->
+                    <div class="config-row">
+                        <label>Filtre caractères :</label>
+                        <input type="text" [(ngModel)]="zone.char_filter" class="sm-input" [attr.list]="'charFilters-' + zone.id" placeholder="none">
+                        <datalist [id]="'charFilters-' + zone.id">
+                            <option value="none">Aucun</option>
+                            <option value="alpha_only">Lettres uniquement</option>
+                            <option value="digits_only">Chiffres uniquement</option>
+                            <option value="alphanum">Lettres + Chiffres</option>
+                        </datalist>
+                    </div>
+
+                    <!-- Expected format -->
+                    <div class="config-row">
+                        <label>Format attendu :</label>
+                        <select [(ngModel)]="zone.expected_format" class="sm-input">
+                            <option value="auto">Auto</option>
+                            <option value="single_line">Ligne unique</option>
+                            <option value="single_word">Mot unique</option>
+                            <option value="block">Bloc de texte</option>
+                        </select>
+                    </div>
+
+                    <!-- Margin -->
+                    <div class="config-row">
+                        <label>Marge (px) :</label>
+                        <input type="number" [(ngModel)]="zone.margin" class="sm-input" min="-20" max="20" step="1">
+                    </div>
+
+                    <!-- Coordonnées éditables (format relatif 0.0-1.0) -->
+                    <div class="zone-coords-edit" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; border: 1px solid #ddd;">
+                        <div style="font-size: 0.85em; color: #555; margin-bottom: 5px;">
+                            <strong>Ajustement manuel de la zone</strong> (relatif à l'image courante) :
+                        </div>
+                        <div class="coords-row" style="display: flex; gap: 10px; margin-bottom: 5px;">
+                            <label style="width: 20px;">X1:</label>
+                            <input type="number" [(ngModel)]="zone.coords[0]" class="coord-input sm-input" step="0.01" min="0" max="1" style="width: 60px;" (ngModelChange)="redrawCanvas()">
+                            <label style="width: 20px;">Y1:</label>
+                            <input type="number" [(ngModel)]="zone.coords[1]" class="coord-input sm-input" step="0.01" min="0" max="1" style="width: 60px;" (ngModelChange)="redrawCanvas()">
+                        </div>
+                        <div class="coords-row" style="display: flex; gap: 10px;">
+                            <label style="width: 20px;">X2:</label>
+                            <input type="number" [(ngModel)]="zone.coords[2]" class="coord-input sm-input" step="0.01" min="0" max="1" style="width: 60px;" (ngModelChange)="redrawCanvas()">
+                            <label style="width: 20px;">Y2:</label>
+                            <input type="number" [(ngModel)]="zone.coords[3]" class="coord-input sm-input" step="0.01" min="0" max="1" style="width: 60px;" (ngModelChange)="redrawCanvas()">
+                        </div>
+                    </div>
+
+                    <!-- Anchor offset display (read-only, shown after save) -->
+                    @if (zone.anchor_offset) {
+                    <div class="offset-display">
+                        📏 Offset :
+                        @if (zone.anchor_offset.dx_left !== undefined) {
+                        dx_left={{ zone.anchor_offset.dx_left | number:'1.2-2' }}
+                        dy_top={{ zone.anchor_offset.dy_top | number:'1.2-2' }}
+                        } @else {
+                        dx={{ zone.anchor_offset.dx | number:'1.1-1' }}
+                        dy={{ zone.anchor_offset.dy | number:'1.1-1' }}
+                        }
+                        w={{ zone.anchor_offset.w | number:'1.1-1' }}
+                        h={{ zone.anchor_offset.h | number:'1.1-1' }}
+                    </div>
+                    }
+
+                    <button class="btn-delete" (click)="deleteZone(zone.id)">🗑️</button>
+                </div>
+                }
+            </div>
+        </div>
+        }
+
+        <!-- Save button -->
+        <div class="save-section">
+            @if (editMode()) {
+            <button class="btn btn-outline" (click)="reset()">❌ Annuler</button>
+            }
+            <button class="btn btn-success" (click)="saveEntity()" [disabled]="isSaving() || zones().length === 0 || !entityName()">
+                @if (isSaving()) {
+                <div class="spinner"></div>
+                Sauvegarde...
+                } @else {
+                💾 {{ editMode() ? 'Mettre à jour' : 'Sauvegarder' }} l'entité-ancre
+                }
+            </button>
+        </div>
+    </div>
+</div>

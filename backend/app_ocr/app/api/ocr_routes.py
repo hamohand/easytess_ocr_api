@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session, current_app, Response
+﻿from flask import Blueprint, request, jsonify, session, current_app, Response
 import os
 import json
 import uuid
@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 from app.services.ocr_engine import analyser_hybride
 from app.services.ocr_engine_v2 import analyser_hybride as analyser_hybride_v2
+from app.services.ocr_engine_v2 import analyser_ancres_pures
 from werkzeug.utils import secure_filename
 from easy_core.pdf_utils import convert_pdf_to_image
 
@@ -112,27 +113,51 @@ def api_analyser_v1():
         
     # 2. Determine Entity/Zones
     entite_active = session.get('entite_active')
+    entite_type = None  # Suivre le type d'entité pour le routage ancre_pure
     
     if data.get('zones'):
         zones_config = data['zones']
+        # Convert to dict if it's a list
+        if isinstance(zones_config, list):
+            zones_config = {z['nom']: z for z in zones_config}
+        # Merge _anchor_ref from session's entite_active to allow testing anchors
+        if entite_active and 'zones' in entite_active:
+            saved_zones = {z['nom']: z for z in entite_active['zones']}
+            for nom, z in zones_config.items():
+                if nom in saved_zones and '_anchor_ref' in saved_zones[nom]:
+                    z['_anchor_ref'] = saved_zones[nom]['_anchor_ref']
+        if entite_active:
+            entite_type = entite_active.get('type')
     elif data.get('entite'):
         # Charger l'entité depuis le manager si demandée explicitement (très utile pour Swagger)
         entite_nom = data['entite']
         entite_config = current_app.entity_manager.charger_entite(entite_nom)
         if entite_config and 'zones' in entite_config:
             zones_config = {z['nom']: {**z, 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_config['zones']}
+            entite_type = entite_config.get('type')
         else:
             return jsonify({'error': f"Entité '{entite_nom}' introuvable ou invalide."}), 400
     elif entite_active:
         zones_config = {z['nom']: {**z, 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_active['zones']}
+        entite_type = entite_active.get('type')
     else:
         zones_config = {"Test": {"coords": [100, 100, 300, 200]}}
     
     cadre_reference = data.get('cadre_reference')
     mode = data.get('mode', 'rapide')
     
+    # Auto-détection : si au moins une zone a un anchor_offset, c'est une entité ancre pure
+    has_anchor_offset = any(v.get('anchor_offset') for v in zones_config.values())
+    if has_anchor_offset:
+        entite_type = 'ancre_pure'
+    
     try:
-        resultats, alertes, cadre_detecte = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference, mode=mode)
+        # Routage vers analyser_ancres_pures si l'entité est de type 'ancre_pure'
+        if entite_type == 'ancre_pure':
+            logger.info("⚓ Entité ancre_pure détectée → routage vers analyser_ancres_pures (V1)")
+            resultats, alertes, cadre_detecte = analyser_ancres_pures(image_path, zones_config, mode=mode)
+        else:
+            resultats, alertes, cadre_detecte = analyser_hybride(image_path, zones_config, cadre_reference=cadre_reference, mode=mode)
         
         if resultats is None:
             return jsonify({
@@ -202,28 +227,52 @@ def api_analyser():
         
     # 2. Determine Entity/Zones
     entite_active = session.get('entite_active')
+    entite_type = None  # Suivre le type d'entité pour le routage ancre_pure
     
     if data.get('zones'):
         zones_config = data['zones']
+        # Convert to dict if it's a list
+        if isinstance(zones_config, list):
+            zones_config = {z['nom']: z for z in zones_config}
+        # Merge _anchor_ref from session's entite_active to allow testing anchors
+        if entite_active and 'zones' in entite_active:
+            saved_zones = {z['nom']: z for z in entite_active['zones']}
+            for nom, z in zones_config.items():
+                if nom in saved_zones and '_anchor_ref' in saved_zones[nom]:
+                    z['_anchor_ref'] = saved_zones[nom]['_anchor_ref']
+        if entite_active:
+            entite_type = entite_active.get('type')
     elif data.get('entite'):
         # Charger l'entité depuis le manager si demandée explicitement (très utile pour Swagger)
         entite_nom = data['entite']
         entite_config = current_app.entity_manager.charger_entite(entite_nom)
         if entite_config and 'zones' in entite_config:
             zones_config = {z['nom']: {**z, 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_config['zones']}
+            entite_type = entite_config.get('type')
         else:
             return jsonify({'error': f"Entité '{entite_nom}' introuvable ou invalide."}), 400
     elif entite_active:
         zones_config = {z['nom']: {**z, 'lang': z.get('lang', 'ara+fra'), 'char_filter': z.get('char_filter', 'none')} for z in entite_active['zones']}
+        entite_type = entite_active.get('type')
     else:
         zones_config = {"Test": {"coords": [100, 100, 300, 200]}}
     
     cadre_reference = data.get('cadre_reference')
     mode = data.get('mode', 'rapide')
     
+    # Auto-détection : si au moins une zone a un anchor_offset, c'est une entité ancre pure
+    has_anchor_offset = any(v.get('anchor_offset') for v in zones_config.values())
+    if has_anchor_offset:
+        entite_type = 'ancre_pure'
+    
     try:
-        # APPEL A LA VERSION V2 (AVEC PADDLEOCR)
-        resultats, alertes, cadre_detecte = analyser_hybride_v2(image_path, zones_config, cadre_reference=cadre_reference, mode=mode)
+        # Routage vers analyser_ancres_pures si l'entité est de type 'ancre_pure'
+        if entite_type == 'ancre_pure':
+            logger.info("⚓ Entité ancre_pure détectée → routage vers analyser_ancres_pures (V2)")
+            resultats, alertes, cadre_detecte = analyser_ancres_pures(image_path, zones_config, mode=mode)
+        else:
+            # APPEL A LA VERSION V2 (AVEC PADDLEOCR)
+            resultats, alertes, cadre_detecte = analyser_hybride_v2(image_path, zones_config, cadre_reference=cadre_reference, mode=mode)
         
         if resultats is None:
             return jsonify({
@@ -625,3 +674,104 @@ def api_corrections():
     alertes = session.get('alertes', [])
     zones_a_corriger = {k: v for k, v in resultats.items() if k in alertes}
     return jsonify(zones_a_corriger)
+
+# =============================================================================
+# MRZ — Machine Readable Zone
+# =============================================================================
+
+@ocr_bp.route('/api/mrz/lire', methods=['POST'])
+def api_mrz_lire():
+    """
+    Lit la zone MRZ d'un document d'identité (CNI ou Passeport).
+    
+    Attend un JSON avec le champ 'filename' (nom du fichier déjà uploadé).
+    Retourne les lignes MRZ brutes pour parsing côté Java.
+    """
+    data = request.get_json()
+    if not data or 'filename' not in data:
+        return jsonify({"success": False, "error": "Champ 'filename' manquant"}), 400
+
+    filename = data['filename']
+    image_path = _resolve_image_path(filename)
+    if not image_path:
+        return jsonify({"success": False, "error": f"Fichier '{filename}' introuvable"}), 404
+
+    from app.services.mrz_reader import get_mrz_reader
+    reader = get_mrz_reader()
+    result = reader.extract_mrz(image_path)
+
+    return jsonify(result)
+
+# =============================================================================
+# TRANSLITTÉRATION (Arabe <-> Latin)
+# =============================================================================
+
+def arabic_to_latin(text):
+    if not text: return ""
+    mapping = {
+        'ا': 'A', 'أ': 'A', 'إ': 'A', 'آ': 'A',
+        'ب': 'B', 'ت': 'T', 'ث': 'TH', 'ج': 'J',
+        'ح': 'H', 'خ': 'KH', 'د': 'D', 'ذ': 'DH',
+        'ر': 'R', 'ز': 'Z', 'س': 'S', 'ش': 'CH',
+        'ص': 'S', 'ض': 'D', 'ط': 'T', 'ظ': 'Z',
+        'ع': 'A', 'غ': 'GH', 'ف': 'F', 'ق': 'K',
+        'ك': 'K', 'ل': 'L', 'م': 'M', 'ن': 'N',
+        'ه': 'H', 'و': 'W', 'ي': 'Y', 'ة': 'A',
+        'ى': 'A', 'ئ': 'I', 'ؤ': 'OU'
+    }
+    res = []
+    for c in text:
+        if c in mapping:
+            res.append(mapping[c])
+    return "".join(res)
+
+def normalize_latin(text):
+    if not text: return ""
+    vowels = "AEIOUY"
+    res = []
+    text = text.upper()
+    for i, c in enumerate(text):
+        if c.isalpha():
+            # Garder la première lettre même si c'est une voyelle (ex: OMAR)
+            # ou si c'est une consonne
+            if i == 0 or c not in vowels:
+                res.append(c)
+    return "".join(res)
+
+@ocr_bp.route('/api/translitteration/verifier', methods=['POST'])
+def api_translitteration_verifier():
+    """
+    Vérifie phonétiquement si un nom arabe correspond à un nom latin (MRZ).
+    """
+    data = request.get_json()
+    if not data or 'arabe' not in data or 'latin' not in data:
+        return jsonify({"success": False, "error": "Paramètres 'arabe' et 'latin' requis"}), 400
+    
+    arabe = str(data['arabe']).strip()
+    latin = str(data['latin']).strip()
+    
+    arabe_translit = arabic_to_latin(arabe)
+    latin_norm = normalize_latin(latin)
+    
+    if not arabe_translit or not latin_norm:
+        return jsonify({"success": True, "match": False, "score": 0.0})
+        
+    try:
+        from rapidfuzz import fuzz
+        score = fuzz.ratio(arabe_translit, latin_norm)
+    except ImportError:
+        # Fallback ultra simple si rapidfuzz n'est pas dispo
+        import difflib
+        score = difflib.SequenceMatcher(None, arabe_translit, latin_norm).ratio() * 100.0
+        
+    # Un score > 60% est generalement bon pour cette translitteration phonetique basique
+    match = score > 60.0
+    
+    return jsonify({
+        "success": True,
+        "match": match,
+        "score": score,
+        "arabe_translit": arabe_translit,
+        "latin_norm": latin_norm
+    })
+

@@ -489,6 +489,190 @@ def modifier_zone_existante(nom, zid):
         return jsonify({'success': True})
     return jsonify({'error': 'Zone not found'}), 404
 
+@entity_bp.route('/api/sauvegarder-entite-ancre', methods=['POST'])
+def sauvegarder_entite_ancre():
+    """
+    Sauvegarde une entité de type 'ancre_pure'.
+    Pour chaque zone avec anchor_text, calcule anchor_offset à partir de l'image de référence.
+    """
+    data = request.json
+    nom = data.get('nom')
+    description = data.get('description', '')
+    zones = data.get('zones', [])
+    image_filename = data.get('image_filename')
+
+    if not nom:
+        return jsonify({'error': 'Nom manquant'}), 400
+    if not zones:
+        return jsonify({'error': 'Aucune zone définie'}), 400
+
+    # --- Résoudre le chemin de l'image de référence ---
+    image_path = None
+    if image_filename:
+        temp_path = os.path.join(current_app.config['UPLOAD_TEMP_FOLDER'], image_filename)
+        upload_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
+        if os.path.exists(temp_path):
+            image_path = temp_path
+        elif os.path.exists(upload_path):
+            image_path = upload_path
+        else:
+            current_app.logger.warning(f"⚠️ Image '{image_filename}' non trouvée ni dans uploads_temp/ ni dans uploads/")
+    else:
+        image_path = session.get('temp_image_path')
+
+    # --- Copier l'image de référence dans un emplacement permanent ---
+    if image_path and os.path.exists(image_path):
+        import shutil
+        ext = os.path.splitext(image_path)[1] or '.png'
+        entity_images_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'entities', nom)
+        os.makedirs(entity_images_dir, exist_ok=True)
+        permanent_image_path = os.path.join(entity_images_dir, f"reference{ext}")
+        if os.path.abspath(image_path) != os.path.abspath(permanent_image_path):
+            shutil.copy2(image_path, permanent_image_path)
+            current_app.logger.info(f"✅ Image de référence copiée vers: {permanent_image_path}")
+        image_path = permanent_image_path
+
+    # --- Calcul des anchor_offset via PaddleOCR sur l'image de référence ---
+    zones_avec_ancre = [z for z in zones if z.get('anchor_text')]
+    if zones_avec_ancre and image_path and os.path.exists(image_path):
+        try:
+            from app.services.ocr_engine_v2 import get_paddleocr_reader, PADDLEOCR_DISPONIBLE
+            if PADDLEOCR_DISPONIBLE:
+                reader = get_paddleocr_reader('ara+fra')
+                result_ref = reader.ocr(image_path, cls=True)
+                from rapidfuzz import process, fuzz
+
+                if result_ref and result_ref[0]:
+                    with Image.open(image_path) as img_ref:
+                        ref_w, ref_h = img_ref.size
+
+                    # Construire la liste des blocs OCR (même algo que analyser_ancres_pures)
+                    mots_list = []
+                    for res in result_ref[0]:
+                        box = res[0]
+                        text = res[1][0].strip()
+                        if not text:
+                            continue
+                        bx1 = min(pt[0] for pt in box)
+                        by1 = min(pt[1] for pt in box)
+                        bx2 = max(pt[0] for pt in box)
+                        by2 = max(pt[1] for pt in box)
+                        box_h = by2 - by1
+                        if box_h <= 0:
+                            continue
+                        mots_list.append({
+                            'text': text,
+                            'box': box,
+                            'cx': (bx1 + bx2) / 2,
+                            'cy': (by1 + by2) / 2,
+                            'x1': bx1, 'y1': by1,
+                            'x2': bx2, 'y2': by2,
+                            'h': box_h,
+                            'w': bx2 - bx1,
+                        })
+
+                    for zone in zones_avec_ancre:
+                        anchor = zone['anchor_text']
+                        
+                        # Même algorithme que analyser_ancres_pures :
+                        # Chercher tous les candidats, préférer le plus court parmi les forts
+                        candidates = []
+                        for idx, m in enumerate(mots_list):
+                            score_partial = fuzz.partial_ratio(anchor, m['text'])
+                            score_token = fuzz.token_set_ratio(anchor, m['text'])
+                            best_score = max(score_partial, score_token)
+                            if best_score >= 60:
+                                candidates.append((idx, m, best_score))
+                        
+                        if not candidates:
+                            current_app.logger.warning(f"⚠️ Ancre '{anchor}' introuvable dans l'image de référence")
+                            continue
+                        
+                        # Préférer le plus court parmi les forts (score >= 80)
+                        strong = [(idx, m, s) for idx, m, s in candidates if s >= 80]
+                        if strong:
+                            best_idx, best_entry, best_score = min(strong, key=lambda x: len(x[1]['text']))
+                        else:
+                            best_idx, best_entry, best_score = max(candidates, key=lambda x: x[2])
+
+                        # Utiliser les BORDS de la bounding box (plus stable que le centre)
+                        a_x1 = best_entry['x1']  # bord gauche de l'ancre
+                        a_y1 = best_entry['y1']  # bord haut de l'ancre
+                        a_x2 = best_entry['x2']  # bord droit de l'ancre
+                        a_y2 = best_entry['y2']  # bord bas de l'ancre
+                        h_a = best_entry['h']
+
+                        # Coordonnées de la zone en pixels (depuis coords normalisées)
+                        coords = zone.get('coords', [0, 0, 1, 1])
+                        zx1 = coords[0] * ref_w
+                        zy1 = coords[1] * ref_h
+                        zx2 = coords[2] * ref_w
+                        zy2 = coords[3] * ref_h
+
+                        # Calculer l'offset basé sur les BORDS de l'ancre (pas le centre)
+                        # dx_left = distance du bord gauche de l'ancre au bord gauche de la zone (en multiples de h_a)
+                        # dy_top  = distance du bord bas de l'ancre au bord haut de la zone (en multiples de h_a)
+                        zone['anchor_offset'] = {
+                            'dx_left': (zx1 - a_x1) / h_a,
+                            'dy_top': (zy1 - a_y2) / h_a,
+                            'w': (zx2 - zx1) / h_a,
+                            'h': (zy2 - zy1) / h_a
+                        }
+                        zone['type'] = 'ancre'
+
+                        current_app.logger.info(
+                            f"⚓ Ancre '{anchor}' → match '{best_entry['text'][:30]}' (score={best_score}, h_a={h_a:.0f}px) → "
+                            f"offset dx_left={zone['anchor_offset']['dx_left']:.2f}, dy_top={zone['anchor_offset']['dy_top']:.2f}, "
+                            f"w={zone['anchor_offset']['w']:.2f}, h={zone['anchor_offset']['h']:.2f}"
+                        )
+                else:
+                    current_app.logger.warning("⚠️ PaddleOCR n'a détecté aucun texte dans l'image de référence")
+            else:
+                current_app.logger.warning("⚠️ PaddleOCR non disponible pour le calcul des anchor_offset")
+        except Exception as e:
+            current_app.logger.error(f"❌ Erreur calcul anchor_offset: {e}")
+
+    # --- Sauvegarder l'entité avec le type 'ancre_pure' ---
+    try:
+        manager = get_manager()
+        entite_data = {
+            'nom': nom,
+            'description': description,
+            'type': 'ancre_pure',
+            'zones': zones,
+            'image_reference': image_path,
+        }
+        # Utiliser le manager standard — on passe les zones enrichies avec anchor_offset
+        manager.sauvegarder_entite(nom, zones, image_path=image_path, description=description)
+
+        # Relire le fichier pour y injecter le type 'ancre_pure'
+        entite_saved = manager.charger_entite(nom)
+        if entite_saved:
+            entite_saved['type'] = 'ancre_pure'
+            import json
+            fichier_entite = os.path.join(manager.entities_dir, f"{nom}.json")
+            with open(fichier_entite, 'w', encoding='utf-8') as f:
+                json.dump(entite_saved, f, ensure_ascii=False, indent=2)
+
+        session.pop('temp_zones', None)
+        session.pop('temp_image_path', None)
+
+        return jsonify({'success': True})
+    except Exception as e:
+        current_app.logger.error(f"❌ Erreur sauvegarde entité ancre pure: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@entity_bp.route('/api/entites-ancre', methods=['GET'])
+def lister_entites_ancre():
+    """Liste uniquement les entités de type 'ancre_pure'"""
+    try:
+        toutes = get_manager().lister_entites()
+        ancre_pures = [e for e in toutes if e.get('type') == 'ancre_pure']
+        return jsonify(ancre_pures)
+    except Exception as e:
+        current_app.logger.error(f"❌ Erreur listing entités ancre: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @entity_bp.route('/api/entite/<nom>/supprimer-zone/<int:zid>', methods=['DELETE'])
 def supprimer_zone_existante(nom, zid):
     manager = get_manager()

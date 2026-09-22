@@ -1,0 +1,96 @@
+{
+  "nom": "cni_nomprenom",
+  "description": "Nom et prénom avec ancre, à partir de cni_01",
+  "date_creation": "2026-09-17T17:22:46.382747",
+  "image_reference": "C:\\Users\\hamoh\\Documents\\projets\\frida\\frida-micros\\easytess_ocr_api\\backend\\app_ocr\\uploads\\entities\\cni_nomprenom\\reference.jpg",
+  "zones": [
+    {
+      "anchor_direction": "gauche",
+      "anchor_text": "اللقب",
+      "char_filter": "alpha_only",
+      "coords": [
+        0.6567,
+        0.6246,
+        0.918,
+        0.6957
+      ],
+      "expected_format": "single_line",
+      "id": 1780348310551,
+      "lang": "ara",
+      "margin": 3,
+      "nom": "nom",
+      "preprocess": "arabic_textured",
+      "type": "ancre"
+    },
+    {
+      "anchor_direction": "gauche",
+      "anchor_text": "الاسم",
+      "char_filter": "strip_separators",
+      "coords": [
+        0.6555,
+        0.7214,
+        0.918,
+        0.8024
+      ],
+      "expected_format": "single_line",
+      "id": 1780396536713,
+      "lang": "ara",
+      "margin": 3,
+      "nom": "prenom",
+      "preprocess": "arabic_textured",
+      "type": "ancre"
+    }
+  ],
+  "cadre_reference": {
+    "image_base_dimensions": {
+      "width": 992,
+      "height": 612,
+      "dpi_x": 300.0,
+      "dpi_y": 300.0
+    },
+    "haut": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        0
+      ],
+      "manuel_formula": "0"
+    },
+    "droite": {
+      "labels": [],
+      "position_base": [
+        1,
+        0.5
+      ],
+      "manuel_formula": "largeur"
+    },
+    "gauche": {
+      "labels": [],
+      "position_base": [
+        0,
+        0.5
+      ],
+      "manuel_formula": "0"
+    },
+    "bas": {
+      "labels": [],
+      "position_base": [
+        0.5,
+        1
+      ],
+      "manuel_formula": "hauteur"
+    },
+    "dimensions_absolues": {
+      "largeur": 992,
+      "hauteur": 612,
+      "angle": 0
+    }
+  },
+  "metadata": {
+    "nombre_zones": 2,
+    "image_dimensions": {
+      "width": 992,
+      "height": 612
+    }
+  }
+}
