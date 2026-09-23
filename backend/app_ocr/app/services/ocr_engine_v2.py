@@ -1616,6 +1616,17 @@ def analyser_ancres_pures(image_path, zones_config, mode='rapide'):
                     min(1.0, y2 / img_h)
                 ]
 
+        # --- FILTRE ANTI-RÉPUBLIQUE ---
+        mots_interdits = ["الجمهورية", "الديمقراطية", "الشعبية", "الوطنية"]
+        for k, v in resultats.items():
+            if k in ['nom', 'prenom', 'pere', 'mere']:
+                texte_val = v.get('texte_final', '')
+                if texte_val and any(mot in texte_val for mot in mots_interdits):
+                    logger.warning(f"🚫 Filtrage anti-République déclenché pour le champ '{k}': {texte_val}")
+                    v['texte_final'] = ""
+                    v['texte_auto'] = ""
+                    v['statut'] = 'echec'
+
         alertes = [k for k, v in resultats.items() if v.get('statut') != 'ok']
         return resultats, alertes, None
 
@@ -2379,6 +2390,17 @@ def analyser_hybride(image_path, zones_config, cadre_reference=None, mode='rapid
                     'height': detected_h_px / orig_h
                 }
     
+        # --- FILTRE ANTI-RÉPUBLIQUE ---
+        mots_interdits = ["الجمهورية", "الديمقراطية", "الشعبية", "الوطنية"]
+        for k, v in resultats.items():
+            if k in ['nom', 'prenom', 'pere', 'mere']:
+                texte_val = v.get('texte_final', '')
+                if texte_val and any(mot in texte_val for mot in mots_interdits):
+                    logger.warning(f"🚫 Filtrage anti-République déclenché pour le champ '{k}': {texte_val}")
+                    v['texte_final'] = ""
+                    v['texte_auto'] = ""
+                    v['statut'] = 'echec'
+
         alertes = [k for k, v in resultats.items() if v['statut'] != 'ok']
         return resultats, alertes, cadre_detecte
 
